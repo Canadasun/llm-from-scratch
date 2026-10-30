@@ -1,3 +1,7 @@
 # Milestone 1 runs on CPU. Install the CPU build of PyTorch:
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch>=2.2
+
+# Milestone 3 corpus: NIST SP 800 publications are PDFs, extracted with PyMuPDF.
+# Only needed by data/build_corpus.py; run it with --no-nist to skip.
+pymupdf>=1.24

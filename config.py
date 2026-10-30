@@ -65,4 +65,26 @@ def gpu_preset():
     )
 
 
-PRESETS = {"cpu": cpu_preset, "gpu": gpu_preset}
+def gpu_large_preset():
+    """~33M-param model + a larger BPE vocab, for the Milestone-3 corpus
+    (RFCs + NIST). Still fits a free T4 with mixed precision. Bigger context,
+    deeper, wider than `gpu`, and trained longer."""
+    return TrainConfig(
+        block_size=512,
+        n_layer=10,
+        n_head=8,
+        n_embd=512,
+        dropout=0.2,
+        batch_size=24,          # sized to fit a 16 GB T4 at block 512
+        learning_rate=5e-4,
+        max_iters=6000,
+        eval_interval=500,
+        eval_iters=50,
+        warmup_iters=300,
+        tokenizer="bpe",
+        vocab_size=2048,        # larger vocab for a bigger, more varied corpus
+        bpe_train_chars=600_000,
+    )
+
+
+PRESETS = {"cpu": cpu_preset, "gpu": gpu_preset, "gpu_large": gpu_large_preset}

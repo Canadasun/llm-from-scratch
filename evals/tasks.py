@@ -82,7 +82,8 @@ def run_task(model, tokenizer, task, device="cpu", seed=1337):
 
 def default_task_files(data_dir=None):
     data_dir = data_dir or os.path.join(os.path.dirname(__file__), "data")
-    names = ["security_mc.jsonl", "software_mc.jsonl", "reasoning_mc.jsonl",
-             "generation.jsonl", "code_python.jsonl"]
+    names = ["security_mc.jsonl", "software_mc.jsonl", "cloud_mc.jsonl",
+             "aisec_mc.jsonl", "reasoning_mc.jsonl", "generation.jsonl",
+             "code_python.jsonl"]
     return [os.path.join(data_dir, n) for n in names
             if os.path.exists(os.path.join(data_dir, n))]

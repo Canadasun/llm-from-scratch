@@ -33,3 +33,29 @@ def test_clean_rfc_collapses_blank_runs():
     raw = "line one\n\n\n\n\nline two\n"
     out = build_corpus.clean_rfc(raw)
     assert "\n\n\n" not in out
+
+
+def test_clean_nist_strips_furniture_and_dehyphenates():
+    raw = (
+        "NIST SP 800-207\n"
+        "Zero trust is a set of principles.\n"
+        "This publication is available free of charge from:\n"
+        "https://doi.org/10.6028/NIST.SP.800-207\n"
+        "iii\n"
+        "42\n"
+        "Security config-\nuration matters.\n"
+    )
+    out = build_corpus.clean_nist(raw)
+    assert "NIST SP 800-207" not in out        # running header removed
+    assert "available free of charge" not in out
+    assert "doi.org" not in out                # DOI line removed
+    assert "\niii\n" not in out and "\n42\n" not in out   # page numbers removed
+    assert "configuration matters" in out      # hyphenation rejoined
+    assert "set of principles" in out
+
+
+def test_nist_catalog_is_nonempty_and_well_formed():
+    assert len(build_corpus.NIST) >= 20
+    for sp, (title, url) in build_corpus.NIST.items():
+        assert url.startswith("https://nvlpubs.nist.gov/") and url.endswith(".pdf")
+        assert title
