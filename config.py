@@ -21,9 +21,9 @@ class TrainConfig:
     # --- optimization ---
     batch_size: int = 32
     learning_rate: float = 3e-4
-    max_iters: int = 3000
-    eval_interval: int = 250   # how often to print train/val loss
-    eval_iters: int = 50       # batches averaged when estimating loss
+    max_iters: int = 2000
+    eval_interval: int = 200   # how often to print train/val loss
+    eval_iters: int = 20       # batches averaged when estimating loss
     weight_decay: float = 0.1
     grad_clip: float = 1.0
 

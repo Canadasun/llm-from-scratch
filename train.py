@@ -10,6 +10,7 @@ gradient clipping, periodic train/val loss estimates, and a checkpoint save.
 """
 
 import os
+import time
 
 import torch
 
@@ -53,7 +54,10 @@ def main():
     cfg = TrainConfig()
     torch.manual_seed(cfg.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Device: {device}")
+    # On CPU, use every core we have; PyTorch otherwise leaves some idle.
+    if device == "cpu":
+        torch.set_num_threads(os.cpu_count() or 1)
+    print(f"Device: {device} ({torch.get_num_threads()} threads)", flush=True)
 
     if not os.path.exists(CORPUS):
         raise SystemExit("data/corpus.txt not found. Run: python data/prepare.py")
@@ -78,15 +82,22 @@ def main():
     )
     model = GPT(model_cfg).to(device)
     print(f"Model parameters: {model.num_params():,}")
+    print(f"Training for {cfg.max_iters} iters... (first loss line appears after a short warm-up)",
+          flush=True)
 
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay
     )
 
+    t0 = time.time()
     for it in range(cfg.max_iters + 1):
         if it % cfg.eval_interval == 0:
             losses = estimate_loss(model, splits, cfg, device)
-            print(f"iter {it:5d} | train loss {losses['train']:.4f} | val loss {losses['val']:.4f}")
+            elapsed = time.time() - t0
+            pct = 100 * it / cfg.max_iters
+            print(f"iter {it:5d}/{cfg.max_iters} ({pct:3.0f}%) | "
+                  f"train {losses['train']:.4f} | val {losses['val']:.4f} | "
+                  f"{elapsed:5.1f}s elapsed", flush=True)
 
         x, y = get_batch(splits["train"], cfg.block_size, cfg.batch_size, device)
         _, loss = model(x, y)
