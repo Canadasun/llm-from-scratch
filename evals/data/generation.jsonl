@@ -1,0 +1,11 @@
+# Free-generation tasks, scored by substring/regex match on the continuation.
+{"id": "gen-private", "category": "generation", "type": "generation", "prompt": "In access control, the opposite of a public resource is a ", "scorer": "contains", "target": "private", "max_new_tokens": 12}
+{"id": "gen-https", "category": "generation", "type": "generation", "prompt": "The secure version of the HTTP protocol is called ", "scorer": "contains", "target": "https", "max_new_tokens": 12}
+{"id": "gen-encrypt", "category": "generation", "type": "generation", "prompt": "Scrambling data so only authorised parties can read it is called ", "scorer": "contains_any", "target": ["encrypt", "encryption"], "max_new_tokens": 12}
+{"id": "gen-firewall", "category": "generation", "type": "generation", "prompt": "A network device that filters traffic by rules is a ", "scorer": "contains", "target": "firewall", "max_new_tokens": 12}
+{"id": "gen-password", "category": "generation", "type": "generation", "prompt": "A secret string a user types to log in is called a ", "scorer": "contains", "target": "password", "max_new_tokens": 12}
+{"id": "gen-digit", "category": "generation", "type": "generation", "prompt": "Count up: one, two, three, ", "scorer": "contains", "target": "four", "max_new_tokens": 8}
+{"id": "gen-sql", "category": "generation", "type": "generation", "prompt": "The language used to query relational databases is called ", "scorer": "contains", "target": "sql", "max_new_tokens": 12}
+{"id": "gen-token", "category": "generation", "type": "generation", "prompt": "A JSON Web Token is commonly abbreviated as ", "scorer": "contains", "target": "jwt", "max_new_tokens": 12}
+{"id": "gen-tls13", "category": "generation", "type": "generation", "prompt": "The latest major version of the TLS protocol is TLS ", "scorer": "regex", "target": "1\\.3", "max_new_tokens": 8}
+{"id": "gen-cve", "category": "generation", "type": "generation", "prompt": "A publicly catalogued software vulnerability is identified by a CVE ", "scorer": "contains_any", "target": ["id", "identifier", "number"], "max_new_tokens": 12}

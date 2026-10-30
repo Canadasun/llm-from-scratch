@@ -1,0 +1,41 @@
+Held-out evaluation text. Independently authored for this suite and deliberately
+kept out of the training corpus so that perplexity measured here reflects
+generalisation, not memorisation. Topic: software development and defensive
+security, in plain prose.
+
+A secure system begins with a clear threat model. Before writing a line of code,
+a team should ask who might attack the system, what they want, and which assets
+must be protected. Authentication proves who a user is; authorisation decides
+what that user may do. Confusing the two is a common and costly mistake. A
+request that is correctly authenticated can still be denied if the user lacks
+permission for the action, and every permission check must happen on the server,
+never only in the browser.
+
+Input from outside the trust boundary is never trusted. A web application should
+validate and encode user input to prevent injection. SQL injection happens when
+untrusted text is concatenated into a query instead of being passed as a bound
+parameter. Cross-site scripting happens when untrusted text is written into a
+page without being escaped for its context. The defence in both cases is the
+same idea: keep data and code separate, and let the platform do the escaping.
+
+Secrets deserve special care. Passwords should be stored only as salted hashes
+from a slow algorithm designed for the purpose. API keys and tokens should live
+in a secrets manager, not in source control, and they should be scoped to the
+least privilege the task requires. When a secret leaks, the only safe response
+is to rotate it. Logging is useful for investigation, but logs must redact
+tokens, passwords and personal data, because a log file is itself an asset an
+attacker would like to read.
+
+Good engineering practice and good security practice overlap. Code review catches
+defects before they ship. Automated tests give a team the confidence to refactor.
+Dependencies should be pinned to known versions and scanned for published
+vulnerabilities, because a supply-chain compromise can undo every other control.
+Infrastructure should be described as code so that changes are reviewable and
+reproducible, and production credentials should never be exposed to a developer's
+laptop or to an automated agent without a documented reason.
+
+When something goes wrong, a calm and rehearsed incident response matters more
+than blame. Detect the problem, contain it, eradicate the cause, recover service,
+and write an honest post-mortem that improves the system. The goal is not a
+system that never fails, which is impossible, but a system that fails safely,
+recovers quickly, and learns from each failure.

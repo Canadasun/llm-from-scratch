@@ -103,7 +103,25 @@ python -m pytest tests/ -q
 ```
 
 Covers the model (shapes, causal masking, learning), both tokenizers (round-trip,
-compression, save/load), corpus cleaning, and the safety layers.
+compression, save/load), corpus cleaning, the safety layers, and the evaluation
+harness (scoring maths, scorers, the code sandbox, and task-data validity).
+
+## Evaluation
+
+Training loss says the model is learning its data; it does not say the model is
+good. The eval suite turns that into measured numbers:
+
+```bash
+python -m evals.run                 # intrinsic metrics + capability tasks
+python -m evals.run --suite intrinsic   # held-out perplexity vs a random-init model
+```
+
+It reports held-out perplexity / bits-per-byte / next-token accuracy **against a
+random-init baseline** (proof that training — not the architecture — produced the
+skill), plus likelihood-scored multiple-choice, generation, and **sandboxed**
+code tasks, with sample sizes, the random-chance baseline, example failures and
+explicit limitations. See [`docs/EVALUATION.md`](docs/EVALUATION.md). It reports;
+it never prints "pass" — release gating is a separate, explicit decision.
 
 ## Data note
 
@@ -117,7 +135,9 @@ is used for training.
 - [x] Milestone 2 — from-scratch BPE tokenizer wired into training, a curated
   license-safe dev+security corpus (~6 MB of IETF RFCs), and GPU support
   (`--preset gpu`, mixed precision) with a Colab notebook for a free cloud GPU
-- [ ] Milestone 3 — scale params/data, evaluation harness
+- [x] Milestone 3 (in progress) — evaluation harness (`evals/`): held-out
+  perplexity vs a random baseline, likelihood-scored multiple-choice, generation
+  and sandboxed code tasks. Next: scale params/data and grow the task suite.
 - [ ] Milestone 4 — inference endpoint
 
 ## License
