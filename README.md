@@ -70,7 +70,10 @@ is used for training.
 ## Roadmap
 
 - [x] Milestone 1 — local from-scratch GPT, char-level, CPU
-- [ ] Milestone 2 — BPE tokenizer, curated dev+security corpus, free cloud GPU
+- [~] Milestone 2 — **in progress:** from-scratch BPE tokenizer (`tokenizer_bpe.py`)
+  and a curated, license-safe dev+security corpus (`data/build_corpus.py`, ~6 MB
+  of IETF RFCs) are done. Still to do: wire the BPE tokenizer into training and
+  move to a free cloud GPU.
 - [ ] Milestone 3 — scale params/data, evaluation harness
 - [ ] Milestone 4 — inference endpoint
 

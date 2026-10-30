@@ -15,3 +15,8 @@ data/corpus.txt
 
 # training logs
 train.log
+
+# corpus build artifacts
+data/rfc_cache/
+data/sources/
+*.bpe.json
