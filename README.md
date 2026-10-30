@@ -29,16 +29,29 @@ You are at **Milestone 1**.
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-# 2. Prepare a corpus (built-in sample, or your own text)
-python data/prepare.py                      # built-in sample
-# python data/prepare.py --input notes.txt  # your own .txt
+# 2. Build the corpus (curated RFCs; or use your own text)
+python data/build_corpus.py                 # ~6 MB dev+security corpus
+# python data/prepare.py --input notes.txt  # alternatively, your own .txt
 
-# 3. Train (minutes on a CPU with the small defaults)
-python train.py
+# 3. Train (minutes on a CPU with the small char-level defaults)
+python train.py --preset cpu
 
 # 4. Generate text from the trained model
 python sample.py --prompt "Security " --tokens 400
 ```
+
+## Train on a GPU (bigger model + BPE)
+
+No local GPU needed — use a free Colab/Kaggle GPU. See [`docs/GPU.md`](docs/GPU.md)
+and [`notebooks/train_colab.ipynb`](notebooks/train_colab.ipynb).
+
+```bash
+python train.py --preset gpu                # ~15M params, BPE tokenizer, mixed precision
+python sample.py --prompt "TLS 1.3 " --tokens 400
+```
+
+Tokenizer and corpus encoding are cached after the first run, so the one-time
+BPE build is paid once.
 
 ## What each file is
 
@@ -101,10 +114,9 @@ is used for training.
 ## Roadmap
 
 - [x] Milestone 1 — local from-scratch GPT, char-level, CPU
-- [~] Milestone 2 — **in progress:** from-scratch BPE tokenizer (`tokenizer_bpe.py`)
-  and a curated, license-safe dev+security corpus (`data/build_corpus.py`, ~6 MB
-  of IETF RFCs) are done. Still to do: wire the BPE tokenizer into training and
-  move to a free cloud GPU.
+- [x] Milestone 2 — from-scratch BPE tokenizer wired into training, a curated
+  license-safe dev+security corpus (~6 MB of IETF RFCs), and GPU support
+  (`--preset gpu`, mixed precision) with a Colab notebook for a free cloud GPU
 - [ ] Milestone 3 — scale params/data, evaluation harness
 - [ ] Milestone 4 — inference endpoint
 

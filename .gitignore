@@ -20,3 +20,6 @@ train.log
 data/rfc_cache/
 data/sources/
 *.bpe.json
+
+# tokenizer/ids cache
+data/.cache_*.pt

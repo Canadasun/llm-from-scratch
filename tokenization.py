@@ -1,0 +1,39 @@
+"""
+Tokenizer factory: one place that knows about both tokenizers.
+
+train.py and sample.py use this so they stay tokenizer-agnostic — the choice of
+char vs BPE is a single flag, and a trained checkpoint carries its tokenizer with
+it (as a dict) so sampling needs nothing else.
+"""
+
+from tokenizer import CharTokenizer
+from tokenizer_bpe import BPETokenizer
+
+_REGISTRY = {"char": CharTokenizer, "bpe": BPETokenizer}
+
+
+def build(kind, text, vocab_size=1024, bpe_train_chars=500_000, verbose=False):
+    """Create and fit a tokenizer of the given kind on `text`.
+
+    - char: vocabulary is every distinct character (vocab_size is ignored).
+    - bpe:  learn merges up to `vocab_size`. Because pure-Python BPE training is
+            slow, it trains on the first `bpe_train_chars` characters (a
+            representative slice) and is then applied to the whole corpus.
+    """
+    if kind == "char":
+        return CharTokenizer.from_text(text)
+    if kind == "bpe":
+        slice_ = text[:bpe_train_chars] if bpe_train_chars else text
+        if verbose:
+            print(f"Training BPE (vocab {vocab_size}) on {len(slice_):,} chars...",
+                  flush=True)
+        return BPETokenizer().train(slice_, vocab_size=vocab_size, verbose=verbose)
+    raise ValueError(f"unknown tokenizer kind: {kind!r}")
+
+
+def from_dict(d):
+    """Rebuild a tokenizer from the dict stored in a checkpoint."""
+    kind = d.get("kind")
+    if kind not in _REGISTRY:
+        raise ValueError(f"unknown tokenizer kind in checkpoint: {kind!r}")
+    return _REGISTRY[kind].from_dict(d)

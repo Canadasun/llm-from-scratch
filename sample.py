@@ -10,8 +10,8 @@ import os
 
 import torch
 
+import tokenization
 from model import GPT, GPTConfig
-from tokenizer import CharTokenizer
 from safety import content_policy
 
 
@@ -42,14 +42,19 @@ def main():
     # Secure load: weights_only=True so a malicious checkpoint cannot execute
     # arbitrary code via pickle. Checkpoints here hold only tensors + plain data.
     ckpt = torch.load(args.ckpt, map_location="cpu", weights_only=True)
-    tokenizer = CharTokenizer(ckpt["chars"])
+    tokenizer = tokenization.from_dict(ckpt["tokenizer"])
     model = GPT(GPTConfig(**ckpt["model_cfg"]))
     model.load_state_dict(ckpt["model_state"])
     model.eval()
 
-    # Any prompt character the model never saw is dropped (char-level limitation).
-    prompt = "".join(c for c in args.prompt if c in tokenizer.stoi) or "\n"
-    idx = torch.tensor([tokenizer.encode(prompt)], dtype=torch.long)
+    prompt = args.prompt
+    if tokenizer.kind == "char":
+        # A char tokenizer has no token for a character it never saw; drop those.
+        prompt = "".join(c for c in prompt if c in tokenizer.stoi) or "\n"
+    ids = tokenizer.encode(prompt)
+    if not ids:
+        ids = tokenizer.encode("\n")
+    idx = torch.tensor([ids], dtype=torch.long)
 
     out = model.generate(idx, args.tokens, temperature=args.temperature, top_k=args.top_k)
     text = tokenizer.decode(out[0].tolist())

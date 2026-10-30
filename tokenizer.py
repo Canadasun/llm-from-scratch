@@ -11,6 +11,8 @@ import json
 
 
 class CharTokenizer:
+    kind = "char"
+
     def __init__(self, chars):
         # Sorted for determinism, so the same corpus always yields the same ids.
         self.chars = sorted(set(chars))
@@ -40,3 +42,12 @@ class CharTokenizer:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return cls(data["chars"])
+
+    # --- uniform (de)serialization so a checkpoint can embed the tokenizer ---
+
+    def to_dict(self):
+        return {"kind": self.kind, "chars": self.chars}
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(d["chars"])
