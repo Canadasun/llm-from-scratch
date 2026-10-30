@@ -61,6 +61,37 @@ position's vector into a probability distribution over the vocabulary, and the
 model is trained to make the true next token likely. Generating text is just
 sampling from that distribution one token at a time and feeding it back in.
 
+## Safety (built in from the start)
+
+This is a security-focused model, so safety is part of the pipeline, not an
+afterthought — and it is **dual-use aware**: security topics are in scope
+(the users are professionals), while clear wrongdoing is not.
+
+- **Training-data scrubbing** — `safety/scrub.py` redacts private keys, API
+  tokens, JWTs, cloud keys and passwords before any text enters the corpus. It
+  runs by default in `data/build_corpus.py`. A model can memorize its data, so
+  secrets must never get in.
+- **Use policy** — `safety/content_policy.py` classifies prompts/generations as
+  allow / flag / block. It allows exploits, pentesting and attack theory, *flags*
+  dual-use content aimed at a specific target with no authorization context, and
+  *blocks* categories with no legitimate use. `sample.py` applies it (disable for
+  research with `--no-safety`, which is logged).
+- **Secure checkpoint loading** — `torch.load(..., weights_only=True)` so an
+  untrusted `.pt` cannot execute code.
+
+See [`SECURITY.md`](SECURITY.md), [`docs/RESPONSIBLE_USE.md`](docs/RESPONSIBLE_USE.md)
+and [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md).
+
+## Tests
+
+```bash
+pip install pytest
+python -m pytest tests/ -q
+```
+
+Covers the model (shapes, causal masking, learning), both tokenizers (round-trip,
+compression, save/load), corpus cleaning, and the safety layers.
+
 ## Data note
 
 Training data comes from **public sources and the author's own notes** in

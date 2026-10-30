@@ -24,6 +24,10 @@ import time
 import urllib.request
 
 HERE = os.path.dirname(__file__)
+# Make the repo root importable so we can use the safety package when this file
+# is run directly as `python data/build_corpus.py`.
+sys.path.insert(0, os.path.abspath(os.path.join(HERE, "..")))
+from safety import scrub as _scrub  # noqa: E402
 
 # A curated set of RFCs across security, networking and web development.
 RFCS = {
@@ -86,11 +90,20 @@ def main():
                     help="Downloaded RFCs are cached here so re-runs are offline.")
     ap.add_argument("--limit", type=int, default=None,
                     help="Only use the first N RFCs (for a quick test).")
+    ap.add_argument("--no-scrub", action="store_true",
+                    help="skip secret scrubbing (NOT recommended).")
+    ap.add_argument("--scrub-pii", action="store_true",
+                    help="also redact emails in user-supplied sources.")
     args = ap.parse_args()
 
     os.makedirs(args.cache, exist_ok=True)
     parts = []
+    redactions = {}  # running total across all sources
     nums = list(RFCS)[: args.limit] if args.limit else list(RFCS)
+
+    def _accumulate(counts):
+        for k, v in counts.items():
+            redactions[k] = redactions.get(k, 0) + v
 
     for i, num in enumerate(nums, 1):
         cache_path = os.path.join(args.cache, f"rfc{num}.txt")
@@ -104,6 +117,9 @@ def main():
                 status = "fetched"
                 time.sleep(0.3)  # be polite to the server
             cleaned = clean_rfc(raw)
+            if not args.no_scrub:
+                cleaned, counts = _scrub.scrub_secrets(cleaned)
+                _accumulate(counts)
             header = f"\n\n===== RFC {num}: {RFCS[num]} =====\n\n"
             parts.append(header + cleaned)
             print(f"[{i:2d}/{len(nums)}] RFC {num:<4} {RFCS[num]:<32} "
@@ -118,6 +134,10 @@ def main():
             if name.lower().endswith((".txt", ".md")):
                 path = os.path.join(src_dir, name)
                 body = open(path, encoding="utf-8", errors="ignore").read()
+                # User sources get secret scrubbing and, optionally, PII scrubbing.
+                if not args.no_scrub:
+                    body, counts = _scrub.scrub(body, pii=args.scrub_pii)
+                    _accumulate(counts)
                 parts.append(f"\n\n===== source: {name} =====\n\n" + body)
                 print(f"[+] local source {name}: {len(body):,} chars", flush=True)
 
@@ -126,6 +146,12 @@ def main():
         f.write(corpus)
     mb = len(corpus.encode("utf-8")) / 1e6
     print(f"\nWrote {args.output}: {len(corpus):,} chars ({mb:.1f} MB)")
+    if args.no_scrub:
+        print("WARNING: secret scrubbing was DISABLED (--no-scrub).")
+    elif redactions:
+        print(f"Safety: redacted secrets/PII -> {redactions}")
+    else:
+        print("Safety: secret scrub ran; nothing matched.")
 
 
 if __name__ == "__main__":
