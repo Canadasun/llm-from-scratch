@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Training artifacts
+checkpoints/
+data/corpus.txt
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# training logs
+train.log
