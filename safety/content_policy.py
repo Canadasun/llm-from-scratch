@@ -64,6 +64,13 @@ _LEGIT = re.compile(
     r"vulnerability (?:research|assessment)|responsible disclosure|educational|"
     r"blue team|incident response|for a client\b)\b")
 
+_EXPLICIT_UNAUTHORIZED = re.compile(
+    r"(?i)\bwithout (?:their )?(?:consent|permission|authorization)\b")
+_PROTECTIVE = re.compile(
+    r"(?i)\b(?:detect|report|prevent|investigate|identify)\b.{0,60}"
+    r"\b(?:child sexual|csam|exploitation)\b")
+_HARMFUL_PRODUCTION = re.compile(r"(?i)\b(?:produce|create|generate|obtain|distribute)\b")
+
 
 def check(text):
     """Classify a prompt or a generation. Returns a Decision."""
@@ -72,13 +79,16 @@ def check(text):
 
     for category, pat in _BLOCK:
         if pat.search(text):
+            if category == "csam" and _PROTECTIVE.search(text) and not _HARMFUL_PRODUCTION.search(text):
+                return Decision("flag", "sensitive protective investigation; follow approved procedures",
+                                "sensitive_investigation")
             return Decision("block",
                             reason="matches a category with no legitimate use",
                             category=category)
 
     wrongdoing = bool(_WRONGDOING.search(text))
     targeting = bool(_TARGETING.search(text))
-    legit = bool(_LEGIT.search(text))
+    legit = bool(_LEGIT.search(text)) and not _EXPLICIT_UNAUTHORIZED.search(text)
 
     if wrongdoing and targeting and not legit:
         return Decision(

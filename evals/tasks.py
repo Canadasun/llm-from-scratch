@@ -67,15 +67,22 @@ def run_task(model, tokenizer, task, device="cpu", seed=1337):
         return {**base, "correct": correct, "detail": repr(out[:80])}
 
     if ttype == "code":
+        from evals.code_executor import evaluate_function, task_spec
+        spec = task_spec(task)
+        if spec is None:
+            return {**base, "correct": False, "execution_status": "unavailable",
+                    "detail": "reviewed function cases missing or task content changed"}
         torch.manual_seed(seed)
         out = generate_text(
             model, tokenizer, task["prompt"],
             max_new_tokens=task.get("max_new_tokens", 256),
             temperature=task.get("temperature", 0.4),
             top_k=task.get("top_k", 40), device=device)
-        passed, detail = scorers.run_python_unittest(
-            out, task["test"], timeout=task.get("timeout", 10))
-        return {**base, "correct": passed, "detail": detail}
+        verdict = evaluate_function(scorers.extract_code(out), spec["function"],
+                                    spec["cases"], timeout=task.get("timeout", 10))
+        return {**base, "correct": verdict.passed, "detail": verdict.detail,
+                "execution_status": verdict.status,
+                "cases_passed": verdict.cases_passed, "cases_total": verdict.cases_total}
 
     raise ValueError(f"unknown task type: {ttype!r}")
 

@@ -24,7 +24,6 @@ gap. Authentication rejects a revoked or expired key in the store, so rotation
 and revocation take effect the moment they are recorded.
 """
 
-import threading
 import time
 import uuid
 
@@ -41,12 +40,6 @@ class KeyManager:
         self.audit = audit
         self.clock = clock
         self.authorizer = authorizer
-        # Serialise the read-modify-write in rotate()/revoke(): without it a
-        # revoke that lands between rotate's read and its write is LOST (the stale
-        # record is written back un-revoked, reviving the credential). One writer
-        # is correct for the single-replica deployment; cross-process atomicity
-        # needs DB transactions (the Postgres path).
-        self._lock = threading.Lock()
 
     # -- internal: authorize the actor for apikey:manage ----------------------
     def _authorize_manage(self, actor, actor_scopes, rid, detail=""):
@@ -105,7 +98,8 @@ class KeyManager:
         expires_at = (now + ttl_seconds) if ttl_seconds else 0.0
         record = ApiKey(key_id, key_hash, tid, target_principal_id, scopes,
                         created_at=now, expires_at=expires_at)
-        self.store.add_api_key(record)
+        with self.store.key_transaction():
+            self.store.add_api_key(record)
 
         self.audit.record(rid, MANAGE_ACTION, "allow", "issued",
                           tenant_id=tid, principal_id=actor.id,
@@ -127,7 +121,7 @@ class KeyManager:
         if not self._authorize_manage(actor, actor_scopes, rid):
             return 403, {"error": "forbidden", "request_id": rid}
 
-        with self._lock:
+        with self.store.key_transaction():
             key = self.store.get_api_key(actor, key_id)   # tenant-scoped
             if key is None:
                 self.audit.record(rid, MANAGE_ACTION, "deny", "not_found_or_forbidden",
@@ -160,7 +154,7 @@ class KeyManager:
         # The whole read-modify-write runs under the lock so a concurrent revoke
         # cannot be lost (finding: rotation would otherwise write the stale record
         # back un-revoked and revive the credential).
-        with self._lock:
+        with self.store.key_transaction():
             old = self.store.get_api_key(actor, key_id)    # tenant-scoped
             if old is None:
                 self.audit.record(rid, MANAGE_ACTION, "deny", "not_found_or_forbidden",

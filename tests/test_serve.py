@@ -30,7 +30,7 @@ def engine():
             "recovery restore operations.\n")
     tok = CharTokenizer.from_text(text)
     torch.manual_seed(0)
-    cfg = GPTConfig(vocab_size=tok.vocab_size, block_size=32,
+    cfg = GPTConfig(vocab_size=tok.vocab_size, block_size=128,
                     n_layer=2, n_head=2, n_embd=32, dropout=0.0)
     model = GPT(cfg)
     return InferenceEngine(model, tok, device="cpu")
@@ -99,6 +99,11 @@ def test_engine_handles_unknown_characters(engine):
     # Characters the char tokenizer never saw must not crash generation.
     out = engine.generate("ZZZ ☃ ÿ", max_new_tokens=4, seed=1)
     assert out["completion_tokens"] == 4
+
+
+def test_engine_rejects_prompt_above_context_limit(engine):
+    with pytest.raises(ValidationError, match="context limit"):
+        engine.generate("a" * (engine.block_size + 1), max_new_tokens=1)
 
 
 # ---------- service pipeline ----------

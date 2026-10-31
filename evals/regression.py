@@ -108,6 +108,12 @@ def check(candidate, baseline, tolerances=None):
         limit = bv - tol[tkey]
         record(metric, bv, cv, limit, "higher_better", cv >= limit)
 
+    code_results = [r for r in candidate.get("results", []) if r.get("type") == "code"]
+    if code_results:
+        available = all(r.get("execution_status") in ("passed", "failed") for r in code_results)
+        checks.append({"metric": "code_execution", "baseline": 1, "candidate": int(available),
+                       "limit": 1, "direction": "higher_better", "ok": available,
+                       "skipped": False, "note": "all code tasks require an available independent evaluator"})
     ok = all(c["ok"] for c in checks)
     return ok, checks
 

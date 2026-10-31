@@ -28,6 +28,7 @@ import json
 import sqlite3
 import threading
 import time
+from contextlib import contextmanager
 
 from enterprise.keys import hash_key, verify_key
 from enterprise.models import ApiKey, Principal, Resource, Tenant
@@ -69,14 +70,42 @@ class SqlStore:
         # single serialized connection is simplest and correct for this load.
         self._db = sqlite3.connect(path, uri=uri, check_same_thread=False)
         self._db.row_factory = sqlite3.Row
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._transaction_depth = 0
         self._clock = clock
         with self._lock:
             self._db.executescript(_SCHEMA)
-            self._db.commit()
+            self._commit()
 
     def close(self):
         self._db.close()
+
+    def _commit(self):
+        if not self._transaction_depth:
+            self._db.commit()
+
+    @contextmanager
+    def key_transaction(self):
+        """Atomic lifecycle operation, including across connections to a local DB.
+
+        SQLite locking must be enabled for cross-process exclusion. A nolock
+        network-share deployment still requires an externally enforced writer.
+        """
+        with self._lock:
+            outer = self._transaction_depth == 0
+            if outer:
+                self._db.execute("BEGIN IMMEDIATE")
+            self._transaction_depth += 1
+            try:
+                yield
+                if outer:
+                    self._db.commit()
+            except BaseException:
+                if outer:
+                    self._db.rollback()
+                raise
+            finally:
+                self._transaction_depth -= 1
 
     # --- row <-> dataclass ---
     @staticmethod
@@ -100,7 +129,7 @@ class SqlStore:
         with self._lock:
             self._db.execute("INSERT OR REPLACE INTO tenants(id,name) VALUES(?,?)",
                              (tenant.id, tenant.name))
-            self._db.commit()
+            self._commit()
         return tenant
 
     def add_principal(self, principal):
@@ -111,7 +140,7 @@ class SqlStore:
             self._db.execute(
                 "INSERT OR REPLACE INTO principals(id,tenant_id,roles) VALUES(?,?,?)",
                 (principal.id, principal.tenant_id, json.dumps(list(principal.roles))))
-            self._db.commit()
+            self._commit()
         return principal
 
     def add_api_key(self, api_key):
@@ -126,7 +155,7 @@ class SqlStore:
                 (api_key.key_hash, api_key.id, api_key.tenant_id, api_key.principal_id,
                  json.dumps(list(api_key.scopes)), api_key.created_at,
                  api_key.expires_at, int(api_key.revoked), api_key.replaced_by))
-            self._db.commit()
+            self._commit()
         return api_key
 
     def add_resource(self, resource):
@@ -139,7 +168,7 @@ class SqlStore:
                 " VALUES(?,?,?,?,?)",
                 (resource.id, resource.tenant_id, resource.kind, resource.owner_id,
                  json.dumps(resource.attributes)))
-            self._db.commit()
+            self._commit()
         return resource
 
     def get_principal(self, principal_id):
@@ -200,7 +229,7 @@ class SqlStore:
                  api_key.key_hash))
             if cur.rowcount == 0:
                 raise KeyError("unknown api key")
-            self._db.commit()
+            self._commit()
         return api_key
 
     # --- tenant-scoped resource access (THE isolation boundary, in SQL) ---

@@ -99,18 +99,18 @@ TEST = ("import unittest\nfrom solution import add\n"
 
 
 def test_sandbox_passes_correct_code():
-    ok, _ = scorers.run_python_unittest(CORRECT, TEST)
+    ok, _ = scorers.run_python_unittest(CORRECT, TEST, trusted=True)
     assert ok is True
 
 
 def test_sandbox_fails_wrong_code():
-    ok, _ = scorers.run_python_unittest(WRONG, TEST)
+    ok, _ = scorers.run_python_unittest(WRONG, TEST, trusted=True)
     assert ok is False
 
 
 def test_sandbox_times_out_on_infinite_loop():
     ok, detail = scorers.run_python_unittest(
-        "def add(a, b):\n    while True:\n        pass\n", TEST, timeout=3)
+        "def add(a, b):\n    while True:\n        pass\n", TEST, timeout=3, trusted=True)
     assert ok is False
 
 

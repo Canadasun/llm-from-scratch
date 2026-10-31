@@ -18,6 +18,8 @@ class RateLimiter:
         clients (principals/IPs) can't grow memory without limit."""
         if capacity <= 0 or refill_per_sec <= 0:
             raise ValueError("capacity and refill_per_sec must be positive")
+        if isinstance(max_keys, bool) or not isinstance(max_keys, int) or max_keys < 1:
+            raise ValueError("max_keys must be a positive integer")
         self.capacity = float(capacity)
         self.refill = float(refill_per_sec)
         self._clock = clock
@@ -25,16 +27,11 @@ class RateLimiter:
         self._lock = threading.Lock()
         self._buckets = {}  # key -> (tokens, last_timestamp)
 
-    def _evict(self):
-        """Bound the table. A bucket at full capacity is indistinguishable from a
-        never-seen key, so dropping it is lossless; if still over, drop the
-        stalest entry (it just gets a fresh full bucket next time)."""
+    def _evict(self, now):
+        """Only forget buckets that have fully refilled; preserve spent budgets."""
         for k in [k for k, (t, _) in self._buckets.items()
-                  if t >= self.capacity]:
+                  if t + (now - self._buckets[k][1]) * self.refill >= self.capacity]:
             del self._buckets[k]
-        while len(self._buckets) >= self._max_keys:
-            del self._buckets[min(self._buckets,
-                                  key=lambda k: self._buckets[k][1])]
 
     def allow(self, key):
         """Return True if a request from `key` is permitted now, consuming one
@@ -42,7 +39,9 @@ class RateLimiter:
         now = self._clock()
         with self._lock:
             if key not in self._buckets and len(self._buckets) >= self._max_keys:
-                self._evict()
+                self._evict(now)
+                if len(self._buckets) >= self._max_keys:
+                    return False
             tokens, last = self._buckets.get(key, (self.capacity, now))
             tokens = min(self.capacity, tokens + (now - last) * self.refill)
             if tokens >= 1.0:

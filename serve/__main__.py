@@ -87,6 +87,8 @@ def main():
     ap.add_argument("--metrics", action="store_true",
                     help="collect aggregate reliability/latency/cost metrics and "
                          "expose them at GET /metrics (Stage-4 pilot)")
+    ap.add_argument("--max-concurrent", type=int, default=2,
+                    help="maximum simultaneous generations; excess requests get 503")
     ap.add_argument("--quantize", action="store_true",
                     help="dynamic int8 quantization (CPU): ~2x faster generation, "
                          "negligible quality change")
@@ -105,7 +107,8 @@ def main():
     if args.quantize:
         log.info("int8 dynamic quantization enabled (faster CPU generation)")
     limiter = RateLimiter(capacity=args.rate_capacity, refill_per_sec=args.rate_per_sec)
-    service = InferenceService(engine, rate_limiter=limiter, safety=not args.no_safety)
+    service = InferenceService(engine, rate_limiter=limiter, safety=not args.no_safety,
+                               max_concurrent=args.max_concurrent)
 
     if args.secured:
         import json as _json

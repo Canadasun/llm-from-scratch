@@ -36,21 +36,21 @@ def completion_nll(model, tokenizer, prompt, completion, device="cpu"):
     if ci == 0:
         # Need at least one context token to predict the first completion token.
         nl = safe_encode(tokenizer, "\n")
-        full = nl + full
-        ci = len(nl) or 1
+        context = nl or [0]
+        full = context + full
+        ci = len(context)
     if ci >= len(full):
         return math.inf, 0
 
-    # Score EVERY completion token, each with up to block_size tokens of left
-    # context, sliding the window in block_size steps. (Previously an answer
-    # longer than the window was scored only on its tail, so two answers that
-    # differed only in a discarded prefix received identical scores.)
+    # Each prediction gets all available context, up to block_size. Before the
+    # window fills we can score several targets in one forward; afterwards use
+    # stride one so the first token of a block does not lose its prompt context.
     nll_sum = 0.0
     scored = 0
     pos = ci
     while pos < len(full):
-        end = min(len(full), pos + block_size)        # score tokens [pos, end)
-        lo = max(0, end - (block_size + 1))           # left context; window<=block+1
+        end = min(len(full), max(pos + 1, block_size + 1))
+        lo = max(0, end - (block_size + 1))
         window = full[lo:end]
         x = torch.tensor([window[:-1]], dtype=torch.long, device=device)
         y = torch.tensor(window[1:], dtype=torch.long, device=device)

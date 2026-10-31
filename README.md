@@ -110,6 +110,14 @@ harness (scoring maths, scorers, the code sandbox, and task-data validity).
 
 ## Evaluation
 
+Code tasks use an independent controller to compare function outputs against
+reviewed JSON cases. Linux bubblewrap and libseccomp isolation are required;
+missing isolation fails closed and blocks the regression gate. Legacy arbitrary
+unittest execution remains disabled for untrusted code. See
+[code evaluation](docs/CODE_EVALUATION.md) and [audit follow-up](docs/AUDIT_FOLLOWUP.md)
+for implemented hardening, training resume, required CI configuration, and
+remaining enterprise work.
+
 Training loss says the model is learning its data; it does not say the model is
 good. The eval suite turns that into measured numbers:
 

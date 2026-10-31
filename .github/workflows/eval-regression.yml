@@ -1,29 +1,34 @@
 name: Eval regression gate
 
-# Model-level gate: run the evaluation suite on a trained checkpoint and FAIL if
-# it regresses below the recorded baseline (evals/baselines/m2.json) on the
-# enforced, tokenizer-independent metrics (bits-per-byte, task accuracy).
-#
-# A checkpoint is large and not committed, so this workflow obtains one by:
-#   1. a checkpoint_url input (paste the URL when dispatching manually), or
-#   2. a restored Actions cache under key `model-checkpoint` (seed it once and
-#      every later run reuses it).
-# If neither is available it SKIPS cleanly (neutral), so the gate activates the
-# moment a checkpoint exists without ever blocking on its absence.
+# Candidate checkpoint evaluation fails closed when the artifact is unavailable.
+# Configure MODEL_CHECKPOINT_URL and MODEL_CHECKPOINT_SHA256 repository variables
+# for scheduled, PR and tag runs, or supply both on manual dispatch.
 
 on:
   workflow_dispatch:
     inputs:
       checkpoint_url:
-        description: "Direct URL to a ckpt.pt (optional; else uses cached checkpoint)"
-        required: false
-        default: ""
+        description: "HTTPS URL of the candidate checkpoint"
+        required: true
+      checkpoint_sha256:
+        description: "Expected SHA-256 digest of the candidate checkpoint"
+        required: true
+  pull_request:
+    branches: [master]
+  push:
+    tags: ["v*"]
   schedule:
     - cron: "17 6 * * *"   # nightly 06:17 UTC
 
 jobs:
   regression:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      CHECKPOINT_URL: ${{ inputs.checkpoint_url || vars.MODEL_CHECKPOINT_URL }}
+      CHECKPOINT_SHA256: ${{ inputs.checkpoint_sha256 || vars.MODEL_CHECKPOINT_SHA256 }}
     steps:
       - uses: actions/checkout@v4
 
@@ -38,29 +43,20 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Restore cached checkpoint
-        uses: actions/cache@v4
-        with:
-          path: checkpoints/ckpt.pt
-          key: model-checkpoint
+      - name: Install code-evaluation isolation dependencies
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap libseccomp2
 
-      - name: Fetch checkpoint from input URL (if provided)
-        if: ${{ inputs.checkpoint_url != '' }}
+      - name: Fetch and verify candidate checkpoint
         run: |
+          test -n "$CHECKPOINT_URL" || { echo "::error::Candidate checkpoint URL is required"; exit 1; }
+          [[ "$CHECKPOINT_SHA256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo "::error::Valid checkpoint SHA-256 is required"; exit 1; }
           mkdir -p checkpoints
-          curl -fSL "${{ inputs.checkpoint_url }}" -o checkpoints/ckpt.pt
-          ls -la checkpoints/
+          curl --proto '=https' --proto-redir '=https' --max-time 300 -fSL -- "$CHECKPOINT_URL" -o checkpoints/ckpt.pt
+          printf '%s  checkpoints/ckpt.pt\n' "$CHECKPOINT_SHA256" | sha256sum --check --status
 
-      - name: Run regression gate (or skip if no checkpoint)
+      - name: Run candidate regression gate
         run: |
-          if [ -f checkpoints/ckpt.pt ]; then
-            echo "Checkpoint present — running regression gate."
-            python -m evals.regression \
-              --ckpt checkpoints/ckpt.pt \
-              --baseline evals/baselines/m3.json \
-              --device cpu
-          else
-            echo "::notice::No checkpoint available (no cache, no checkpoint_url)."
-            echo "Skipping model regression gate. Provide checkpoint_url when"
-            echo "dispatching, or seed the 'model-checkpoint' cache, to activate it."
-          fi
+          python -m evals.regression \
+            --ckpt checkpoints/ckpt.pt \
+            --baseline evals/baselines/m3.json \
+            --device cpu

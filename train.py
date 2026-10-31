@@ -19,6 +19,7 @@ import argparse
 import hashlib
 import os
 import time
+import tempfile
 
 import torch
 
@@ -27,6 +28,36 @@ from config import PRESETS, TrainConfig
 from model import GPT, GPTConfig
 
 CORPUS = os.path.join("data", "corpus.txt")
+
+
+def atomic_save(blob, path):
+    """Replace a checkpoint only after its complete contents reach disk."""
+    directory = os.path.dirname(os.path.abspath(path))
+    os.makedirs(directory, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=".checkpoint-", dir=directory)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            torch.save(blob, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def save_training_checkpoint(path, model, model_cfg, tokenizer, optimizer,
+                             scaler, cfg, completed_steps, corpus_hash, device):
+    raw_model = getattr(model, "_orig_mod", model)
+    atomic_save({
+        "model_state": raw_model.state_dict(), "model_cfg": model_cfg.__dict__,
+        "tokenizer": tokenizer.to_dict(), "optimizer_state": optimizer.state_dict(),
+        "scaler_state": scaler.state_dict(), "train_cfg": cfg.__dict__,
+        "completed_steps": completed_steps, "corpus_hash": corpus_hash,
+        "rng_state": torch.get_rng_state(), "training_device": device,
+        "cuda_rng_state": torch.cuda.get_rng_state_all() if device.startswith("cuda") else [],
+        "mps_rng_state": torch.mps.get_rng_state() if device.startswith("mps") else None,
+    }, path)
 
 
 def pick_device(requested):
@@ -108,7 +139,7 @@ def load_or_build_tokenizer_and_ids(text, cfg, device):
     ids = torch.tensor(tok.encode(text), dtype=torch.long)
     print(f"Tokenizer ready in {time.time() - t:.1f}s "
           f"(vocab {tok.vocab_size}, {len(ids):,} tokens)", flush=True)
-    torch.save({"tok": tok.to_dict(), "ids": ids}, cache)
+    atomic_save({"tok": tok.to_dict(), "ids": ids}, cache)
     return tok, ids
 
 
@@ -121,12 +152,24 @@ def main():
     ap.add_argument("--bpe-train-chars", type=int, default=None,
                     help="chars the BPE tokenizer learns merges from")
     ap.add_argument("--max-iters", type=int, default=None)
+    ap.add_argument("--resume", help="resume a training checkpoint, preserving optimizer and RNG")
+    ap.add_argument("--out-dir", help="checkpoint directory")
+    ap.add_argument("--checkpoint-interval", type=int, default=None,
+                    help="save every N completed steps (default: evaluation interval)")
     ap.add_argument("--device", default="auto", help="auto|cpu|cuda|mps")
     ap.add_argument("--compile", action="store_true",
                     help="torch.compile the model (PyTorch 2.x, CUDA)")
     args = ap.parse_args()
 
-    cfg: TrainConfig = PRESETS[args.preset]()
+    resumed = torch.load(args.resume, map_location="cpu", weights_only=True) if args.resume else None
+    if resumed is not None:
+        required = {"train_cfg", "optimizer_state", "scaler_state", "completed_steps",
+                    "corpus_hash", "rng_state", "training_device", "cuda_rng_state"}
+        if required - resumed.keys():
+            ap.error("checkpoint lacks training state; inference-only checkpoints cannot resume")
+        cfg = TrainConfig(**resumed["train_cfg"])
+    else:
+        cfg = PRESETS[args.preset]()
     if args.tokenizer:
         cfg.tokenizer = args.tokenizer
     if args.vocab_size:
@@ -135,9 +178,16 @@ def main():
         cfg.bpe_train_chars = args.bpe_train_chars
     if args.max_iters is not None:
         cfg.max_iters = args.max_iters
+    if args.out_dir:
+        cfg.out_dir = args.out_dir
+    checkpoint_interval = args.checkpoint_interval or cfg.eval_interval
+    if cfg.max_iters < 1 or checkpoint_interval < 1 or args.checkpoint_interval == 0:
+        ap.error("max-iters and checkpoint-interval must be positive")
 
     torch.manual_seed(cfg.seed)
     device = pick_device(args.device)
+    if resumed is not None and device != resumed["training_device"]:
+        ap.error("resume requires the original training device for RNG compatibility")
     if device == "cpu":
         torch.set_num_threads(os.cpu_count() or 1)
     print(f"Preset: {args.preset} | device: {device} | tokenizer: {cfg.tokenizer}",
@@ -147,16 +197,25 @@ def main():
         raise SystemExit("data/corpus.txt not found. Run: python data/build_corpus.py")
     with open(CORPUS, encoding="utf-8") as f:
         text = f.read()
+    corpus_hash = hashlib.sha256(text.encode()).hexdigest()
+    if resumed is not None and corpus_hash != resumed["corpus_hash"]:
+        ap.error("corpus differs from the resume checkpoint")
 
     tokenizer, data = load_or_build_tokenizer_and_ids(text, cfg, device)
     n_val = max(1, int(len(data) * cfg.val_split))
     splits = {"train": data[:-n_val], "val": data[-n_val:]}
+    if any(len(split) <= cfg.block_size for split in splits.values()):
+        ap.error("both training and validation splits need more than block_size tokens")
 
     model_cfg = GPTConfig(
         vocab_size=tokenizer.vocab_size, block_size=cfg.block_size,
         n_layer=cfg.n_layer, n_head=cfg.n_head, n_embd=cfg.n_embd, dropout=cfg.dropout,
     )
     model = GPT(model_cfg).to(device)
+    if resumed is not None:
+        if model_cfg.__dict__ != resumed["model_cfg"] or tokenizer.to_dict() != resumed["tokenizer"]:
+            ap.error("model or tokenizer differs from the resume checkpoint")
+        model.load_state_dict(resumed["model_state"])
     print(f"Model parameters: {model.num_params():,}", flush=True)
 
     # Mixed precision on CUDA: bf16 if the GPU supports it (no scaler needed),
@@ -179,9 +238,26 @@ def main():
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=cfg.learning_rate, weight_decay=cfg.weight_decay)
 
+    start = 0
+    if resumed is not None:
+        optimizer.load_state_dict(resumed["optimizer_state"])
+        scaler.load_state_dict(resumed["scaler_state"])
+        torch.set_rng_state(resumed["rng_state"])
+        if device.startswith("cuda"):
+            torch.cuda.set_rng_state_all(resumed["cuda_rng_state"])
+        if device.startswith("mps"):
+            if resumed.get("mps_rng_state") is None:
+                ap.error("checkpoint lacks MPS RNG state")
+            torch.mps.set_rng_state(resumed["mps_rng_state"])
+        start = resumed["completed_steps"]
+        if start > cfg.max_iters:
+            ap.error("max-iters is a total step count and cannot precede the resume step")
+
+    ckpt_path = os.path.join(cfg.out_dir, "ckpt.pt")
+
     print(f"Training for {cfg.max_iters} iters...", flush=True)
     t0 = time.time()
-    for it in range(cfg.max_iters + 1):
+    for it in range(start, cfg.max_iters):
         for g in optimizer.param_groups:
             g["lr"] = lr_for(it, cfg)
 
@@ -200,18 +276,14 @@ def main():
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
         scaler.step(optimizer)
         scaler.update()
+        if (it + 1) % checkpoint_interval == 0 and it + 1 < cfg.max_iters:
+            save_training_checkpoint(ckpt_path, model, model_cfg, tokenizer,
+                                     optimizer, scaler, cfg, it + 1, corpus_hash, device)
 
     os.makedirs(cfg.out_dir, exist_ok=True)
     ckpt_path = os.path.join(cfg.out_dir, "ckpt.pt")
-    raw_model = getattr(model, "_orig_mod", model)  # unwrap torch.compile
-    torch.save(
-        {
-            "model_state": raw_model.state_dict(),
-            "model_cfg": model_cfg.__dict__,
-            "tokenizer": tokenizer.to_dict(),
-        },
-        ckpt_path,
-    )
+    save_training_checkpoint(ckpt_path, model, model_cfg, tokenizer, optimizer,
+                             scaler, cfg, cfg.max_iters, corpus_hash, device)
     print(f"Saved checkpoint to {ckpt_path}", flush=True)
 
 

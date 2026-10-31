@@ -13,17 +13,22 @@ import json
 import logging
 import time
 import uuid
+import threading
 
 from safety import content_policy
 from serve.validation import ValidationError, validate_generate
 
 
 class InferenceService:
-    def __init__(self, engine, rate_limiter=None, safety=True, logger=None):
+    def __init__(self, engine, rate_limiter=None, safety=True, logger=None,
+                 max_concurrent=2):
+        if isinstance(max_concurrent, bool) or not isinstance(max_concurrent, int) or max_concurrent < 1:
+            raise ValueError("max_concurrent must be a positive integer")
         self.engine = engine
         self.rate_limiter = rate_limiter
         self.safety = safety
         self.log = logger or logging.getLogger("serve")
+        self._slots = threading.BoundedSemaphore(max_concurrent)
 
     def health(self):
         return {
@@ -67,6 +72,8 @@ class InferenceService:
                 caution = content_policy.caution_text(d)
 
         # 4. Generate.
+        if not self._slots.acquire(blocking=False):
+            return done(503, {"error": "overloaded", "detail": "generation capacity is busy; retry later"})
         try:
             result = self.engine.generate(
                 prompt=params["prompt"],
@@ -74,9 +81,13 @@ class InferenceService:
                 temperature=params["temperature"],
                 top_k=params["top_k"],
                 seed=params["seed"])
+        except ValidationError as e:
+            return done(400, {"error": "invalid_request", "detail": str(e)})
         except Exception as e:  # keep internals off the wire
             self.log.exception("generation failed rid=%s", rid)
             return done(500, {"error": "generation_failed"})
+        finally:
+            self._slots.release()
 
         # 5. Use-safety on the output.
         if self.safety:

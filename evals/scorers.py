@@ -1,28 +1,22 @@
-"""
-Scorers for free-generation and code tasks.
+"""Text scorers and an explicit TRUSTED-code test runner.
 
-Text scorers are simple and transparent (exact / contains / regex). The code
-scorer runs the model's output against unit tests in a SEPARATE subprocess —
-never imported or exec'd in this process — with a throwaway working directory, a
-wall-clock timeout, CPU/memory/file-size rlimits, a scrubbed environment, and a
-best-effort network namespace when the host supports it.
+Untrusted generated code is refused by this legacy unittest runner. The JSON
+function evaluator in evals.code_executor provides independent comparisons with
+mandatory isolation. A unittest runner sharing a
+Python interpreter with a solution cannot attest its own integrity: the solution
+can inspect runner globals, monkeypatch unittest, or alter the tests. A separate
+sandboxed execution service with an independent verdict is required for arbitrary
+unittest tasks, which this helper does not support.
 
-Honest isolation scope: this is resource-limited, not a security sandbox. The
-subprocess still runs with the evaluator's OS user, so generated code can READ
-files the user can read. Run this only on model output you are willing to
-execute, in a disposable environment (local dev / throwaway CI). Strong
-isolation (no host filesystem, no escalation) requires an OS sandbox
-(a container, bubblewrap, etc.) and is out of scope for this stdlib harness.
-
-Scoring integrity: a pass requires BOTH a clean exit AND a per-run random
-sentinel that is printed only after the tests actually run and all succeed — so
-generated code cannot score a pass by exiting 0 early (e.g. os._exit(0) at
-import) before the assertions execute.
+`trusted=True` is only for reviewed fixtures or code the caller already trusts
+to execute as its OS user. It is never enabled by model output or task JSON.
+Bubblewrap is used when available as defense in depth, not as proof of scoring
+integrity. Timeout cleanup kills the process group and always closes pipes.
 """
 
 import os
 import re
-import secrets
+import signal
 import shutil
 import subprocess
 import sys
@@ -118,11 +112,8 @@ def _net_isolation_prefix():
     return []
 
 
-# Runner executed in the child. The sentinel is read from an inherited pipe fd
-# (SENT_FD) BEFORE any untrusted code is imported, and written back on SENT_FD's
-# partner (RES_FD) only after every test actually ran and passed. The sentinel
-# never appears in argv or the environment, so generated code can't read it there
-# and forge a pass (and an early os._exit(0) never reaches the write).
+# Completion marker for reviewed fixtures only. This runner and the solution
+# share an interpreter, so the marker cannot attest adversarial test execution.
 _RUNNER = (
     "import os, sys, unittest\n"
     "sent = os.read(int(os.environ['SENT_FD']), 128)\n"
@@ -137,15 +128,12 @@ _RUNNER = (
 )
 
 
-def run_python_unittest(solution_code, test_code, timeout=10):
-    """Write `solution_code` as solution.py and `test_code` as a test that
-    imports it, then run the tests in a separate, resource-limited subprocess
-    (bubblewrap-isolated when available, else a best-effort network namespace).
-    Returns (passed: bool, detail: str). A pass requires a clean exit AND an
-    unforgeable per-run sentinel delivered over a pipe, so neither an early
-    os._exit(0) nor reading argv/env can fake success. See the module docstring
-    for the (honest, limited) isolation scope.
-    """
+def run_python_unittest(solution_code, test_code, timeout=10, *, trusted=False):
+    """Run reviewed code only; untrusted code requires an independent evaluator."""
+    if trusted is not True:
+        return False, "execution_disabled: untrusted code requires an independent evaluator"
+    if os.name != "posix":
+        return False, "execution_disabled: POSIX process isolation is required"
     code = extract_code(solution_code)
     sentinel = os.urandom(24)
     with tempfile.TemporaryDirectory(prefix="llm_eval_") as d:
@@ -167,31 +155,45 @@ def run_python_unittest(solution_code, test_code, timeout=10):
                "SENT_FD": str(sent_r), "RES_FD": str(res_w)}
         prefix = _bwrap_prefix(d) or _net_isolation_prefix()
         argv = prefix + [sys.executable, "-s", "-E", "_runner.py"]
+        received = b""
         try:
-            proc = subprocess.run(
-                argv, cwd=d, env=env, capture_output=True, text=True,
-                timeout=timeout, pass_fds=(sent_r, res_w),
-                preexec_fn=_limit_resources if resource else None)
-        except subprocess.TimeoutExpired:
-            return False, "timeout"
-        except Exception as e:                 # pragma: no cover - defensive
+            # Files keep captured output out of parent memory; the child file-size
+            # rlimit bounds each stream. Read just the diagnostic tail afterwards.
+            with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+                proc = subprocess.Popen(
+                    argv, cwd=d, env=env, stdout=stdout, stderr=stderr,
+                    start_new_session=True, pass_fds=(sent_r, res_w),
+                    preexec_fn=_limit_resources if resource else None)
+                try:
+                    proc.wait(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    return False, "timeout"
+                finally:
+                    # Includes descendants that outlive a normally exiting parent.
+                    try:
+                        os.killpg(proc.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    proc.wait()
+                os.set_blocking(res_r, False)
+                try:
+                    received = os.read(res_r, 128)
+                except BlockingIOError:
+                    received = b""
+                for stream in (stdout, stderr):
+                    stream.seek(0, os.SEEK_END)
+                    stream.seek(max(0, stream.tell() - 8192))
+                out = stdout.read().decode("utf-8", errors="replace")
+                err = stderr.read().decode("utf-8", errors="replace")
+        except Exception as e:
             return False, f"runner error: {e}"
         finally:
-            for fd in (sent_r, res_w):
-                try:
-                    os.close(fd)
-                except OSError:
-                    pass
-        try:
-            received = os.read(res_r, 128)
-        except OSError:                         # pragma: no cover - defensive
-            received = b""
-        finally:
-            os.close(res_r)
-        # Integrity gate: a clean exit is NOT enough — only the sentinel coming
-        # back proves the tests actually ran to completion and all passed.
+            for fd in (sent_r, res_w, res_r):
+                os.close(fd)
+        # This completion marker catches accidents in trusted fixtures only;
+        # it is deliberately NOT described as an unforgeable security boundary.
         ok = proc.returncode == 0 and received == sentinel
-        detail = (proc.stderr or proc.stdout or "").strip().splitlines()
+        detail = (err or out or "").strip().splitlines()
         if proc.returncode == 0 and not ok:
             return False, "exited 0 without completing tests (no sentinel)"
         return ok, (detail[-1] if detail else ("ok" if ok else "failed"))

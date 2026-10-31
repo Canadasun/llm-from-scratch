@@ -11,6 +11,7 @@ import torch
 
 import tokenization
 from model import GPT, GPTConfig
+from serve.validation import ValidationError
 
 DEFAULT_CKPT = os.path.join(os.path.dirname(os.path.dirname(__file__)), "checkpoints", "ckpt.pt")
 
@@ -85,6 +86,9 @@ class InferenceEngine:
             gen = torch.Generator(device=self.device)
             gen.manual_seed(seed)
         ids = self._encode_prompt(prompt)
+        if len(ids) > self.block_size:
+            raise ValidationError(
+                f"prompt has {len(ids)} tokens; model context limit is {self.block_size}")
         idx = torch.tensor([ids], dtype=torch.long, device=self.device)
         out = self.model.generate(
             idx, max_new_tokens, temperature=temperature, top_k=top_k,

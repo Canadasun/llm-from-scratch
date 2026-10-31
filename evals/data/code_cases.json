@@ -1,0 +1,553 @@
+{
+  "schema": "function-json-v1",
+  "tasks": {
+    "code-add": {
+      "task_sha256": "546f49ab20738fd1dde1dd6825b20282561f67b4a470864750afe43361c72829",
+      "function": "add",
+      "cases": [
+        {
+          "args": [
+            2,
+            3
+          ],
+          "expected": 5
+        },
+        {
+          "args": [
+            -1,
+            1
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            0,
+            0
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            123,
+            -5
+          ],
+          "expected": 118
+        }
+      ]
+    },
+    "code-max": {
+      "task_sha256": "cd2d3015364e117cc5abe3072596ceb6931c5374fb461169be378989905ac228",
+      "function": "maximum",
+      "cases": [
+        {
+          "args": [
+            [
+              1,
+              5,
+              3
+            ]
+          ],
+          "expected": 5
+        },
+        {
+          "args": [
+            [
+              -2,
+              -9
+            ]
+          ],
+          "expected": -2
+        },
+        {
+          "args": [
+            [
+              7
+            ]
+          ],
+          "expected": 7
+        }
+      ]
+    },
+    "code-rev": {
+      "task_sha256": "798767e50048b93962cf3d147a385a3debb4006142e4696c684b92034ede0af3",
+      "function": "reverse_string",
+      "cases": [
+        {
+          "args": [
+            "abc"
+          ],
+          "expected": "cba"
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": ""
+        },
+        {
+          "args": [
+            "a"
+          ],
+          "expected": "a"
+        },
+        {
+          "args": [
+            "a b"
+          ],
+          "expected": "b a"
+        }
+      ]
+    },
+    "code-even": {
+      "task_sha256": "eca021d424f26d28bab2ec82851ac23bcf942c57c476dfac856477ce1194dfeb",
+      "function": "is_even",
+      "cases": [
+        {
+          "args": [
+            4
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            7
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            0
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            -2
+          ],
+          "expected": true
+        }
+      ]
+    },
+    "code-count": {
+      "task_sha256": "f633f97aece093d16dafe5edc849b3e2f90d694381f5bad215a3b609a7164988",
+      "function": "count_vowels",
+      "cases": [
+        {
+          "args": [
+            "hello"
+          ],
+          "expected": 2
+        },
+        {
+          "args": [
+            "xyz"
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            "aeiou"
+          ],
+          "expected": 5
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": 0
+        }
+      ]
+    },
+    "code-fib": {
+      "task_sha256": "0fdf44f414b342eb3fa628651ff12a7e6ee30795bdcc2279ff4559ace6b0f53f",
+      "function": "fib",
+      "cases": [
+        {
+          "args": [
+            0
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            1
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            7
+          ],
+          "expected": 13
+        },
+        {
+          "args": [
+            10
+          ],
+          "expected": 55
+        }
+      ]
+    },
+    "code-palin": {
+      "task_sha256": "2712a543467300dee2781ce04f1e481ac4b2ba2d16bb00e146502d2fa23f7728",
+      "function": "is_palindrome",
+      "cases": [
+        {
+          "args": [
+            "racecar"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "hello"
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "ab"
+          ],
+          "expected": false
+        }
+      ]
+    },
+    "code-sum": {
+      "task_sha256": "761b14e50038e4ce9bfa74f7260bd8a370e9ae96bc1da1b7dbae25684ab7b8c9",
+      "function": "list_sum",
+      "cases": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              3
+            ]
+          ],
+          "expected": 6
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            [
+              -2,
+              3,
+              -1
+            ]
+          ],
+          "expected": 0
+        }
+      ]
+    },
+    "code2-even": {
+      "task_sha256": "3cd2823080675122d5edce84eb12efdc38375803863458ab7e5f39116e34125d",
+      "function": "is_even",
+      "cases": [
+        {
+          "args": [
+            4
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            7
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            0
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            -3
+          ],
+          "expected": false
+        }
+      ]
+    },
+    "code2-reverse": {
+      "task_sha256": "e1a8585e2d140b16486550413d7453dcf630461b2b83ee2161a170a37dbdf8c1",
+      "function": "reverse_string",
+      "cases": [
+        {
+          "args": [
+            "abc"
+          ],
+          "expected": "cba"
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": ""
+        },
+        {
+          "args": [
+            "ab cd"
+          ],
+          "expected": "dc ba"
+        }
+      ]
+    },
+    "code2-vowels": {
+      "task_sha256": "3b9170881e10dd36fea234a77367503f32244f1c46b1e697c8b5625334c532b1",
+      "function": "count_vowels",
+      "cases": [
+        {
+          "args": [
+            "hello"
+          ],
+          "expected": 2
+        },
+        {
+          "args": [
+            "XYZ"
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            "AeI"
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": 0
+        }
+      ]
+    },
+    "code2-factorial": {
+      "task_sha256": "a936091d26dac6c69f985fb19f4f93403d38d55e4e9e010dd1139ec1c9e2680e",
+      "function": "factorial",
+      "cases": [
+        {
+          "args": [
+            0
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            1
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            5
+          ],
+          "expected": 120
+        },
+        {
+          "args": [
+            7
+          ],
+          "expected": 5040
+        }
+      ]
+    },
+    "code2-palindrome": {
+      "task_sha256": "e04c66bcb03736c1493bb455885ff937b944bd5f61eaa6f3161cd6b1be8cc71f",
+      "function": "is_palindrome",
+      "cases": [
+        {
+          "args": [
+            "level"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "python"
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": true
+        }
+      ]
+    },
+    "code2-gcd": {
+      "task_sha256": "9fd0289746d8c9086681961348a7a98bcb780384e59b25c237b2b41357f3aa71",
+      "function": "gcd",
+      "cases": [
+        {
+          "args": [
+            12,
+            8
+          ],
+          "expected": 4
+        },
+        {
+          "args": [
+            17,
+            5
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            42,
+            42
+          ],
+          "expected": 42
+        },
+        {
+          "args": [
+            270,
+            192
+          ],
+          "expected": 6
+        }
+      ]
+    },
+    "code2-sumlist": {
+      "task_sha256": "c5bf3a3580563931e6b12f277c51bed13ab070f9fa8760984d0204b2091aa2fc",
+      "function": "sum_list",
+      "cases": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              3
+            ]
+          ],
+          "expected": 6
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            [
+              -1,
+              3
+            ]
+          ],
+          "expected": 2
+        }
+      ]
+    },
+    "code2-c2f": {
+      "task_sha256": "d6e9e6c22afd335843495eb16a1f92d87f87faaecdc96adbba13127167f73c32",
+      "function": "c_to_f",
+      "cases": [
+        {
+          "args": [
+            0
+          ],
+          "expected": 32
+        },
+        {
+          "args": [
+            100
+          ],
+          "expected": 212
+        },
+        {
+          "args": [
+            -40
+          ],
+          "expected": -40
+        }
+      ]
+    },
+    "code2-unique": {
+      "task_sha256": "5829b4520b1434d88072d5593ae08705391299f28555e85b36d19ed8e0bf3597",
+      "function": "unique",
+      "cases": [
+        {
+          "args": [
+            [
+              1,
+              1,
+              2,
+              3,
+              3,
+              2
+            ]
+          ],
+          "expected": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              "b",
+              "a",
+              "b"
+            ]
+          ],
+          "expected": [
+            "b",
+            "a"
+          ]
+        }
+      ]
+    },
+    "code2-fizz": {
+      "task_sha256": "60452bb9e887909de7e8618bb9b5fdc3515e2948243983fef5cda5571176e01e",
+      "function": "fizz",
+      "cases": [
+        {
+          "args": [
+            3
+          ],
+          "expected": "Fizz"
+        },
+        {
+          "args": [
+            4
+          ],
+          "expected": "4"
+        },
+        {
+          "args": [
+            0
+          ],
+          "expected": "Fizz"
+        },
+        {
+          "args": [
+            9
+          ],
+          "expected": "Fizz"
+        }
+      ]
+    }
+  }
+}
