@@ -105,6 +105,29 @@ coincidence) — verified on the first-party packages, which scan clean.
     fix: Avoid eval/exec on dynamic input; use ast.literal_eval or a dispatch table.
 ```
 
+## Assembling a PR for human review (`--prepare-pr` / `--open-pr`)
+
+The last step turns findings + verified fixes into a reviewable pull request.
+Two authority levels are kept separate on purpose:
+
+```bash
+# build the PR artifact — evidence body + combined patch. NO git, NO network.
+python -m codereview . --prepare-pr --test-cmd "python -m pytest -q"
+#   -> writes CODEREVIEW_PR.md (the evidence report) and codereview_fixes.patch
+
+# EXPLICIT opt-in: create a branch and commit the VERIFIED fixes (refuses on a
+# dirty tree or unverified fixes). Local only unless you add --push.
+python -m codereview . --open-pr --test-cmd "python -m pytest -q"
+python -m codereview . --open-pr --push --test-cmd "python -m pytest -q"   # + gh pr create
+```
+
+`prepare_pr()` has **no side effects**. The git/gh operations live behind
+`--open-pr`, which **only ever commits `verified` fixes**, refuses a dirty working
+tree, and never auto-merges. The PR body carries the verification evidence (tests
+before/after, findings resolved), the applied-fix table **with caveats**, the
+combined diff, all findings (including the manual-only ones), and the limitations
+— so a human reviews a complete, honest artifact.
+
 ## Where this sits in the plan & what's next
 
 This is **Stage 2** of the endorsed staged plan (Stage 1 = prove the model learns,
@@ -115,9 +138,16 @@ done). Increments:
 2. ✅ **Verify fixes against the project's tests** — copy the repo, run the test
    command before/after applying the reviewed fixes in a bounded sandbox, and
    confirm findings are resolved with no test regression (`--verify-fixes`).
-3. **Evidence-backed report + PR** — open a pull request for human review (P6).
+3. ✅ **Evidence-backed report + PR** — assemble findings + verified fixes + test
+   evidence into a PR artifact (`--prepare-pr`, no side effects); open the PR
+   behind an explicit, guarded opt-in that only commits verified fixes
+   (`--open-pr`). Never auto-merged; authorization is a human decision.
 4. Extend language/rule coverage; add FP/FN *rate* tracking across a larger
    labelled corpus.
+
+With increments 1–3 done, the secure-code-review workflow is complete end to end:
+**read → find (measured FP/FN) → propose (verified diffs) → verify (tests) → PR
+(human review).**
 
 Stage 3 (enterprise security: identities, repo permissions, tenant isolation,
 audited tool execution) and Stage 4 (authorized pilot) follow. See the project's

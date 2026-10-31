@@ -34,7 +34,18 @@ def main(argv=None):
     ap.add_argument("--test-cmd", default=None,
                     help="test command for --verify-fixes, e.g. 'python -m pytest -q'")
     ap.add_argument("--timeout", type=int, default=180,
-                    help="per-run timeout (seconds) for --verify-fixes")
+                    help="per-run timeout (seconds) for --verify-fixes/--prepare-pr")
+    ap.add_argument("--prepare-pr", action="store_true",
+                    help="build a PR artifact (title, evidence body, combined patch) "
+                         "from VERIFIED fixes — writes files, NO git/network")
+    ap.add_argument("--open-pr", action="store_true",
+                    help="EXPLICIT: create a branch, commit the verified fixes "
+                         "(refuses if tree is dirty or fixes unverified). Add --push "
+                         "to also push and open a PR via gh.")
+    ap.add_argument("--push", action="store_true",
+                    help="with --open-pr: push the branch and run gh pr create")
+    ap.add_argument("--out-dir", default=".",
+                    help="where --prepare-pr writes its artifact files")
     args = ap.parse_args(argv)
 
     scan = scan_path(args.path)
@@ -73,6 +84,41 @@ def main(argv=None):
               f"{args.path} (before and after applying fixes).")
         result = verify_fixes(args.path, args.test_cmd, timeout=args.timeout)
         print(format_verification(result))
+
+    if args.prepare_pr or args.open_pr:
+        if not args.test_cmd:
+            print("\nerror: --prepare-pr/--open-pr require --test-cmd "
+                  "(e.g. --test-cmd 'python -m pytest -q')", file=sys.stderr)
+            return 2
+        from codereview.pr import (apply_fixes_to_branch, prepare_pr,
+                                    push_and_create_pr, write_artifact)
+        print(f"\n[!] Preparing PR: this EXECUTES {args.test_cmd!r} on a copy to "
+              f"verify fixes (before/after).")
+        artifact = prepare_pr(args.path, args.test_cmd, timeout=args.timeout)
+        print(f"\nVerdict: {artifact.verdict} — {artifact.note}")
+        print(f"Branch:  {artifact.branch}")
+        print(f"Title:   {artifact.title}")
+        print(f"Files:   {', '.join(artifact.files_changed) or '(none)'}")
+
+        if args.prepare_pr:
+            body_path, patch_path = write_artifact(artifact, args.out_dir)
+            print(f"\nWrote PR body -> {body_path}\nWrote patch    -> {patch_path}")
+            print("No git actions taken. Review, then run with --open-pr to branch.")
+
+        if args.open_pr:
+            if not artifact.verified:
+                print(f"\nRefusing --open-pr: fixes are not verified "
+                      f"(verdict={artifact.verdict}).", file=sys.stderr)
+                return 1
+            base, branch = apply_fixes_to_branch(args.path, artifact)
+            print(f"\nCommitted verified fixes on branch '{branch}' (from '{base}').")
+            if args.push:
+                url = push_and_create_pr(args.path, branch, artifact.title,
+                                         artifact.body)
+                print(f"Opened PR: {url}")
+            else:
+                print("Branch is local only. Push it and open a PR when ready "
+                      "(or re-run with --push).")
 
     if args.fail_on != "none":
         threshold = SEVERITY_ORDER[args.fail_on]

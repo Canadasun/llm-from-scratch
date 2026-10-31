@@ -173,10 +173,12 @@ teams can trust, in staged, evidence-backed steps.
   **measured FP/FN** (every rule has vulnerable + safe ground-truth fixtures;
   zero false positives on first-party code). `python -m codereview <path>`; runs
   in CI against its own source, proposes safe fixes as human-review diffs
-  (`--fix`, never auto-applied), and verifies them against the project's own tests
-  on a copy in a bounded sandbox (`--verify-fixes`: findings resolved + no test
-  regression). See [`docs/CODE_REVIEW.md`](docs/CODE_REVIEW.md). Next: assemble
-  the evidence and open a PR for human review.
+  (`--fix`), verifies them against the project's own tests on a copy in a bounded
+  sandbox (`--verify-fixes`), and assembles the evidence into a PR for human
+  review (`--prepare-pr` has no side effects; `--open-pr` is an explicit, guarded
+  opt-in that only commits verified fixes, never auto-merges). The workflow is
+  complete end to end: **read → find → propose → verify → PR.** See
+  [`docs/CODE_REVIEW.md`](docs/CODE_REVIEW.md).
 - [ ] Stage 3 — enterprise security (identities, repo permissions, tenant
   isolation, audited tool execution, controlled deploy).
 - [ ] Stage 4 — authorized pilot measuring reliability, security, latency, cost.
