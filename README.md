@@ -145,7 +145,12 @@ is used for training.
 - [x] Milestone 3 (in progress) — evaluation harness (`evals/`): held-out
   perplexity vs a random baseline, likelihood-scored multiple-choice, generation
   and sandboxed code tasks. Next: scale params/data and grow the task suite.
-- [ ] Milestone 4 — inference endpoint
+- [x] Milestone 4 (in progress) — inference endpoint (`serve/`): a
+  framework-agnostic, unit-tested service core (validation + per-client rate
+  limiting + use-safety on prompt **and** output + secure checkpoint load) behind
+  a dependency-free HTTP adapter. `python -m serve`; see
+  [`docs/SERVING.md`](docs/SERVING.md). Next: auth, a production ASGI worker, and
+  a shared rate-limit store.
 
 ## License
 
