@@ -96,11 +96,14 @@ the architecture or tokenizer — produced the skill.
   signal from a small model. Compared against the **random-guess baseline**.
 - **Generation** (`generation.jsonl`): the model generates a continuation, matched
   by exact / substring / regex.
-- **Code** (`code_python.jsonl`): the model's output is written to `solution.py`
-  and run against unit tests **in a sandboxed subprocess** — throwaway working
-  directory, a minimal environment (no parent-process secrets), CPU/memory/
-  file-size rlimits, and a wall-clock timeout. Generated code is untrusted input
-  and is never imported or exec'd in-process.
+- **Code** (`code_python.jsonl`): checked by an **independent evaluator**.
+  Untrusted generated code is **refused by default** — a runner that shares an
+  interpreter with the solution cannot offer independent proof that the tests
+  passed (its completion marker is forgeable), so an unexecuted code task scores
+  as a measured **failure**, not a pass. Only reviewed fixtures may opt in
+  (`run_python_unittest(..., trusted=True)`); task JSON and model output cannot
+  enable execution. A genuinely fail-closed sandboxed verdict service is tracked
+  as the P0 item in [`AUDIT_FOLLOWUP.md`](AUDIT_FOLLOWUP.md).
 
 ## Honesty rules baked in
 - Sample sizes are always shown (`acc (correct/n)`).
@@ -136,8 +139,15 @@ suite — the fluent RFC-looking samples could fool you; these numbers don't. Th
 is the line Milestone 3 (more and broader data, a bigger model, longer training,
 later RAG + tools) must move.
 
-## Second measurement — Milestone 3 (2026-10-30)
+## Second measurement — Milestone 3 (2026-10-30, original 91-task suite)
 *(ckpt: ~31.8M params, BPE vocab 2048, block 512, 6000 iters, ~19.2 MB RFC+NIST corpus)*
+
+> **Historical snapshot.** The numbers below are the original 2026-10-30
+> measurement on the **91-task** suite with the former scorer. The current,
+> authoritative figures are the **170-task** remeasurement at the top of this
+> file (base M3: **51/170 = 30.0%** overall, **37.5%** MC-only). The suite and
+> scoring changed, so these two aggregates are **not directly comparable** — this
+> section is kept for the honest M2→M3 record, not as the current baseline.
 
 Held-out intrinsic (trained vs a random-init twin of the same shape):
 
@@ -208,15 +218,15 @@ network, or checkpoint needed, so it is fast and reliable. If the eval machinery
 breaks, the build goes red.
 
 **2. Model regression (`eval-regression.yml`)** — runs the suite on a trained
-checkpoint and **fails if it regresses** below a recorded baseline
-(`evals/baselines/m2.json`). Run it locally too:
+checkpoint and **fails if it regresses** below the recorded baseline
+(`evals/baselines/m3.json`, the current M3 floor). It downloads an HTTPS
+checkpoint and verifies its SHA-256, and rejects partial, reordered, or
+provenance-mismatched evidence. Run it locally too:
 
 ```bash
-# run the suite on a checkpoint and gate it against the baseline
-python -m evals.regression --ckpt checkpoints/ckpt.pt --baseline evals/baselines/m2.json
-# or compare an already-produced results file
-python -m evals.run --json out.json
-python -m evals.regression --results out.json --baseline evals/baselines/m2.json
+# run the suite, then review/gate it against the baseline (offline, no backend)
+python -m evals.run --threads 2 --task-timeout 120 --json out.json
+python -m evals.review --results out.json --baseline evals/baselines/m3.json
 ```
 
 Exit code is **1 on regression**, 0 otherwise. This does *not* assert the model
@@ -224,14 +234,17 @@ is good — it only catches a change that quietly makes it **worse** (a tokenize
 bug, a broken checkpoint, a scoring change).
 
 **What is gated, and why only some metrics.** A baseline's `enforce` list names
-the metrics that actually fail the build. The M2 baseline enforces only
-**bits-per-byte** and **overall task accuracy**, because those are
-**tokenizer-independent** and so compare fairly across models with different
-vocabularies (M2 vocab 1024 vs M3 vocab 2048). **Perplexity** and **next-token
-top-k** are per-token and therefore tokenizer-dependent — they are recorded for
-reference but not gated across a vocab change. Default tolerances: bits/byte may
-worsen by ≤ 0.15 absolute; task accuracy may drop by ≤ 0.05 absolute (overridable
-per baseline).
+the metrics that fail the build. The M3 baseline enforces **bits-per-byte** and
+**overall task accuracy** — both **tokenizer-independent**, so they compare
+fairly across models with different vocabularies (M2 vocab 1024 vs M3 vocab 2048)
+— plus a **per-category accuracy floor** for each enforced category, so a gain in
+one area cannot mask a decline in another (this is what blocked the instruction
+candidate: overall rose but `reasoning` regressed). **Perplexity** and **next-token
+top-k** are per-token and therefore tokenizer-dependent — recorded for reference,
+not gated across a vocab change. Default tolerances: bits/byte may worsen by
+≤ 0.15 absolute; overall and per-category accuracy may drop by ≤ 0.05 absolute
+(overridable per baseline). Evidence must also match on suite/held-out/scoring/
+evaluator provenance, and be a complete, non-timed-out run.
 
 When a new milestone's numbers are measured and accepted, add a new baseline file
 (e.g. `evals/baselines/m3.json`) and point the workflow at it.
