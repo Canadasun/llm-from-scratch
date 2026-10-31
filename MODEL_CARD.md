@@ -1,5 +1,13 @@
 # Model Card — llm-from-scratch
 
+**Latest remeasurement (2026-10-31):** the existing M3 checkpoint scored 51/170
+overall (30.0%), 51/136 multiple-choice (37.5%), 0/18 independently sandboxed code
+tasks, 0/16 generation tasks, and 1/12 new secure-development scenarios. Bits per
+byte is 1.78003. No weights were changed. Historical results below use earlier
+suites and are not directly comparable. See the
+[measured review](docs/evaluations/m3-2026-10-31.md) and
+[evaluation workflow](docs/EVALUATION.md) for reproducible evidence and limits.
+
 A small, decoder-only GPT language model **written and trained from scratch** for
 the **software-development and cybersecurity** domains. Every component — the
 byte-pair tokenizer, the attention, the transformer blocks, the training loop and

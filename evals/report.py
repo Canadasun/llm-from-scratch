@@ -7,6 +7,18 @@ success), a few concrete failure examples, and an explicit limitations note.
 """
 
 from collections import defaultdict
+import math
+
+
+def _metrics(correct, n):
+    if not n:
+        return {"n": 0, "correct": 0, "acc": 0.0, "wilson_95": None}
+    p, z = correct / n, 1.959963984540054
+    denominator = 1 + z * z / n
+    center = (p + z * z / (2 * n)) / denominator
+    margin = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denominator
+    return {"n": n, "correct": correct, "acc": p,
+            "wilson_95": [max(0.0, center - margin), min(1.0, center + margin)]}
 
 
 def _mc_chance(results):
@@ -18,17 +30,21 @@ def _mc_chance(results):
 
 def summarize(results):
     by_cat = defaultdict(lambda: {"n": 0, "correct": 0})
+    by_type = defaultdict(lambda: {"n": 0, "correct": 0})
     for r in results:
         c = by_cat[r["category"]]
         c["n"] += 1
         c["correct"] += int(r["correct"])
+        t = by_type[r["type"]]
+        t["n"] += 1
+        t["correct"] += int(r["correct"])
     total_n = sum(c["n"] for c in by_cat.values())
     total_correct = sum(c["correct"] for c in by_cat.values())
     return {
-        "by_category": {k: {**v, "acc": v["correct"] / v["n"]}
+        "by_category": {k: _metrics(v["correct"], v["n"])
                         for k, v in sorted(by_cat.items())},
-        "overall": {"n": total_n, "correct": total_correct,
-                    "acc": (total_correct / total_n) if total_n else 0.0},
+        "by_type": {k: _metrics(v["correct"], v["n"]) for k, v in sorted(by_type.items())},
+        "overall": _metrics(total_correct, total_n),
         "mc_random_baseline": _mc_chance(results),
     }
 
@@ -65,6 +81,9 @@ def format_report(summary, results, intrinsic=None, max_failures=5):
     lines.append(f"  {'-'*28} {'-'*5}")
     lines.append(f"  {'OVERALL':<28} {o['acc']*100:5.1f}%   ({o['correct']}/{o['n']})")
     if summary["mc_random_baseline"] is not None:
+        mc = summary.get("by_type", {}).get("multiple_choice")
+        if mc:
+            lines.append(f"  MC-only accuracy: {mc['acc']*100:.1f}% ({mc['correct']}/{mc['n']})")
         lines.append(f"  (random-guess baseline on the MC tasks ≈ "
                      f"{summary['mc_random_baseline']*100:.1f}%)")
 
@@ -75,7 +94,7 @@ def format_report(summary, results, intrinsic=None, max_failures=5):
             lines.append(f"  [{r['category']}/{r['id']}] {r['type']}: {r.get('detail','')}")
 
     lines.append("\nLimitations:")
-    lines.append("  - This is a ~10M-param base model, not instruction-tuned; it is")
+    lines.append("  - This is a base model, not instruction-tuned; it is")
     lines.append("    scored on likelihood (MC) and raw generation, not chat ability.")
     lines.append("  - A small, hand-authored starter suite: treat numbers as a")
     lines.append("    baseline to improve against, not a readiness claim.")

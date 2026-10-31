@@ -57,9 +57,25 @@ jobs:
           curl --proto '=https' --proto-redir '=https' --max-time 300 -fSL -- "$CHECKPOINT_URL" -o checkpoints/ckpt.pt
           printf '%s  checkpoints/ckpt.pt\n' "$CHECKPOINT_SHA256" | sha256sum --check --status
 
-      - name: Run candidate regression gate
+      - name: Measure candidate checkpoint
         run: |
-          python -m evals.regression \
+          python -m evals.run \
             --ckpt checkpoints/ckpt.pt \
-            --baseline evals/baselines/m3.json \
-            --device cpu
+            --device cpu --threads 2 --task-timeout 120 \
+            --json evals/results-candidate.json
+
+      - name: Review candidate and enforce regression floor
+        run: |
+          python -m evals.review --results evals/results-candidate.json \
+            --baseline evals/baselines/m3.json --markdown evals/review-candidate.md
+
+      - name: Preserve evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-evaluation
+          path: |
+            evals/results-candidate.json
+            evals/review-candidate.md
+          if-no-files-found: warn
+          retention-days: 14

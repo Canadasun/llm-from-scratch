@@ -62,6 +62,24 @@ def check(candidate, baseline, tolerances=None):
     cand_i, base_i = _intrinsic(candidate), _intrinsic(baseline)
     checks = []
 
+    base_meta, cand_meta = baseline.get("meta", {}), candidate.get("meta", {})
+    for field in ("suite_sha256", "heldout_sha256", "scoring_version", "code_evaluator"):
+        if base_meta.get(field) is not None:
+            same = cand_meta.get(field) == base_meta[field]
+            checks.append({"metric": field, "baseline": 1, "candidate": int(same),
+                           "limit": 1, "direction": "higher_better", "ok": same,
+                           "skipped": False, "note": "evaluation provenance must match"})
+    if base_meta.get("complete") is True:
+        complete = cand_meta.get("complete") is True
+        base_n = baseline.get("summary", {}).get("overall", {}).get("n")
+        cand_n = candidate.get("summary", {}).get("overall", {}).get("n")
+        complete = complete and base_n == cand_n and len(candidate.get("results", [])) == base_n
+        if "task_ids" in base_meta:
+            complete = complete and [r.get("id") for r in candidate.get("results", [])] == base_meta["task_ids"]
+        checks.append({"metric": "complete_suite", "baseline": 1, "candidate": int(complete),
+                       "limit": 1, "direction": "higher_better", "ok": complete,
+                       "skipped": False, "note": "full suite required; smoke runs cannot pass"})
+
     def record(metric, base_v, cand_v, limit, direction, ok, note=""):
         enforced = enforce is None or metric in enforce
         # A metric the baseline GATES ON that is present in the baseline but
@@ -107,6 +125,18 @@ def check(candidate, baseline, tolerances=None):
             continue
         limit = bv - tol[tkey]
         record(metric, bv, cv, limit, "higher_better", cv >= limit)
+
+    # Overall accuracy must not hide a security/coding decline behind gains in
+    # another category. Category floors are opt-in for historical baselines.
+    for category in baseline.get("enforce_categories", []):
+        base_category = baseline.get("summary", {}).get("by_category", {}).get(category, {})
+        candidate_category = candidate.get("summary", {}).get("by_category", {}).get(category, {})
+        bv, cv = base_category.get("acc"), candidate_category.get("acc")
+        limit = bv - tol.get("category_acc_abs_max_drop", .05) if bv is not None else None
+        passed = bv is not None and cv is not None and cv >= limit
+        checks.append({"metric": f"category:{category}", "baseline": bv, "candidate": cv,
+                       "limit": limit, "direction": "higher_better", "ok": passed,
+                       "skipped": False, "note": "category regression floor"})
 
     code_results = [r for r in candidate.get("results", []) if r.get("type") == "code"]
     if code_results:

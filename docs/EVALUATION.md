@@ -1,5 +1,56 @@
 # Evaluation suite
 
+## Measured baseline and developer workflow (2026-10-31)
+
+The current M3 baseline was remeasured over **170 tasks**, including 12 new
+scenario-based secure-development judgments and all 18 code tasks evaluated by
+the independent sandboxed controller. Results: **51/170 overall (30.0%)**, **51/136
+MC (37.5%)**, **0/18 code**, **0/16 generation**, and **1/12 secure-development
+scenarios**. Intrinsic bits/byte remains **1.78003**. These results show substantial
+capability gaps; they are not an enterprise-readiness claim or a model improvement.
+The suite changed, so older aggregate percentages are not directly comparable.
+
+Raw measured evidence and failure triage are in
+[`evaluations/m3-2026-10-31.json`](evaluations/m3-2026-10-31.json) and
+[`evaluations/m3-2026-10-31.md`](evaluations/m3-2026-10-31.md).
+
+```bash
+# Full measurement (Linux bubblewrap/libseccomp required for code tasks)
+python -m evals.run --threads 2 --task-timeout 120 --json evals/results-local.json
+# Offline review and regression comparison; no model or backend needed
+python -m evals.review --results evals/results-local.json \
+  --baseline evals/baselines/m3.json --markdown evals/review-local.md
+# Focus the failure table on one category
+python -m evals.review --results evals/results-local.json --category secure_development
+# Explicitly propose a baseline at a NEW path; existing baselines are never overwritten
+python -m evals.review --results evals/results-local.json \
+  --write-baseline evals/baselines/proposed.json --name proposed-baseline
+```
+
+Baseline recording requires a complete all-suite run, measured intrinsic metrics,
+no task timeouts, and available independent code evaluation. A failed code task
+is a valid measured outcome; missing execution infrastructure is not. Baseline
+promotion remains an explicit review decision, never an automatic response to
+a regression.
+
+Evidence records checkpoint/suite/held-out hashes, scoring/evaluator versions,
+seed, configuration, timestamp and PyTorch version. The regression gate rejects
+partial, reordered, missing, or incompatible task evidence. Candidate checkpoints
+may change; comparison data and scoring versions must match. `--limit` remains
+useful for smoke checks but cannot pass the full-suite gate.
+
+The new baseline also enforces per-category accuracy floors (default maximum
+absolute drop: 0.05), so gains in cloud questions cannot hide a security decline.
+
+Reports separate MC from generation/code and show Wilson 95% intervals. These
+describe the small observed samples, not uncertainty across all possible work.
+Generation substring scorers are lexical checks, not semantic assessments of
+instruction following or security correctness. The 12 new MC scenarios exercise
+security judgments, not executable remediation. No model weights were changed.
+
+The candidate CI workflow uploads its JSON evidence and Markdown review even
+when comparison fails. This work does not change Azure/backend infrastructure.
+
 Training loss tells you the model is *learning its training data*. It does **not**
 tell you the model is good, safe, or ready. This suite exists to replace "the
 samples look impressive" with numbers you can track and defend.

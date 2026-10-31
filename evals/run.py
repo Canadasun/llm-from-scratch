@@ -15,6 +15,11 @@ import argparse
 import json
 import os
 import signal
+from datetime import datetime, timezone
+
+import torch
+
+from evals.evidence import CODE_EVALUATOR, SCORING_VERSION, file_sha256, suite_sha256
 
 from evals.loader import DEFAULT_CKPT, load_checkpoint, random_baseline, pick_device
 from evals import report as report_mod
@@ -77,12 +82,20 @@ def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
     slow task cannot stall the whole run; a timed-out task counts as incorrect.
     """
     say = progress or (lambda *_: None)
+    if suite not in {"all", "tasks", "intrinsic"}:
+        raise ValueError("unknown evaluation suite")
+    if limit is not None and (type(limit) is not int or limit < 1):
+        raise ValueError("limit must be a positive integer")
     device = pick_device(device)
+    checkpoint_hash = file_sha256(ckpt)
     model, tokenizer, cfg = load_checkpoint(ckpt, device)
     say(f"Loaded {ckpt} | device {device} | tokenizer {tokenizer.kind} "
         f"vocab {tokenizer.vocab_size} | block {cfg['block_size']} "
         f"layers {cfg['n_layer']}")
 
+    all_tasks = load_tasks(default_task_files())
+    suite_hash = suite_sha256(all_tasks)
+    selected_tasks = all_tasks[:limit] if limit is not None else all_tasks
     intrinsic = None
     if suite in ("all", "intrinsic"):
         say("Running intrinsic metrics (held-out perplexity vs random init)...")
@@ -92,9 +105,7 @@ def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
     summary = {"by_category": {}, "overall": {"n": 0, "correct": 0, "acc": 0.0},
                "mc_random_baseline": None}
     if suite in ("all", "tasks"):
-        tasks = load_tasks(default_task_files())
-        if limit:
-            tasks = tasks[:limit]
+        tasks = selected_tasks
         say(f"Running {len(tasks)} capability tasks...")
         for i, task in enumerate(tasks, 1):
             r = _run_task_guarded(model, tokenizer, task, device, task_timeout)
@@ -105,8 +116,19 @@ def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
                 say(f"  {i}/{len(tasks)}")
         summary = report_mod.summarize(results)
 
+    if file_sha256(ckpt) != checkpoint_hash or suite_sha256(all_tasks) != suite_hash:
+        raise ValueError("checkpoint or reviewed code cases changed during evaluation")
     return {"summary": summary, "intrinsic": intrinsic, "results": results,
             "meta": {"ckpt": ckpt, "device": device,
+                     "checkpoint_sha256": checkpoint_hash,
+                     "suite_sha256": suite_hash,
+                     "heldout_sha256": file_sha256(HELDOUT) if os.path.exists(HELDOUT) else None,
+                     "scoring_version": SCORING_VERSION, "code_evaluator": CODE_EVALUATOR,
+                     "evaluated_at": datetime.now(timezone.utc).isoformat(),
+                     "torch_version": str(torch.__version__), "seed": 1337,
+                     "suite": suite, "limit": limit, "tasks_total": len(all_tasks),
+                     "complete": suite == "all" and limit is None and intrinsic is not None,
+                     "num_params": model.num_params(),
                      "tokenizer": tokenizer.kind, "vocab_size": tokenizer.vocab_size,
                      "block_size": cfg["block_size"], "n_layer": cfg["n_layer"]}}
 
@@ -115,6 +137,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default=DEFAULT_CKPT)
     ap.add_argument("--device", default="auto")
+    ap.add_argument("--threads", type=int, default=2, help="CPU threads (default 2)")
     ap.add_argument("--suite", choices=["all", "tasks", "intrinsic"], default="all")
     ap.add_argument("--limit", type=int, default=None,
                     help="cap number of capability tasks (quick smoke run)")
@@ -123,6 +146,9 @@ def main():
                     help="seconds cap per capability task (prevents a slow task "
                          "from stalling the run; timed-out tasks count incorrect)")
     args = ap.parse_args()
+    if args.threads < 1:
+        ap.error("threads must be positive")
+    torch.set_num_threads(args.threads)
 
     out = evaluate(args.ckpt, args.device, args.suite, args.limit,
                    progress=lambda s: print(s, flush=True),

@@ -1,17 +1,337 @@
 {
-  "name": "m3-baseline-2026-10-30",
-  "note": "Milestone 3 checkpoint (~31.8M params, BPE vocab 2048, block 512, 6000 iters, ~19.2MB RFC+NIST corpus). Measured locally on CPU over the 91-task suite + held-out intrinsic. Enforced metrics are tokenizer-independent; perplexity/top-k are recorded for reference. Supersedes m2.json as the regression floor for the M3 lineage.",
-  "enforce": ["bits_per_byte", "overall_acc"],
+  "name": "m3-baseline-2026-10-31-independent-evaluator",
+  "note": "Measured with the current suite and independent evaluator. Regression floor only; not a production-readiness claim.",
+  "enforce": [
+    "bits_per_byte",
+    "overall_acc"
+  ],
+  "enforce_categories": [
+    "ai_security",
+    "cloud",
+    "code",
+    "generation",
+    "reasoning",
+    "secure_development",
+    "security",
+    "software"
+  ],
   "intrinsic": {
     "trained": {
-      "perplexity": 12.82,
-      "bits_per_byte": 1.78,
-      "top1_acc": 0.4933,
-      "top5_acc": 0.7035
+      "tokens": 1275,
+      "bytes": 2636,
+      "perplexity": 12.818239181910474,
+      "bits_per_byte": 1.7800306875355714,
+      "top1_acc": 0.49333333333333335,
+      "top5_acc": 0.7035294117647058
     }
   },
   "summary": {
-    "overall": {"n": 91, "correct": 30, "acc": 0.3297}
+    "by_category": {
+      "ai_security": {
+        "n": 22,
+        "correct": 8,
+        "acc": 0.36363636363636365,
+        "wilson_95": [
+          0.19733204670366125,
+          0.5704829190986899
+        ]
+      },
+      "cloud": {
+        "n": 20,
+        "correct": 10,
+        "acc": 0.5,
+        "wilson_95": [
+          0.2992980081982123,
+          0.7007019918017877
+        ]
+      },
+      "code": {
+        "n": 18,
+        "correct": 0,
+        "acc": 0.0,
+        "wilson_95": [
+          0.0,
+          0.17587922364665765
+        ]
+      },
+      "generation": {
+        "n": 16,
+        "correct": 0,
+        "acc": 0.0,
+        "wilson_95": [
+          0.0,
+          0.1936076805344365
+        ]
+      },
+      "reasoning": {
+        "n": 14,
+        "correct": 7,
+        "acc": 0.5,
+        "wilson_95": [
+          0.26799202452413634,
+          0.7320079754758637
+        ]
+      },
+      "secure_development": {
+        "n": 12,
+        "correct": 1,
+        "acc": 0.08333333333333333,
+        "wilson_95": [
+          0.014865094404917095,
+          0.35387991114111694
+        ]
+      },
+      "security": {
+        "n": 45,
+        "correct": 18,
+        "acc": 0.4,
+        "wilson_95": [
+          0.27024886565009165,
+          0.5454814540964862
+        ]
+      },
+      "software": {
+        "n": 23,
+        "correct": 7,
+        "acc": 0.30434782608695654,
+        "wilson_95": [
+          0.15604024453214022,
+          0.508657562687592
+        ]
+      }
+    },
+    "by_type": {
+      "code": {
+        "n": 18,
+        "correct": 0,
+        "acc": 0.0,
+        "wilson_95": [
+          0.0,
+          0.17587922364665765
+        ]
+      },
+      "generation": {
+        "n": 16,
+        "correct": 0,
+        "acc": 0.0,
+        "wilson_95": [
+          0.0,
+          0.1936076805344365
+        ]
+      },
+      "multiple_choice": {
+        "n": 136,
+        "correct": 51,
+        "acc": 0.375,
+        "wilson_95": [
+          0.2981212768263188,
+          0.4587462481070767
+        ]
+      }
+    },
+    "overall": {
+      "n": 170,
+      "correct": 51,
+      "acc": 0.3,
+      "wilson_95": [
+        0.2361552780924876,
+        0.3726837154289745
+      ]
+    },
+    "mc_random_baseline": 0.25
+  },
+  "meta": {
+    "ckpt": "ckpt.pt",
+    "device": "cpu",
+    "checkpoint_sha256": "6115d7a500e06a82aaae44ab9cdcd76a9879b3bced12e276acfffc5cc6c4afd7",
+    "suite_sha256": "b2c1c3737b03d6d2a2711e7fc36044575e1e35b930d26588da76b79208e70df0",
+    "heldout_sha256": "43edd64f8f1f3d2b0a7356f5048a7d2a3c668d06c783bd72022a8f98d8dae5e0",
+    "scoring_version": "context-preserving-v2",
+    "code_evaluator": "function-json-v1",
+    "evaluated_at": "2026-10-31T19:08:59.371504+00:00",
+    "torch_version": "2.15.0+cpu",
+    "seed": 1337,
+    "suite": "all",
+    "limit": null,
+    "tasks_total": 170,
+    "complete": true,
+    "num_params": 32835584,
+    "tokenizer": "bpe",
+    "vocab_size": 2048,
+    "block_size": 512,
+    "n_layer": 10,
+    "task_ids": [
+      "sec-sqli",
+      "sec-xss",
+      "sec-pwstore",
+      "sec-authnz",
+      "sec-leak",
+      "sec-tls",
+      "sec-leastpriv",
+      "sec-csrf",
+      "sec-cia",
+      "sec-saltwhy",
+      "sec-defexploit",
+      "sec-mfa",
+      "sec-owasp-injection",
+      "sec-logging",
+      "sec-depscan",
+      "sec-encrest",
+      "sec-privesc",
+      "sec-idor",
+      "sec-patch",
+      "sec-zerotrust",
+      "sec-ir",
+      "sec-rmf",
+      "sec-zta2",
+      "sec-ssdf",
+      "sec-supplychain",
+      "sec-logmgmt",
+      "sec-abac",
+      "sec-vpn",
+      "sec-pentest",
+      "sec-recovery",
+      "sec2-tls",
+      "sec2-hashpw",
+      "sec2-sqli",
+      "sec2-xss",
+      "sec2-csrf",
+      "sec2-leastpriv",
+      "sec2-mfa",
+      "sec2-zerotrust",
+      "sec2-segmentation",
+      "sec2-patch",
+      "sec2-ir",
+      "sec2-ransom",
+      "sec2-secretsmgmt",
+      "sec2-defense",
+      "sec2-constanttime",
+      "sw-bigo",
+      "sw-idempotent",
+      "sw-get",
+      "sw-dry",
+      "sw-git",
+      "sw-unit",
+      "sw-stack",
+      "sw-immutable",
+      "sw-exception",
+      "sw-index",
+      "sw-hashmap",
+      "sw-compile",
+      "sw-ci",
+      "sw-recursion",
+      "sw-null",
+      "sw2-vcs",
+      "sw2-review",
+      "sw2-idempotent",
+      "sw2-pure",
+      "sw2-bigo",
+      "sw2-pin",
+      "sw2-immutable",
+      "sw2-test",
+      "cld-iac",
+      "cld-container",
+      "cld-k8s",
+      "cld-secrets",
+      "cld-leastpriv",
+      "cld-misconfig",
+      "cld-cicd",
+      "cld-immutable",
+      "cld-sast",
+      "cld-dast",
+      "cld-obs",
+      "cld-rollback",
+      "cloud2-iam",
+      "cloud2-atrest",
+      "cloud2-sg",
+      "cloud2-private",
+      "cloud2-kms",
+      "cloud2-shared",
+      "cloud2-logging",
+      "cloud2-scale0",
+      "ai-injection",
+      "ai-indirect",
+      "ai-authz",
+      "ai-untrusted",
+      "ai-exfil",
+      "ai-agency",
+      "ai-sandbox",
+      "ai-humanloop",
+      "aisec2-direct",
+      "aisec2-exfil",
+      "aisec2-untrusted",
+      "aisec2-leastpriv",
+      "aisec2-tenant",
+      "aisec2-rag",
+      "aisec2-secrets",
+      "aisec2-humanloop",
+      "aisec2-jailbreak",
+      "aisec2-authz",
+      "aisec2-output",
+      "aisec2-sandbox",
+      "aisec2-promptleak",
+      "aisec2-dos",
+      "rsn-uncertain",
+      "rsn-highrisk",
+      "rsn-citation",
+      "rsn-injection",
+      "rsn-regress",
+      "rsn-evidence",
+      "rsn-scope",
+      "rsn-authz-text",
+      "rz2-transitive",
+      "rz2-contrapos",
+      "rz2-counting",
+      "rz2-necessary",
+      "rz2-setdiff",
+      "rz2-dedup",
+      "gen-private",
+      "gen-https",
+      "gen-encrypt",
+      "gen-firewall",
+      "gen-password",
+      "gen-digit",
+      "gen-sql",
+      "gen-token",
+      "gen-tls13",
+      "gen-cve",
+      "gen2-tls",
+      "gen2-sqli",
+      "gen2-least",
+      "gen2-encrypt",
+      "gen2-firewall",
+      "gen2-auth",
+      "code-add",
+      "code-max",
+      "code-rev",
+      "code-even",
+      "code-count",
+      "code-fib",
+      "code-palin",
+      "code-sum",
+      "code2-even",
+      "code2-reverse",
+      "code2-vowels",
+      "code2-factorial",
+      "code2-palindrome",
+      "code2-gcd",
+      "code2-sumlist",
+      "code2-c2f",
+      "code2-unique",
+      "code2-fizz",
+      "secure-dev-sqli",
+      "secure-dev-shell",
+      "secure-dev-tenant",
+      "secure-dev-injection",
+      "secure-dev-tls",
+      "secure-dev-redirect",
+      "secure-dev-revocation",
+      "secure-dev-eval",
+      "secure-dev-path",
+      "secure-dev-cache",
+      "secure-dev-artifact",
+      "secure-dev-overload"
+    ]
   },
   "tolerances": {
     "bits_per_byte_abs_max_increase": 0.15,
