@@ -40,7 +40,7 @@ jobs:
           # intentionally vulnerable fixtures, so it is deliberately excluded:
           # we scan the package dirs that have no testdata, plus the top-level
           # source files, plus codereview's own modules (not its testdata/).
-          for d in serve evals safety; do
+          for d in serve evals safety enterprise; do
             python -m codereview "$d" --fail-on high
           done
           for f in *.py codereview/*.py; do

@@ -179,8 +179,13 @@ teams can trust, in staged, evidence-backed steps.
   opt-in that only commits verified fixes, never auto-merges). The workflow is
   complete end to end: **read → find → propose → verify → PR.** See
   [`docs/CODE_REVIEW.md`](docs/CODE_REVIEW.md).
-- [ ] Stage 3 — enterprise security (identities, repo permissions, tenant
-  isolation, audited tool execution, controlled deploy).
+- [x] Stage 3 (started) — **enterprise security** (`enterprise/`): multi-tenant
+  identity, scoped API keys (hashed), RBAC + **tenant isolation**, a redacted
+  audit log, and an authenticate→authorize→act→audit gateway. Hits the **P0 gate
+  — zero cross-tenant access** (a test attempts every action across tenants and
+  all are denied + audited). See
+  [`docs/ENTERPRISE_SECURITY.md`](docs/ENTERPRISE_SECURITY.md). Next: DB row-level
+  security, SSO/MFA, shared rate-limit store, and wiring it in front of `serve/`.
 - [ ] Stage 4 — authorized pilot measuring reliability, security, latency, cost.
 
 Findings and fixes are always for **human review** — authorization lives in the
