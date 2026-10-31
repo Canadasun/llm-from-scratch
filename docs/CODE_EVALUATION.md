@@ -27,6 +27,11 @@ unit-test CI requires integration tests to actually run. A host that prohibits
 namespaces must use an approved execution host; there is no host fallback and no
 automatic relaxation of host security settings.
 
+The hosted workflows pin Ubuntu 22.04 and run a trusted namespace preflight
+before evaluation. The first `ubuntu-latest` CI run refused execution because
+its sandbox could not start. Namespace checks remain mandatory; the workflow
+does not disable AppArmor or relax system-wide namespace restrictions.
+
 ```python
 from evals.code_executor import evaluate_function
 

@@ -16,7 +16,8 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pin the sandbox host rather than inheriting namespace-policy changes from latest.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +34,9 @@ jobs:
 
       - name: Install code-evaluation isolation dependencies
         run: sudo apt-get update && sudo apt-get install -y bubblewrap libseccomp2
+
+      - name: Verify host namespace support
+        run: bwrap --unshare-all --ro-bind / / -- /usr/bin/true
 
       - name: Run test suite (unit + eval harness + serving + regression logic)
         env:
