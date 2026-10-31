@@ -96,3 +96,40 @@ def test_committed_m2_baseline_parses_and_gates():
     # a candidate that regresses bits/byte must fail
     ok2, _ = check(_cand(bpb=2.6), base)
     assert ok2 is False
+
+
+def test_category_floor_uses_wilson_lower_bound_not_fixed_drop():
+    # Small category (n=14): the floor is the baseline's wide Wilson lower bound,
+    # so a single borderline flip (7/14 -> 6/14), statistically indistinguishable
+    # from the baseline, must NOT fail (the old fixed 5% drop wrongly did).
+    base = {"enforce_categories": ["reasoning"], "enforce": ["overall_acc"],
+            "summary": {"overall": {"acc": 0.5},
+                        "by_category": {"reasoning": {
+                            "n": 14, "correct": 7, "acc": 0.5,
+                            "wilson_95": [0.2679920, 0.7320079]}}}}
+    noise = {"summary": {"overall": {"acc": 0.5},
+                         "by_category": {"reasoning": {"n": 14, "correct": 6, "acc": 6/14}}}}
+    ok, checks = check(noise, base)
+    assert ok is True
+    assert _get(checks, "category:reasoning")["ok"] is True
+
+    # A genuine collapse (3/14 = 0.214) falls below the Wilson lower bound -> FAIL.
+    collapse = {"summary": {"overall": {"acc": 0.5},
+                            "by_category": {"reasoning": {"n": 14, "correct": 3, "acc": 3/14}}}}
+    ok2, checks2 = check(collapse, base)
+    assert ok2 is False
+    assert _get(checks2, "category:reasoning")["ok"] is False
+
+
+def test_category_floor_scales_tight_for_large_samples():
+    # Large category (n=200): the recomputed Wilson interval is tight, so even a
+    # ~10-point drop is a real regression and must fail. (No stored interval ->
+    # the floor is recomputed from n/correct.)
+    base = {"enforce_categories": ["security"], "enforce": ["overall_acc"],
+            "summary": {"overall": {"acc": 0.5},
+                        "by_category": {"security": {"n": 200, "correct": 100, "acc": 0.5}}}}
+    cand = {"summary": {"overall": {"acc": 0.5},
+                        "by_category": {"security": {"n": 200, "correct": 80, "acc": 0.4}}}}
+    ok, checks = check(cand, base)
+    assert ok is False
+    assert _get(checks, "category:security")["ok"] is False

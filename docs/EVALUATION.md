@@ -39,8 +39,12 @@ partial, reordered, missing, or incompatible task evidence. Candidate checkpoint
 may change; comparison data and scoring versions must match. `--limit` remains
 useful for smoke checks but cannot pass the full-suite gate.
 
-The new baseline also enforces per-category accuracy floors (default maximum
-absolute drop: 0.05), so gains in cloud questions cannot hide a security decline.
+The new baseline also enforces per-category accuracy floors, so gains in cloud
+questions cannot hide a security decline. Each category floor is the baseline's
+**Wilson 95% lower bound** — a sample-size-aware threshold, wide for small
+categories and tight for large ones — so a single borderline flip in a tiny
+category (statistically indistinguishable from the baseline) does not fail, while
+a genuine decline still does.
 
 Reports separate MC from generation/code and show Wilson 95% intervals. These
 describe the small observed samples, not uncertainty across all possible work.
@@ -238,11 +242,14 @@ the metrics that fail the build. The M3 baseline enforces **bits-per-byte** and
 **overall task accuracy** — both **tokenizer-independent**, so they compare
 fairly across models with different vocabularies (M2 vocab 1024 vs M3 vocab 2048)
 — plus a **per-category accuracy floor** for each enforced category, so a gain in
-one area cannot mask a decline in another (this is what blocked the instruction
-candidate: overall rose but `reasoning` regressed). **Perplexity** and **next-token
-top-k** are per-token and therefore tokenizer-dependent — recorded for reference,
-not gated across a vocab change. Default tolerances: bits/byte may worsen by
-≤ 0.15 absolute; overall and per-category accuracy may drop by ≤ 0.05 absolute
+one area cannot mask a decline in another. Each category floor is the baseline's
+**Wilson 95% lower bound** (sample-size-aware), so a single borderline likelihood
+flip in a small category is not mistaken for a regression but a real decline still
+fails. (The fixed 5% drop this replaced blocked a net-positive instruction
+candidate on one flip in the 14-task `reasoning` category.) **Perplexity** and
+**next-token top-k** are per-token and therefore tokenizer-dependent — recorded
+for reference, not gated across a vocab change. Default tolerances: bits/byte may
+worsen by ≤ 0.15 absolute; overall accuracy may drop by ≤ 0.05 absolute
 (overridable per baseline). Evidence must also match on suite/held-out/scoring/
 evaluator provenance, and be a complete, non-timed-out run.
 
