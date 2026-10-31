@@ -166,3 +166,29 @@ def test_seeded_generate_does_not_touch_global_rng(engine):
     _ = engine.generate("zero trust ", max_new_tokens=8, seed=999)
     after = torch.randint(0, 1000, (5,))
     assert torch.equal(before, after)   # seeded gen used a private generator
+
+
+def test_temperature_overflow_is_rejected():
+    with pytest.raises(ValidationError):
+        validate_generate({"prompt": "x", "temperature": 10**400})
+
+
+def test_engine_handles_unknown_prompt_without_newline_in_vocab():
+    tok = CharTokenizer.from_text("ab")          # vocab has no newline
+    cfg = GPTConfig(vocab_size=tok.vocab_size, block_size=8,
+                    n_layer=1, n_head=1, n_embd=8, dropout=0.0)
+    torch.manual_seed(0)
+    eng = InferenceEngine(GPT(cfg), tok, device="cpu")
+    out = eng.generate("zzz", max_new_tokens=3, seed=1)   # all-unknown -> fallback
+    assert out["completion_tokens"] == 3
+
+
+def test_rate_limiter_table_is_bounded():
+    # Sweep find (same class as unbounded audit/bpe-cache): the per-client bucket
+    # table must not grow without bound as distinct clients arrive.
+    t = [0.0]
+    rl = RateLimiter(capacity=2, refill_per_sec=1.0, clock=lambda: t[0], max_keys=50)
+    for i in range(500):
+        t[0] += 0.001
+        rl.allow(f"client-{i}")
+    assert len(rl._buckets) <= 50

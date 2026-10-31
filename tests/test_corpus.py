@@ -59,3 +59,12 @@ def test_nist_catalog_is_nonempty_and_well_formed():
     for sp, (title, url) in build_corpus.NIST.items():
         assert url.startswith("https://nvlpubs.nist.gov/") and url.endswith(".pdf")
         assert title
+
+
+def test_bpe_encode_cache_is_bounded(monkeypatch):
+    import tokenizer_bpe
+    monkeypatch.setattr(tokenizer_bpe, "_CACHE_MAX", 8)
+    tok = tokenizer_bpe.BPETokenizer()           # base byte vocab, no merges
+    for i in range(40):
+        tok.encode(f"distinct-chunk-{i} ")
+    assert len(tok._cache) <= 8                   # no unbounded growth

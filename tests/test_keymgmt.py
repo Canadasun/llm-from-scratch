@@ -236,3 +236,27 @@ def test_scoped_manager_can_rotate_key_within_authority(world):
                          actor_scopes=scp)
     status, body = km.rotate(P(store, "adminA"), issued["key_id"], actor_scopes=scp)
     assert status == 200 and "api_key" in body
+
+
+# ---- regression: grace rotation must not revive / extend ----
+
+def test_grace_rotation_does_not_revive_a_revoked_key(world):
+    store, km, audit, clock, keys = world
+    _, issued = km.issue(P(store, "adminA"), "memberA")
+    kid = issued["key_id"]
+    assert km.revoke(P(store, "adminA"), kid)[0] == 200
+    # rotating with a grace window must NOT bring the revoked key back to life
+    status, _ = km.rotate(P(store, "adminA"), kid, grace_seconds=100)
+    assert status == 200
+    old = store.get_api_key(P(store, "adminA"), kid)
+    assert old.is_active(clock.t) is False
+
+
+def test_grace_rotation_does_not_extend_expiry(world):
+    store, km, audit, clock, keys = world
+    _, issued = km.issue(P(store, "adminA"), "memberA", ttl_seconds=10)
+    kid = issued["key_id"]
+    # a long grace must not push the old key's expiry beyond its original ttl
+    km.rotate(P(store, "adminA"), kid, grace_seconds=1000)
+    old = store.get_api_key(P(store, "adminA"), kid)
+    assert old.expires_at <= clock.t + 10 + 1e-9

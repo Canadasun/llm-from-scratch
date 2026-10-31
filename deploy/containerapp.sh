@@ -29,8 +29,11 @@ BUDGET_CAD="${BUDGET_CAD:-5}"
 ALERT_EMAIL="${ALERT_EMAIL:-idwu1470@gmail.com}"
 # Persistent key store: an Azure Files share holds the SQLite key DB so API keys
 # survive restarts/recycles (without this, --secured mints a DIFFERENT demo key
-# per replica/restart -> intermittent 401s and key loss). Globally-unique name.
-STORAGE_ACCOUNT="${STORAGE_ACCOUNT:-stllmkeys$RANDOM$RANDOM}"
+# per replica/restart -> intermittent 401s and key loss). The account name is
+# DETERMINISTIC (derived from sub+RG) so re-running this script REUSES the same
+# storage + key DB instead of creating a fresh, empty one (which would silently
+# drop every existing credential). Override STORAGE_ACCOUNT to pin a specific name.
+STORAGE_ACCOUNT="${STORAGE_ACCOUNT:-stllmkeys$(printf '%s' "$SUBSCRIPTION$RG" | sha1sum | cut -c1-12)}"
 FILE_SHARE="${FILE_SHARE:-keys}"
 STORAGE_MOUNT="${STORAGE_MOUNT:-keysvol}"
 # nolock: SQLite over SMB/CIFS can't take byte-range locks, so the URI disables

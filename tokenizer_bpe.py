@@ -23,6 +23,10 @@ decoding are all implemented by hand so the mechanism is fully visible.
 import json
 import re
 
+# Cap the per-tokenizer encode memo so a long-lived serving process fed many
+# distinct inputs cannot accumulate retained strings/token-lists without bound.
+_CACHE_MAX = 100_000
+
 # Split into runs of non-whitespace or runs of whitespace. Together these cover
 # every character with no loss, so decode(encode(x)) == x.
 _SPLIT = re.compile(r"\S+|\s+")
@@ -116,6 +120,10 @@ class BPETokenizer:
             if candidate not in rank:
                 break
             ids = _merge(ids, candidate, self.merges[candidate])
+        # Bound the memo so a serving process fed endless distinct inputs can't
+        # grow memory without limit; evict oldest (FIFO) past the cap.
+        if len(self._cache) >= _CACHE_MAX:
+            self._cache.pop(next(iter(self._cache)))
         self._cache[chunk] = ids
         return ids
 

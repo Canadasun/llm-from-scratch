@@ -65,7 +65,13 @@ class Store:
             return None, None
         if not api_key.is_active(self._clock()):              # revoked or expired
             return None, None
-        return self._principals.get(api_key.principal_id), api_key
+        principal = self._principals.get(api_key.principal_id)
+        # Tenant consistency: if the principal was deleted and re-created under
+        # the same id in ANOTHER tenant, the old key must NOT authenticate as it
+        # (that would cross the tenant boundary). The key carries its own tenant.
+        if principal is None or principal.tenant_id != api_key.tenant_id:
+            return None, None
+        return principal, api_key
 
     # --- tenant-scoped API-key management (same isolation rule as resources) ---
     def get_api_key(self, principal, key_id):

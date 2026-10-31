@@ -63,7 +63,12 @@ def validate_generate(payload):
     temperature = payload.get("temperature", DEFAULTS["temperature"])
     if isinstance(temperature, bool) or not isinstance(temperature, (int, float)):
         raise ValidationError("temperature must be a number")
-    temperature = float(temperature)
+    try:
+        # A huge JSON integer (e.g. 10**400) overflows float() with OverflowError;
+        # turn that into a clean validation error instead of a 500.
+        temperature = float(temperature)
+    except (OverflowError, ValueError):
+        raise ValidationError("temperature is out of range")
     if math.isnan(temperature) or math.isinf(temperature):
         raise ValidationError("temperature must be a finite number")
     if temperature < MIN_TEMPERATURE or temperature > MAX_TEMPERATURE:

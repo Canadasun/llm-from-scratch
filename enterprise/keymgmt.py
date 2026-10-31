@@ -24,6 +24,7 @@ gap. Authentication rejects a revoked or expired key in the store, so rotation
 and revocation take effect the moment they are recorded.
 """
 
+import threading
 import time
 import uuid
 
@@ -40,6 +41,12 @@ class KeyManager:
         self.audit = audit
         self.clock = clock
         self.authorizer = authorizer
+        # Serialise the read-modify-write in rotate()/revoke(): without it a
+        # revoke that lands between rotate's read and its write is LOST (the stale
+        # record is written back un-revoked, reviving the credential). One writer
+        # is correct for the single-replica deployment; cross-process atomicity
+        # needs DB transactions (the Postgres path).
+        self._lock = threading.Lock()
 
     # -- internal: authorize the actor for apikey:manage ----------------------
     def _authorize_manage(self, actor, actor_scopes, rid, detail=""):
@@ -120,16 +127,17 @@ class KeyManager:
         if not self._authorize_manage(actor, actor_scopes, rid):
             return 403, {"error": "forbidden", "request_id": rid}
 
-        key = self.store.get_api_key(actor, key_id)   # tenant-scoped
-        if key is None:
-            self.audit.record(rid, MANAGE_ACTION, "deny", "not_found_or_forbidden",
-                              tenant_id=tid, principal_id=actor.id,
-                              detail=f"key_id={key_id}")
-            return 404, {"error": "not_found", "request_id": rid}
+        with self._lock:
+            key = self.store.get_api_key(actor, key_id)   # tenant-scoped
+            if key is None:
+                self.audit.record(rid, MANAGE_ACTION, "deny", "not_found_or_forbidden",
+                                  tenant_id=tid, principal_id=actor.id,
+                                  detail=f"key_id={key_id}")
+                return 404, {"error": "not_found", "request_id": rid}
 
-        if not key.revoked:
-            import dataclasses
-            self.store.update_api_key(dataclasses.replace(key, revoked=True))
+            if not key.revoked:
+                import dataclasses
+                self.store.update_api_key(dataclasses.replace(key, revoked=True))
         self.audit.record(rid, MANAGE_ACTION, "allow", "revoked",
                           tenant_id=tid, principal_id=actor.id,
                           detail=f"key_id={key_id}")
@@ -148,49 +156,60 @@ class KeyManager:
         if not self._authorize_manage(actor, actor_scopes, rid):
             return 403, {"error": "forbidden", "request_id": rid}
 
-        old = self.store.get_api_key(actor, key_id)    # tenant-scoped
-        if old is None:
-            self.audit.record(rid, MANAGE_ACTION, "deny", "not_found_or_forbidden",
-                              tenant_id=tid, principal_id=actor.id,
-                              detail=f"key_id={key_id}")
-            return 404, {"error": "not_found", "request_id": rid}
-
-        # Ceiling check (was missing): rotation re-issues the old key's authority
-        # and hands the actor the new secret, so the actor must be allowed to
-        # grant that authority right now. Otherwise a key scoped only to
-        # `apikey:manage` could rotate a powerful key and obtain its replacement.
-        grantable = effective_permissions(actor, actor_scopes)
-        target = self.store.get_principal(old.principal_id)
-        old_authority = (effective_permissions(target, old.scopes) if target
-                         else set(ALL_ACTIONS))
-        over = set(old_authority) - grantable
-        if over:
-            self.audit.record(rid, MANAGE_ACTION, "deny", "scope_exceeds_grantor",
-                              tenant_id=tid, principal_id=actor.id,
-                              detail=f"old={key_id} over={sorted(over)}")
-            return 403, {"error": "forbidden",
-                         "reason": f"cannot rotate a key beyond your own authority: {sorted(over)}",
-                         "request_id": rid}
-
-        now = self.clock()
-        plaintext, key_hash = generate_key()
-        new_id = "key_" + uuid.uuid4().hex[:16]
-        # inherit the old key's scopes and its original ttl span if it had one
-        ttl = (old.expires_at - old.created_at) if old.expires_at else 0.0
-        new_record = ApiKey(new_id, key_hash, tid, old.principal_id, old.scopes,
-                            created_at=now, expires_at=(now + ttl) if ttl else 0.0)
-        self.store.add_api_key(new_record)
-
-        # retire the old key: immediate revoke, or a grace expiry
         import dataclasses
-        if grace_seconds > 0:
-            retired = dataclasses.replace(old, replaced_by=new_id,
-                                          expires_at=now + grace_seconds)
-            outcome = "rotated_grace"
-        else:
-            retired = dataclasses.replace(old, replaced_by=new_id, revoked=True)
-            outcome = "rotated"
-        self.store.update_api_key(retired)
+        # The whole read-modify-write runs under the lock so a concurrent revoke
+        # cannot be lost (finding: rotation would otherwise write the stale record
+        # back un-revoked and revive the credential).
+        with self._lock:
+            old = self.store.get_api_key(actor, key_id)    # tenant-scoped
+            if old is None:
+                self.audit.record(rid, MANAGE_ACTION, "deny", "not_found_or_forbidden",
+                                  tenant_id=tid, principal_id=actor.id,
+                                  detail=f"key_id={key_id}")
+                return 404, {"error": "not_found", "request_id": rid}
+
+            # Ceiling check: rotation re-issues the old key's authority and hands
+            # the actor the new secret, so the actor must be allowed to grant that
+            # authority now. Otherwise a key scoped only to `apikey:manage` could
+            # rotate a powerful key and obtain its replacement.
+            grantable = effective_permissions(actor, actor_scopes)
+            target = self.store.get_principal(old.principal_id)
+            old_authority = (effective_permissions(target, old.scopes) if target
+                             else set(ALL_ACTIONS))
+            over = set(old_authority) - grantable
+            if over:
+                self.audit.record(rid, MANAGE_ACTION, "deny", "scope_exceeds_grantor",
+                                  tenant_id=tid, principal_id=actor.id,
+                                  detail=f"old={key_id} over={sorted(over)}")
+                return 403, {"error": "forbidden",
+                             "reason": f"cannot rotate a key beyond your own authority: {sorted(over)}",
+                             "request_id": rid}
+
+            now = self.clock()
+            plaintext, key_hash = generate_key()
+            new_id = "key_" + uuid.uuid4().hex[:16]
+            # inherit the old key's scopes and its original ttl span if it had one
+            ttl = (old.expires_at - old.created_at) if old.expires_at else 0.0
+            new_record = ApiKey(new_id, key_hash, tid, old.principal_id, old.scopes,
+                                created_at=now, expires_at=(now + ttl) if ttl else 0.0)
+            self.store.add_api_key(new_record)
+
+            # Retire the old key. NEVER revive one already revoked or expired, and
+            # never EXTEND an existing expiry — a grace window can only shorten the
+            # old key's life, not lengthen or resurrect it.
+            inactive = old.revoked or (old.expires_at and old.expires_at <= now)
+            applied_grace = grace_seconds > 0 and not inactive
+            if applied_grace:
+                new_expiry = now + grace_seconds
+                if old.expires_at:                 # don't push an expiry later
+                    new_expiry = min(old.expires_at, new_expiry)
+                retired = dataclasses.replace(old, replaced_by=new_id,
+                                              expires_at=new_expiry)
+                outcome = "rotated_grace"
+            else:
+                retired = dataclasses.replace(old, replaced_by=new_id, revoked=True)
+                outcome = "rotated"
+            self.store.update_api_key(retired)
 
         self.audit.record(rid, MANAGE_ACTION, "allow", outcome,
                           tenant_id=tid, principal_id=actor.id,
@@ -198,6 +217,6 @@ class KeyManager:
         body = {"request_id": rid, "old_key_id": key_id, "key_id": new_id,
                 "api_key": plaintext, "principal_id": old.principal_id,
                 "scopes": list(old.scopes)}
-        if grace_seconds > 0:
-            body["old_key_expires_at"] = now + grace_seconds
+        if applied_grace:
+            body["old_key_expires_at"] = new_expiry
         return 200, body

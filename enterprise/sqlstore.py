@@ -160,7 +160,13 @@ class SqlStore:
             return None, None
         if not key.is_active(self._clock()):              # revoked or expired
             return None, None
-        return self.get_principal(key.principal_id), key
+        principal = self.get_principal(key.principal_id)
+        # Tenant consistency: a key must only authenticate as a principal in the
+        # key's OWN tenant. If the principal id was re-created in another tenant,
+        # the stale key must not cross into it.
+        if principal is None or principal.tenant_id != key.tenant_id:
+            return None, None
+        return principal, key
 
     # --- tenant-scoped API-key management (isolation enforced in SQL) ---
     def get_api_key(self, principal, key_id):

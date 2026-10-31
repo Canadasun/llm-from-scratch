@@ -45,7 +45,14 @@ class InferenceEngine:
             p = "".join(c for c in p if c in self.tokenizer.stoi)
         ids = self.tokenizer.encode(p)
         if not ids:
-            ids = self.tokenizer.encode("\n") or [0]
+            # Fall back to a newline, but a char tokenizer whose vocab lacks "\n"
+            # would raise here, so guard it and fall back to token id 0.
+            try:
+                ids = self.tokenizer.encode("\n")
+            except Exception:
+                ids = []
+            if not ids:
+                ids = [0]
         return ids
 
     @torch.no_grad()

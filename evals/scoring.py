@@ -32,24 +32,35 @@ def completion_nll(model, tokenizer, prompt, completion, device="cpu"):
         return math.inf, 0
 
     full = prompt_ids + comp_ids
-    # The model sees at most block_size tokens; keep the whole completion at the
-    # tail and crop the prompt from the left if the pair is too long.
-    if len(full) > block_size + 1:
-        full = full[-(block_size + 1):]
-    if len(full) < 2:
+    ci = len(prompt_ids)               # index of the first completion token
+    if ci == 0:
         # Need at least one context token to predict the first completion token.
-        full = safe_encode(tokenizer, "\n") + full
-        if len(full) < 2:
-            return math.inf, n_comp
-    n_comp = min(n_comp, len(full) - 1)
+        nl = safe_encode(tokenizer, "\n")
+        full = nl + full
+        ci = len(nl) or 1
+    if ci >= len(full):
+        return math.inf, 0
 
-    x = torch.tensor([full[:-1]], dtype=torch.long, device=device)
-    y = torch.tensor(full[1:], dtype=torch.long, device=device)
-    logits, _ = model(x)                       # (1, T, V)
-    logits_comp = logits[0, -n_comp:, :]       # only the completion positions
-    y_comp = y[-n_comp:]
-    nll = F.cross_entropy(logits_comp, y_comp, reduction="sum")
-    return nll.item(), n_comp
+    # Score EVERY completion token, each with up to block_size tokens of left
+    # context, sliding the window in block_size steps. (Previously an answer
+    # longer than the window was scored only on its tail, so two answers that
+    # differed only in a discarded prefix received identical scores.)
+    nll_sum = 0.0
+    scored = 0
+    pos = ci
+    while pos < len(full):
+        end = min(len(full), pos + block_size)        # score tokens [pos, end)
+        lo = max(0, end - (block_size + 1))           # left context; window<=block+1
+        window = full[lo:end]
+        x = torch.tensor([window[:-1]], dtype=torch.long, device=device)
+        y = torch.tensor(window[1:], dtype=torch.long, device=device)
+        logits, _ = model(x)                          # (1, T, V)
+        n_here = end - pos
+        nll_sum += F.cross_entropy(logits[0, -n_here:, :], y[-n_here:],
+                                   reduction="sum").item()
+        scored += n_here
+        pos = end
+    return nll_sum, scored
 
 
 def choose_by_likelihood(model, tokenizer, prompt, choices, device="cpu"):
@@ -95,7 +106,12 @@ def corpus_metrics(model, tokenizer, text, device="cpu"):
     if total_tokens == 0:
         return {"tokens": 0}
     mean_nll = total_nll / total_tokens
-    n_bytes = max(1, len(text.encode("utf-8")))
+    # Count the bytes ACTUALLY scored (the bytes of the tokenized text), not the
+    # raw input. A char tokenizer drops unknown characters; counting their bytes
+    # in the denominator would let junk, unscorable text inflate bits-per-byte
+    # downward. decode(ids) is lossless for BPE, so trained baselines are
+    # unchanged; for a char tokenizer it excludes the dropped characters.
+    n_bytes = max(1, len(tokenizer.decode(ids).encode("utf-8")))
     return {
         "tokens": total_tokens,
         "bytes": n_bytes,

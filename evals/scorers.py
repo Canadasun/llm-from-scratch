@@ -73,10 +73,39 @@ def _limit_resources(cpu_seconds=5, mem_mb=512, fsize_mb=8):
     resource.setrlimit(resource.RLIMIT_FSIZE, (fbytes, fbytes))
 
 
+_BWRAP_OK = None       # cached probe result for the bubblewrap sandbox
+
+
+def _bwrap_prefix(workdir):
+    """Strong isolation when bubblewrap (`bwrap`) is installed: a fresh namespace
+    with NO host filesystem except a read-only runtime and the writable workdir,
+    and no network. Returns an argv prefix, or None if bwrap is absent or a probe
+    shows the sandbox can't run Python here (then we fall back). The probe is
+    cached so it runs at most once."""
+    global _BWRAP_OK
+    if not shutil.which("bwrap"):
+        return None
+    base = ["bwrap", "--unshare-all", "--die-with-parent", "--new-session",
+            "--tmpfs", "/", "--ro-bind", "/usr", "/usr",
+            "--ro-bind-try", "/lib", "/lib", "--ro-bind-try", "/lib64", "/lib64",
+            "--ro-bind-try", "/bin", "/bin", "--ro-bind-try", "/sbin", "/sbin",
+            "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
+    if _BWRAP_OK is None:
+        try:
+            probe = subprocess.run(base + [sys.executable, "-I", "-c",
+                                           "import unittest"],
+                                   capture_output=True, timeout=10)
+            _BWRAP_OK = probe.returncode == 0
+        except Exception:                      # pragma: no cover - defensive
+            _BWRAP_OK = False
+    if not _BWRAP_OK:
+        return None
+    return base + ["--bind", workdir, workdir, "--chdir", workdir, "--"]
+
+
 def _net_isolation_prefix():
-    """Return an argv prefix that runs the child in a new (rootless) network
-    namespace when the host supports it, so generated code can't exfiltrate over
-    the network. Returns [] if unavailable, so the scorer still works."""
+    """Fallback when bwrap is absent: run in a rootless network namespace if the
+    host allows it (blocks network exfiltration). NOT filesystem isolation."""
     if not shutil.which("unshare"):
         return []
     try:
@@ -89,28 +118,36 @@ def _net_isolation_prefix():
     return []
 
 
-# Runner executed in the child: it RUNS the tests and only prints the sentinel
-# (passed in as argv[1]) after every test has actually run and succeeded. This is
-# what makes an early os._exit(0) unable to fake a pass.
+# Runner executed in the child. The sentinel is read from an inherited pipe fd
+# (SENT_FD) BEFORE any untrusted code is imported, and written back on SENT_FD's
+# partner (RES_FD) only after every test actually ran and passed. The sentinel
+# never appears in argv or the environment, so generated code can't read it there
+# and forge a pass (and an early os._exit(0) never reaches the write).
 _RUNNER = (
-    "import sys, unittest\n"
-    "suite = unittest.TestLoader().loadTestsFromName('test_solution')\n"
-    "res = unittest.TextTestRunner(verbosity=1).run(suite)\n"
-    "if res.wasSuccessful() and res.testsRun > 0:\n"
-    "    sys.stdout.write(sys.argv[1]); sys.stdout.flush(); sys.exit(0)\n"
-    "sys.exit(1)\n"
+    "import os, sys, unittest\n"
+    "sent = os.read(int(os.environ['SENT_FD']), 128)\n"
+    "os.close(int(os.environ['SENT_FD']))\n"
+    "res = unittest.TextTestRunner(verbosity=1).run(\n"
+    "    unittest.TestLoader().loadTestsFromName('test_solution'))\n"
+    "ok = res.wasSuccessful() and res.testsRun > 0\n"
+    "if ok:\n"
+    "    os.write(int(os.environ['RES_FD']), sent)\n"
+    "os.close(int(os.environ['RES_FD']))\n"
+    "sys.exit(0 if ok else 1)\n"
 )
 
 
 def run_python_unittest(solution_code, test_code, timeout=10):
     """Write `solution_code` as solution.py and `test_code` as a test that
-    imports it, then run the tests in a separate, resource-limited subprocess.
-    Returns (passed: bool, detail: str). A pass requires a clean exit AND the
-    per-run sentinel, so early-exit tricks cannot fake success. See the module
-    docstring for the (honest, limited) isolation scope.
+    imports it, then run the tests in a separate, resource-limited subprocess
+    (bubblewrap-isolated when available, else a best-effort network namespace).
+    Returns (passed: bool, detail: str). A pass requires a clean exit AND an
+    unforgeable per-run sentinel delivered over a pipe, so neither an early
+    os._exit(0) nor reading argv/env can fake success. See the module docstring
+    for the (honest, limited) isolation scope.
     """
     code = extract_code(solution_code)
-    sentinel = "PASS_" + secrets.token_hex(16)
+    sentinel = os.urandom(24)
     with tempfile.TemporaryDirectory(prefix="llm_eval_") as d:
         with open(os.path.join(d, "solution.py"), "w") as f:
             f.write(code)
@@ -118,32 +155,43 @@ def run_python_unittest(solution_code, test_code, timeout=10):
             f.write(test_code)
         with open(os.path.join(d, "_runner.py"), "w") as f:
             f.write(_RUNNER)
-        # Minimal environment: the child inherits no parent-process secrets, but
-        # still gets the temp dir on its import path so the test can import the
-        # generated solution.
+
+        sent_r, sent_w = os.pipe()
+        res_r, res_w = os.pipe()
+        os.write(sent_w, sentinel)             # fits the pipe buffer
+        os.close(sent_w)
+        # Minimal environment; the child gets the temp dir on its import path and
+        # the two pipe fd NUMBERS (the sentinel value travels through the pipe).
         env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-               "PYTHONPATH": d, "PYTHONDONTWRITEBYTECODE": "1"}
-        argv = (_net_isolation_prefix()
-                + [sys.executable, "-s", "-E", "_runner.py", sentinel])
+               "PYTHONPATH": d, "PYTHONDONTWRITEBYTECODE": "1",
+               "SENT_FD": str(sent_r), "RES_FD": str(res_w)}
+        prefix = _bwrap_prefix(d) or _net_isolation_prefix()
+        argv = prefix + [sys.executable, "-s", "-E", "_runner.py"]
         try:
             proc = subprocess.run(
-                argv,
-                cwd=d,
-                env=env,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                preexec_fn=_limit_resources if resource else None,
-            )
+                argv, cwd=d, env=env, capture_output=True, text=True,
+                timeout=timeout, pass_fds=(sent_r, res_w),
+                preexec_fn=_limit_resources if resource else None)
         except subprocess.TimeoutExpired:
             return False, "timeout"
         except Exception as e:                 # pragma: no cover - defensive
             return False, f"runner error: {e}"
-        # Integrity gate: clean exit is NOT enough — the sentinel proves the
-        # tests actually ran to completion and all passed.
-        ok = proc.returncode == 0 and sentinel in (proc.stdout or "")
-        out = (proc.stdout or "").replace(sentinel, "").strip()
-        detail = (proc.stderr or out or "").strip().splitlines()
+        finally:
+            for fd in (sent_r, res_w):
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+        try:
+            received = os.read(res_r, 128)
+        except OSError:                         # pragma: no cover - defensive
+            received = b""
+        finally:
+            os.close(res_r)
+        # Integrity gate: a clean exit is NOT enough — only the sentinel coming
+        # back proves the tests actually ran to completion and all passed.
+        ok = proc.returncode == 0 and received == sentinel
+        detail = (proc.stderr or proc.stdout or "").strip().splitlines()
         if proc.returncode == 0 and not ok:
             return False, "exited 0 without completing tests (no sentinel)"
         return ok, (detail[-1] if detail else ("ok" if ok else "failed"))

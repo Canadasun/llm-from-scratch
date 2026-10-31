@@ -189,3 +189,19 @@ def test_plain_path_still_opens_without_uri(tmp_path):
     s.add_tenant(Tenant("t", "T"))
     assert s.get_principal("nobody") is None
     s.close()
+
+
+def test_key_rejected_after_principal_moved_tenant(tmp_path):
+    # If a principal id is re-created in ANOTHER tenant, an old key for it must
+    # NOT authenticate (it would otherwise cross the tenant boundary).
+    for store in (SqlStore(str(tmp_path / "a.db")), __import__(
+            "enterprise.store", fromlist=["Store"]).Store()):
+        store.add_tenant(Tenant("A", "A"))
+        store.add_tenant(Tenant("B", "B"))
+        store.add_principal(Principal("p", "A", ("member",)))
+        plain, h = generate_key()
+        store.add_api_key(ApiKey("k", h, "A", "p", ()))
+        assert store.authenticate(plain)[0] is not None     # works initially
+        store.add_principal(Principal("p", "B", ("member",)))  # reassign id p -> B
+        princ, key = store.authenticate(plain)
+        assert princ is None and key is None                # stale key rejected

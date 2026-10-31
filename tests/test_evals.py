@@ -173,3 +173,24 @@ def test_sandbox_rejects_early_exit_zero():
     evil = "import os\ndef add(a, b):\n    return a + b\nos._exit(0)\n"
     ok, _ = scorers.run_python_unittest(evil, TEST)
     assert ok is False
+
+
+def test_bits_per_byte_not_gamed_by_unscorable_text(tiny):
+    model, tok = tiny
+    clean = "secure code and tests. the quick brown fox.\n" * 3
+    junk = clean + ("☃" * 50)               # snowmen: dropped by char tok
+    m_clean = corpus_metrics(model, tok, clean)
+    m_junk = corpus_metrics(model, tok, junk)
+    # adding unscorable characters must NOT lower (improve) bits-per-byte
+    assert m_junk["bits_per_byte"] >= m_clean["bits_per_byte"] - 1e-6
+
+
+def test_long_answer_scoring_sees_the_prefix(tiny):
+    model, tok = tiny
+    suffix = " the quick brown fox. secure code and tests."   # shared tail
+    a = "and " * 12 + suffix                      # > block_size tokens
+    b = "fox " * 12 + suffix                       # differs only in the prefix
+    na, ca = completion_nll(model, tok, "", a)
+    nb, cb = completion_nll(model, tok, "", b)
+    # the distinguishing prefix must affect the score (not silently discarded)
+    assert abs(na / ca - nb / cb) > 1e-4
