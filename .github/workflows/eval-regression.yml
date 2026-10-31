@@ -1,0 +1,66 @@
+name: Eval regression gate
+
+# Model-level gate: run the evaluation suite on a trained checkpoint and FAIL if
+# it regresses below the recorded baseline (evals/baselines/m2.json) on the
+# enforced, tokenizer-independent metrics (bits-per-byte, task accuracy).
+#
+# A checkpoint is large and not committed, so this workflow obtains one by:
+#   1. a checkpoint_url input (paste the URL when dispatching manually), or
+#   2. a restored Actions cache under key `model-checkpoint` (seed it once and
+#      every later run reuses it).
+# If neither is available it SKIPS cleanly (neutral), so the gate activates the
+# moment a checkpoint exists without ever blocking on its absence.
+
+on:
+  workflow_dispatch:
+    inputs:
+      checkpoint_url:
+        description: "Direct URL to a ckpt.pt (optional; else uses cached checkpoint)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "17 6 * * *"   # nightly 06:17 UTC
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies (CPU torch)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Restore cached checkpoint
+        uses: actions/cache@v4
+        with:
+          path: checkpoints/ckpt.pt
+          key: model-checkpoint
+
+      - name: Fetch checkpoint from input URL (if provided)
+        if: ${{ inputs.checkpoint_url != '' }}
+        run: |
+          mkdir -p checkpoints
+          curl -fSL "${{ inputs.checkpoint_url }}" -o checkpoints/ckpt.pt
+          ls -la checkpoints/
+
+      - name: Run regression gate (or skip if no checkpoint)
+        run: |
+          if [ -f checkpoints/ckpt.pt ]; then
+            echo "Checkpoint present — running regression gate."
+            python -m evals.regression \
+              --ckpt checkpoints/ckpt.pt \
+              --baseline evals/baselines/m2.json \
+              --device cpu
+          else
+            echo "::notice::No checkpoint available (no cache, no checkpoint_url)."
+            echo "Skipping model regression gate. Provide checkpoint_url when"
+            echo "dispatching, or seed the 'model-checkpoint' cache, to activate it."
+          fi

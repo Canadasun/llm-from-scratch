@@ -105,6 +105,45 @@ Append JSON lines to the files in `evals/data/`. Schemas:
 `tests/test_evals.py` validates every task file on each test run (parse, unique
 ids, in-range answers), so a malformed task is caught immediately.
 
+## Regression gate & CI
+
+Two layers run in CI (`.github/workflows/`):
+
+**1. Always-on (`ci.yml`)** — every push/PR runs the full test suite, which
+exercises the eval harness itself: task-file validation, likelihood/scoring
+maths, the sandboxed code runner, and the regression-comparison logic. No GPU,
+network, or checkpoint needed, so it is fast and reliable. If the eval machinery
+breaks, the build goes red.
+
+**2. Model regression (`eval-regression.yml`)** — runs the suite on a trained
+checkpoint and **fails if it regresses** below a recorded baseline
+(`evals/baselines/m2.json`). Run it locally too:
+
+```bash
+# run the suite on a checkpoint and gate it against the baseline
+python -m evals.regression --ckpt checkpoints/ckpt.pt --baseline evals/baselines/m2.json
+# or compare an already-produced results file
+python -m evals.run --json out.json
+python -m evals.regression --results out.json --baseline evals/baselines/m2.json
+```
+
+Exit code is **1 on regression**, 0 otherwise. This does *not* assert the model
+is good — it only catches a change that quietly makes it **worse** (a tokenizer
+bug, a broken checkpoint, a scoring change).
+
+**What is gated, and why only some metrics.** A baseline's `enforce` list names
+the metrics that actually fail the build. The M2 baseline enforces only
+**bits-per-byte** and **overall task accuracy**, because those are
+**tokenizer-independent** and so compare fairly across models with different
+vocabularies (M2 vocab 1024 vs M3 vocab 2048). **Perplexity** and **next-token
+top-k** are per-token and therefore tokenizer-dependent — they are recorded for
+reference but not gated across a vocab change. Default tolerances: bits/byte may
+worsen by ≤ 0.15 absolute; task accuracy may drop by ≤ 0.05 absolute (overridable
+per baseline).
+
+When a new milestone's numbers are measured and accepted, add a new baseline file
+(e.g. `evals/baselines/m3.json`) and point the workflow at it.
+
 ## Release gating (separate from this report)
 Per the project's enterprise direction, production promotion should be **blocked**
 on things this suite is a building block for — tenant-isolation defects, secret

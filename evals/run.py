@@ -34,6 +34,45 @@ def run_intrinsic(model, tokenizer, cfg, device):
     return {"trained": trained, "baseline": baseline}
 
 
+def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
+             progress=None):
+    """Run the eval suite and return {"summary","intrinsic","results","meta"}.
+
+    This is the reusable core shared by the CLI (main) and the regression gate
+    (evals.regression). `progress` is an optional callable(str) for status lines.
+    """
+    say = progress or (lambda *_: None)
+    device = pick_device(device)
+    model, tokenizer, cfg = load_checkpoint(ckpt, device)
+    say(f"Loaded {ckpt} | device {device} | tokenizer {tokenizer.kind} "
+        f"vocab {tokenizer.vocab_size} | block {cfg['block_size']} "
+        f"layers {cfg['n_layer']}")
+
+    intrinsic = None
+    if suite in ("all", "intrinsic"):
+        say("Running intrinsic metrics (held-out perplexity vs random init)...")
+        intrinsic = run_intrinsic(model, tokenizer, cfg, device)
+
+    results = []
+    summary = {"by_category": {}, "overall": {"n": 0, "correct": 0, "acc": 0.0},
+               "mc_random_baseline": None}
+    if suite in ("all", "tasks"):
+        tasks = load_tasks(default_task_files())
+        if limit:
+            tasks = tasks[:limit]
+        say(f"Running {len(tasks)} capability tasks...")
+        for i, task in enumerate(tasks, 1):
+            results.append(run_task(model, tokenizer, task, device))
+            if i % 10 == 0:
+                say(f"  {i}/{len(tasks)}")
+        summary = report_mod.summarize(results)
+
+    return {"summary": summary, "intrinsic": intrinsic, "results": results,
+            "meta": {"ckpt": ckpt, "device": device,
+                     "tokenizer": tokenizer.kind, "vocab_size": tokenizer.vocab_size,
+                     "block_size": cfg["block_size"], "n_layer": cfg["n_layer"]}}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default=DEFAULT_CKPT)
@@ -44,38 +83,16 @@ def main():
     ap.add_argument("--json", default=None, help="also write results as JSON here")
     args = ap.parse_args()
 
-    device = pick_device(args.device)
-    model, tokenizer, cfg = load_checkpoint(args.ckpt, device)
-    print(f"Loaded {args.ckpt} | device {device} | "
-          f"tokenizer {tokenizer.kind} vocab {tokenizer.vocab_size} | "
-          f"block {cfg['block_size']} layers {cfg['n_layer']}", flush=True)
-
-    intrinsic = None
-    if args.suite in ("all", "intrinsic"):
-        print("Running intrinsic metrics (held-out perplexity vs random init)...",
-              flush=True)
-        intrinsic = run_intrinsic(model, tokenizer, cfg, device)
-
-    results = []
-    summary = {"by_category": {}, "overall": {"n": 0, "correct": 0, "acc": 0.0},
-               "mc_random_baseline": None}
-    if args.suite in ("all", "tasks"):
-        tasks = load_tasks(default_task_files())
-        if args.limit:
-            tasks = tasks[:args.limit]
-        print(f"Running {len(tasks)} capability tasks...", flush=True)
-        for i, task in enumerate(tasks, 1):
-            results.append(run_task(model, tokenizer, task, device))
-            if i % 10 == 0:
-                print(f"  {i}/{len(tasks)}", flush=True)
-        summary = report_mod.summarize(results)
+    out = evaluate(args.ckpt, args.device, args.suite, args.limit,
+                   progress=lambda s: print(s, flush=True))
+    summary, intrinsic, results = out["summary"], out["intrinsic"], out["results"]
 
     print("\n" + report_mod.format_report(summary, results, intrinsic))
 
     if args.json:
         with open(args.json, "w") as f:
             json.dump({"summary": summary, "intrinsic": intrinsic,
-                       "results": results}, f, indent=2)
+                       "results": results, "meta": out["meta"]}, f, indent=2)
         print(f"\nWrote JSON results to {args.json}")
 
 

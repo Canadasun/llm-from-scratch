@@ -1,0 +1,20 @@
+{
+  "name": "m2-baseline-2026-10-30",
+  "note": "Milestone 2 checkpoint (~10.7M params, BPE vocab 1024, 5000 iters, ~6MB corpus). Recorded in docs/EVALUATION.md. A candidate must not regress below these on the ENFORCED, tokenizer-independent metrics. perplexity and next-token top-k are tokenizer-dependent, so they are recorded for reference but NOT gated across models with a different vocab (e.g. the M3 vocab-2048 model).",
+  "enforce": ["bits_per_byte", "overall_acc"],
+  "intrinsic": {
+    "trained": {
+      "perplexity": 15.60,
+      "bits_per_byte": 2.15,
+      "top1_acc": 0.447,
+      "top5_acc": 0.691
+    }
+  },
+  "summary": {
+    "overall": {"n": 61, "correct": 14, "acc": 0.2295}
+  },
+  "tolerances": {
+    "bits_per_byte_abs_max_increase": 0.15,
+    "overall_acc_abs_max_drop": 0.05
+  }
+}

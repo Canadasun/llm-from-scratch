@@ -1,5 +1,7 @@
 # llm-from-scratch
 
+[![CI](https://github.com/Canadasun/llm-from-scratch/actions/workflows/ci.yml/badge.svg)](https://github.com/Canadasun/llm-from-scratch/actions/workflows/ci.yml)
+
 Building a large language model **from scratch** — no model libraries, no
 fine-tuning of someone else's weights, no retrieval wrapper. The tokenizer, the
 self-attention, the transformer blocks and the training loop are all written by
@@ -122,6 +124,13 @@ skill), plus likelihood-scored multiple-choice, generation, and **sandboxed**
 code tasks, with sample sizes, the random-chance baseline, example failures and
 explicit limitations. See [`docs/EVALUATION.md`](docs/EVALUATION.md). It reports;
 it never prints "pass" — release gating is a separate, explicit decision.
+
+**Evals in CI.** Every push runs the full suite (including the eval harness) via
+[`ci.yml`](.github/workflows/ci.yml). A separate
+[`eval-regression.yml`](.github/workflows/eval-regression.yml) runs the suite on a
+trained checkpoint and **fails on regression** against a recorded baseline
+(`evals/baselines/`), gating the tokenizer-independent metrics (bits-per-byte,
+task accuracy). Run it locally with `python -m evals.regression --ckpt … --baseline …`.
 
 ## Model card
 
