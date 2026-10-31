@@ -89,6 +89,8 @@ def main():
                          "expose them at GET /metrics (Stage-4 pilot)")
     ap.add_argument("--max-concurrent", type=int, default=2,
                     help="maximum simultaneous generations; excess requests get 503")
+    ap.add_argument("--max-connections", type=int, default=32,
+                    help="maximum HTTP connection workers, including idle keep-alive clients")
     ap.add_argument("--quantize", action="store_true",
                     help="dynamic int8 quantization (CPU): ~2x faster generation, "
                          "negligible quality change")
@@ -141,7 +143,7 @@ def main():
         print("  [--metrics] aggregate metrics exposed at GET /metrics\n",
               flush=True)
 
-    serve(service, host=args.host, port=args.port)
+    serve(service, host=args.host, port=args.port, max_connections=args.max_connections)
 
 
 if __name__ == "__main__":

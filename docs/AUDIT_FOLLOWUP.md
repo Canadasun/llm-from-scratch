@@ -18,7 +18,10 @@ readiness or improve the trained model's instruction-following capability.
   Requests within that limit still use a sliding context during generation.
 - Inference has a nonblocking generation concurrency cap, configurable with
   `python -m serve --max-concurrent 2`. Excess work gets HTTP 503. This caps
-  generation, not HTTP connections or threads.
+  generation. HTTP connection workers are separately bounded with
+  `--max-connections 32`, including idle keep-alive clients. Excess connections
+  get a best-effort 503 without creating a worker. Malformed/duplicate length
+  headers and unsupported transfer encoding are rejected with connection close.
 - Explicit unauthorized intent no longer becomes `allow` merely because a
   prompt contains "lab". Sensitive protective investigation is flagged instead
   of automatically blocked. Regex classification remains a heuristic and never
@@ -80,8 +83,10 @@ binding. No cloud deployment or repository setting was changed by this follow-up
    identity ownership, and project/repository permissions.
 5. Add customer data lifecycle controls: retention/deletion, key management,
    tenant-scoped access, approved logging, and tested backup/restore.
-6. Add bounded HTTP admission/queues, distributed tenant quotas, request deadlines,
-   cancellation, and a production server/proxy. Validate under sustained load.
+6. HTTP worker admission is bounded locally. Still add distributed tenant quotas,
+   absolute request deadlines, cancellation, and a production server/proxy.
+   Validate under sustained load; socket inactivity timeouts do not stop a peer
+   that keeps sending data slowly, and local admission is not a fleet quota.
 
 ### P1 — organizational usability and operations
 
