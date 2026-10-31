@@ -84,7 +84,8 @@ def main():
         print("\n  [--secured] demo API key (tenant 'demo', role 'member'):\n"
               f"    {demo_key}\n"
               "  Pass it as:  -H 'authorization: Bearer <key>'\n"
-              "  This is an in-memory demo identity, not a production key store.\n")
+              "  This is an in-memory demo identity, not a production key store.\n",
+              flush=True)
 
     serve(service, host=args.host, port=args.port)
 

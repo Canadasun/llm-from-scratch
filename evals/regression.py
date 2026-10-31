@@ -127,6 +127,9 @@ def main(argv=None):
     ap.add_argument("--device", default="auto")
     ap.add_argument("--suite", choices=["all", "tasks", "intrinsic"], default="all")
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--task-timeout", type=float, default=120,
+                    help="per-task seconds cap so a slow task can't stall the "
+                         "gate (default 120; 0 disables)")
     args = ap.parse_args(argv)
 
     try:
@@ -146,7 +149,8 @@ def main(argv=None):
     elif args.ckpt:
         from evals.run import evaluate
         candidate = evaluate(args.ckpt, args.device, args.suite, args.limit,
-                             progress=lambda s: print(s, flush=True))
+                             progress=lambda s: print(s, flush=True),
+                             task_timeout=(args.task_timeout or None))
     else:
         print("error: pass --results or --ckpt", file=sys.stderr)
         return 2

@@ -14,11 +14,44 @@ reports. Release gating is a separate, explicit decision (see docs/EVALUATION.md
 import argparse
 import json
 import os
+import signal
 
 from evals.loader import DEFAULT_CKPT, load_checkpoint, random_baseline, pick_device
 from evals import report as report_mod
 from evals.scoring import corpus_metrics
 from evals.tasks import default_task_files, load_tasks, run_task
+
+
+class _TaskTimeout(Exception):
+    pass
+
+
+def _run_task_guarded(model, tokenizer, task, device, timeout):
+    """Run one task, but never let a single slow task (e.g. a long CPU
+    generation) stall the whole suite. On timeout the task is recorded as an
+    incorrect result marked 'timed_out' and evaluation continues.
+
+    Uses SIGALRM, so it is effective only on the main thread on Unix (the CLI and
+    CI case); with timeout falsy it is a plain call, unchanged behaviour.
+    """
+    if not timeout:
+        return run_task(model, tokenizer, task, device)
+
+    def _handler(signum, frame):
+        raise _TaskTimeout()
+
+    old = signal.signal(signal.SIGALRM, _handler)
+    signal.setitimer(signal.ITIMER_REAL, float(timeout))
+    try:
+        return run_task(model, tokenizer, task, device)
+    except _TaskTimeout:
+        return {"id": task.get("id"),
+                "category": task.get("category", "uncategorized"),
+                "type": task.get("type"), "correct": False,
+                "detail": f"timed_out (>{timeout}s)"}
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old)
 
 HELDOUT = os.path.join(os.path.dirname(__file__), "data", "heldout_security.txt")
 
@@ -35,11 +68,13 @@ def run_intrinsic(model, tokenizer, cfg, device):
 
 
 def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
-             progress=None):
+             progress=None, task_timeout=None):
     """Run the eval suite and return {"summary","intrinsic","results","meta"}.
 
     This is the reusable core shared by the CLI (main) and the regression gate
     (evals.regression). `progress` is an optional callable(str) for status lines.
+    `task_timeout` (seconds) caps any single capability task so one pathologically
+    slow task cannot stall the whole run; a timed-out task counts as incorrect.
     """
     say = progress or (lambda *_: None)
     device = pick_device(device)
@@ -62,8 +97,11 @@ def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
             tasks = tasks[:limit]
         say(f"Running {len(tasks)} capability tasks...")
         for i, task in enumerate(tasks, 1):
-            results.append(run_task(model, tokenizer, task, device))
-            if i % 10 == 0:
+            r = _run_task_guarded(model, tokenizer, task, device, task_timeout)
+            results.append(r)
+            if r.get("detail", "").startswith("timed_out"):
+                say(f"  {i}/{len(tasks)}  TIMED OUT: {task.get('id')}")
+            elif i % 10 == 0:
                 say(f"  {i}/{len(tasks)}")
         summary = report_mod.summarize(results)
 
@@ -81,10 +119,14 @@ def main():
     ap.add_argument("--limit", type=int, default=None,
                     help="cap number of capability tasks (quick smoke run)")
     ap.add_argument("--json", default=None, help="also write results as JSON here")
+    ap.add_argument("--task-timeout", type=float, default=None,
+                    help="seconds cap per capability task (prevents a slow task "
+                         "from stalling the run; timed-out tasks count incorrect)")
     args = ap.parse_args()
 
     out = evaluate(args.ckpt, args.device, args.suite, args.limit,
-                   progress=lambda s: print(s, flush=True))
+                   progress=lambda s: print(s, flush=True),
+                   task_timeout=args.task_timeout)
     summary, intrinsic, results = out["summary"], out["intrinsic"], out["results"]
 
     print("\n" + report_mod.format_report(summary, results, intrinsic))

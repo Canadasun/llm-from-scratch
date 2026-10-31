@@ -1,0 +1,20 @@
+# Keep the image small and the build fast. IMPORTANT: this does NOT exclude
+# checkpoints/ckpt.pt — that one file is baked into the image on purpose.
+.git/
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Not needed at serving time.
+data/
+notebooks/
+docs/
+tests/
+evals/baselines/
+*.md
+
+# Duplicate / unused checkpoints (ckpt.pt is the one the image uses; keep it).
+checkpoints/ckpt_m2.pt
+checkpoints/ckpt_m3.pt

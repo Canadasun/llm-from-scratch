@@ -1,0 +1,26 @@
+# What NOT to upload to Cloud Build when running `gcloud run deploy --source .`.
+#
+# IMPORTANT: when this file exists, gcloud does NOT fall back to .gitignore, so
+# the gitignored checkpoints/ directory WOULD be uploaded. We want exactly ONE
+# checkpoint in the image — checkpoints/ckpt.pt (the M3 model) — and nothing else
+# heavy. So we keep that one file and drop the rest.
+
+.git/
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Big things the serving image does not need.
+data/
+notebooks/
+docs/
+tests/
+evals/baselines/
+*.md
+
+# Duplicate / unused checkpoints (ckpt.pt is the one the image uses; keep it).
+checkpoints/ckpt_m2.pt
+checkpoints/ckpt_m3.pt
+data/.cache_*.pt
