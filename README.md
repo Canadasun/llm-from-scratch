@@ -95,7 +95,7 @@ afterthought — and it is **dual-use aware**: security topics are in scope
   untrusted `.pt` cannot execute code.
 
 See [`SECURITY.md`](SECURITY.md), [`docs/RESPONSIBLE_USE.md`](docs/RESPONSIBLE_USE.md)
-and [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md).
+and [`MODEL_CARD.md`](MODEL_CARD.md).
 
 ## Tests
 
