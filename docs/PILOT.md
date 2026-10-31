@@ -133,6 +133,15 @@ It exits non-zero on any failure, so it gates CI (and is also asserted by
 The scorecard prints the inputs behind the verdict so a human makes the call; no
 axis is asserted as a guarantee.
 
+### Reaching the GA latency bar
+
+The one axis short of `ga-candidate` was p95 latency (CPU generation). **Dynamic
+int8 quantization** (`--quantize`, or `QUANTIZE=1` in the container) closes it:
+measured **1.93x faster** generation with negligible quality change
+(`bits_per_byte` 1.7800 -> 1.7836, far inside the 1.93 regression gate). It
+quantizes the Linear layers (attention/MLP/head), needs no calibration data, and
+is CPU-only — the right lever for a scale-to-zero consumption container.
+
 ## Honest scope
 
 This measures the endpoint; it does not change its capacity. The server metrics

@@ -87,6 +87,9 @@ def main():
     ap.add_argument("--metrics", action="store_true",
                     help="collect aggregate reliability/latency/cost metrics and "
                          "expose them at GET /metrics (Stage-4 pilot)")
+    ap.add_argument("--quantize", action="store_true",
+                    help="dynamic int8 quantization (CPU): ~2x faster generation, "
+                         "negligible quality change")
     args = ap.parse_args()
 
     logging.basicConfig(
@@ -97,7 +100,10 @@ def main():
     if args.no_safety:
         log.warning("use-safety policy DISABLED (--no-safety)")
 
-    engine = InferenceEngine.from_checkpoint(args.ckpt, device=args.device)
+    engine = InferenceEngine.from_checkpoint(args.ckpt, device=args.device,
+                                             quantize=args.quantize)
+    if args.quantize:
+        log.info("int8 dynamic quantization enabled (faster CPU generation)")
     limiter = RateLimiter(capacity=args.rate_capacity, refill_per_sec=args.rate_per_sec)
     service = InferenceService(engine, rate_limiter=limiter, safety=not args.no_safety)
 

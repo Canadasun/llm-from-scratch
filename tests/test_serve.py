@@ -192,3 +192,17 @@ def test_rate_limiter_table_is_bounded():
         t[0] += 0.001
         rl.allow(f"client-{i}")
     assert len(rl._buckets) <= 50
+
+
+def test_quantized_engine_generates():
+    # int8 dynamic quantization must load, keep the config dims, and still generate.
+    tok = CharTokenizer.from_text(
+        "zero trust architecture verifies every request.\n")
+    torch.manual_seed(0)
+    cfg = GPTConfig(vocab_size=tok.vocab_size, block_size=16,
+                    n_layer=2, n_head=2, n_embd=32, dropout=0.0)
+    eng = InferenceEngine(GPT(cfg), tok, device="cpu", quantize=True)
+    assert eng.quantized is True
+    assert eng.block_size == 16 and eng.vocab_size == tok.vocab_size
+    out = eng.generate("zero ", max_new_tokens=8, seed=1)
+    assert out["completion_tokens"] == 8
