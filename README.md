@@ -161,6 +161,26 @@ is used for training.
   [`docs/SERVING.md`](docs/SERVING.md). Next: auth, a production ASGI worker, and
   a shared rate-limit store.
 
+### Enterprise platform (beyond the model)
+
+The longer-term direction is to make this a *platform* pro developers and security
+teams can trust, in staged, evidence-backed steps.
+
+- [x] Stage 1 — prove the model learns (Milestones 2–3: trained + independently
+  evaluated, honest numbers).
+- [x] Stage 2 (started) — **secure code review** (`codereview/`): AST-based
+  vulnerability detection with CWE-mapped findings, confidence levels, and
+  **measured FP/FN** (every rule has vulnerable + safe ground-truth fixtures;
+  zero false positives on first-party code). `python -m codereview <path>`; runs
+  in CI against its own source. See [`docs/CODE_REVIEW.md`](docs/CODE_REVIEW.md).
+  Next: patch proposals → verify with tests → open a PR for human review.
+- [ ] Stage 3 — enterprise security (identities, repo permissions, tenant
+  isolation, audited tool execution, controlled deploy).
+- [ ] Stage 4 — authorized pilot measuring reliability, security, latency, cost.
+
+Findings and fixes are always for **human review** — authorization lives in the
+software, never in model output, and all analyzed input is untrusted.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

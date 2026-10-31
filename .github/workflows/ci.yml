@@ -33,3 +33,16 @@ jobs:
 
       - name: Run test suite (unit + eval harness + serving + regression logic)
         run: python -m pytest -q
+
+      - name: Secure code review of first-party packages (fail on high+)
+        run: |
+          # The platform reviews its own real code. codereview/testdata/ holds
+          # intentionally vulnerable fixtures, so it is deliberately excluded:
+          # we scan the package dirs that have no testdata, plus the top-level
+          # source files, plus codereview's own modules (not its testdata/).
+          for d in serve evals safety; do
+            python -m codereview "$d" --fail-on high
+          done
+          for f in *.py codereview/*.py; do
+            python -m codereview "$f" --fail-on high
+          done
