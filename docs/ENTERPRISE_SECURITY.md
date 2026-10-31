@@ -55,12 +55,47 @@ Isolation is checked in three places (defense in depth): the store never returns
 cross-tenant row, the authorizer denies a cross-tenant resource, and the gateway
 turns that into a non-leaking 404.
 
+## Wired in front of `/generate`
+
+The security core is now composed around the serving layer (`serve/secured.py`,
+`SecuredInferenceService`), so inference is a multi-tenant, authenticated, audited
+capability:
+
+```
+API key (Bearer)  ->  authenticate  ->  authorize("model:infer", RBAC + key scope)
+                  ->  InferenceService (validate -> rate-limit -> use-safety ->
+                      generate -> use-safety)  ->  audit the outcome
+```
+
+- **Identity comes from the API key, never the socket.** A missing or bad token
+  is a `401` and the model never runs.
+- **Infer is a tenant-scoped capability, not a per-resource action** — authorized
+  by RBAC plus the key-scope ceiling (a key scoped away from `model:infer` gets a
+  `403`, even if the role would allow it). The cross-tenant resource isolation is
+  unchanged and still enforced in the store/authz/gateway.
+- **Rate limiting is keyed by the authenticated principal**, not the connecting
+  IP — real identity is throttled, not whatever address it came from.
+- **Every path emits exactly one audit event**: auth failure, authz denial, a
+  use-safety block, an internal error, or success (with the tenant attached).
+- **Health stays open** (liveness probe) and advertises `"auth": "required"`.
+
+Run it end to end with a demo tenant + key:
+
+```bash
+python -m serve --secured          # prints a one-time demo API key at startup
+curl -s localhost:8000/generate -H 'authorization: Bearer sk_...' \
+     -H 'content-type: application/json' -d '{"prompt":"TLS ","seed":1}'
+```
+
+The `--secured` key store is an **in-memory demo identity**, not production key
+management (see below).
+
 ## Honest scope / what's next
 
-This is the security *core*, not a finished enterprise deployment. Still ahead for
-Stage 3: real persistence with DB row-level security, SSO (OIDC/SAML) and MFA at
-the edge, TLS/encryption at rest, a shared (not in-process) rate-limit + quota
-store, key rotation, and wiring this gateway in front of the serving layer so
-`/generate` is authenticated, tenant-scoped and audited. No SOC 2/ISO claims are
-made; these are building blocks mapped to OWASP LLM Top 10 / NIST AI RMF and the
+This is the security *core* plus its wiring to the endpoint, not a finished
+enterprise deployment. Still ahead for Stage 3: real persistence with DB row-level
+security, an admin flow to issue/rotate keys (the `--secured` store is in-memory
+and demo-only), SSO (OIDC/SAML) and MFA at the edge, TLS/encryption at rest, and a
+shared (not in-process) rate-limit + quota store. No SOC 2/ISO claims are made;
+these are building blocks mapped to OWASP LLM Top 10 / NIST AI RMF and the
 directive's P5.

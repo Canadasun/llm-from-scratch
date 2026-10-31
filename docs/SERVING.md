@@ -86,6 +86,12 @@ Every request produces one structured JSON log line (`rid`, `client`, `status`,
   limiter can't be bypassed with a spoofed header. Put this behind a trusted
   proxy if you need real client IPs.
 - **Bind to `127.0.0.1` by default;** exposing it is an explicit `--host` choice.
+- **Optional authentication (`--secured`):** wraps the service in the enterprise
+  security layer (`serve/secured.py`) so `/generate` requires an
+  `Authorization: Bearer <key>`, authorizes the `model:infer` capability by role
+  + key scope, rate-limits per authenticated principal (not socket IP), and
+  audits every request. Without the flag the endpoint is open (local-dev
+  default). See [`ENTERPRISE_SECURITY.md`](ENTERPRISE_SECURITY.md).
 
 ## Honest limitations
 - This stdlib server is **threaded, single-process** — fine for a demo or a local

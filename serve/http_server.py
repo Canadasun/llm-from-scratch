@@ -37,6 +37,15 @@ def make_handler(service):
             # unless a trusted proxy sets it; we deliberately ignore it here.
             return self.client_address[0] if self.client_address else "-"
 
+        def _bearer(self):
+            # Pull an API key from `Authorization: Bearer <key>`. Returns None if
+            # the header is absent or malformed; authentication itself is the
+            # service's job, not the transport's.
+            h = self.headers.get("Authorization", "")
+            if h[:7].lower() == "bearer ":
+                return h[7:].strip() or None
+            return None
+
         def do_GET(self):
             if self.path.split("?")[0] == "/healthz":
                 self._send(200, service.health())
@@ -61,7 +70,13 @@ def make_handler(service):
             except (ValueError, UnicodeDecodeError):
                 self._send(400, {"error": "invalid_request", "detail": "body is not valid JSON"})
                 return
-            status, body = service.handle_generate(payload, client=self._client())
+            if getattr(service, "requires_auth", False):
+                # Secured service: the bearer token is the identity; a missing
+                # or bad token becomes a 401 inside the service (and is audited).
+                status, body = service.handle_generate(
+                    payload, api_key=self._bearer(), client=self._client())
+            else:
+                status, body = service.handle_generate(payload, client=self._client())
             self._send(status, body)
 
         def log_message(self, *args):

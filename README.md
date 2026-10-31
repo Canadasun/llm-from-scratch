@@ -183,9 +183,12 @@ teams can trust, in staged, evidence-backed steps.
   identity, scoped API keys (hashed), RBAC + **tenant isolation**, a redacted
   audit log, and an authenticate→authorize→act→audit gateway. Hits the **P0 gate
   — zero cross-tenant access** (a test attempts every action across tenants and
-  all are denied + audited). See
+  all are denied + audited). It is now **wired in front of `serve/`**
+  (`serve/secured.py`): `/generate` requires an API key, authorizes `model:infer`
+  by RBAC + key scope, rate-limits per authenticated principal, and audits every
+  path (`python -m serve --secured`). See
   [`docs/ENTERPRISE_SECURITY.md`](docs/ENTERPRISE_SECURITY.md). Next: DB row-level
-  security, SSO/MFA, shared rate-limit store, and wiring it in front of `serve/`.
+  security, SSO/MFA, key rotation, and a shared rate-limit store.
 - [ ] Stage 4 — authorized pilot measuring reliability, security, latency, cost.
 
 Findings and fixes are always for **human review** — authorization lives in the
