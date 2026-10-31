@@ -26,6 +26,7 @@ exactly the ones that must hold there.
 | `models.py` | `Tenant`, `Principal` (roles), `ApiKey` (hash + scopes), `Resource` (tenant-owned) |
 | `keys.py` | generate a key (plaintext shown once), store only a SHA-256 hash, constant-time verify |
 | `store.py` | in-memory store; **resource lookups are tenant-scoped** — the isolation boundary |
+| `sqlstore.py` | **persistent** SQLite store — same interface + invariants, keys survive restarts |
 | `authz.py` | RBAC (`viewer`/`member`/`admin`) + tenant check + key-scope ceiling |
 | `keymgmt.py` | authorized, tenant-scoped API-key **issuance / rotation / revocation** |
 | `audit.py` | structured, **redacted** audit events, queryable by tenant/decision |
@@ -114,11 +115,39 @@ a **grace window** during which both keys authenticate — so a running client c
 swap over without an outage. Each operation emits exactly one audit event and the
 secret never appears in the trail.
 
+## Persistent key store
+
+`enterprise/sqlstore.py` (`SqlStore`) is a **drop-in** for the in-memory store,
+backed by SQLite, so **API keys survive a restart** instead of being minted fresh
+per process. Same method surface (the gateway, key manager and secured service
+are unchanged) and the **same isolation invariant**, enforced in SQL: every
+tenant-scoped lookup carries `WHERE ... AND tenant_id = ?` — the row-level-security
+analog, and there is deliberately no by-id query that ignores the tenant. The P0
+cross-tenant gate is re-run against `SqlStore` in the tests, and key issuance /
+rotation / revocation are shown to persist across a reopen.
+
+Turn it on:
+
+```bash
+python -m serve --secured --key-db keys.db   # keys persist across restarts
+```
+
+On first start it mints and prints a demo key; on later starts it reuses the
+store and existing keys stay valid (mint/rotate more via `enterprise.keymgmt`).
+
+**Durability scope (honest):** a SQLite file persists across process restarts and
+is correct for a single-node deployment. For **true cross-replica sharing** (many
+Container Apps replicas at once) the file must sit on a mounted volume (Azure
+Files) or `SqlStore` should be re-pointed at a networked database (Postgres with
+real RLS policies). The interface and invariants are identical; only the
+connection changes. The Dockerfile reads `KEY_DB=<path>` to enable it.
+
 ## Honest scope / what's next
 
-This is the security *core*, its wiring to the endpoint, and the key lifecycle —
-not a finished enterprise deployment. Still ahead for Stage 3: real persistence
-with DB row-level security (the `--secured` store and the key store are in-memory),
-SSO (OIDC/SAML) and MFA at the edge, TLS/encryption at rest, and a shared (not
-in-process) rate-limit + quota store. No SOC 2/ISO claims are made; these are
-building blocks mapped to OWASP LLM Top 10 / NIST AI RMF and the directive's P5.
+This is the security *core*, its wiring to the endpoint, the key lifecycle, and a
+**persistent key store** — not a finished enterprise deployment. Still ahead for
+Stage 3: mounting the key store on durable shared storage for the live endpoint
+(or moving to Postgres with DB-native RLS), SSO (OIDC/SAML) and MFA at the edge,
+TLS/encryption at rest, and a shared (not in-process) rate-limit + quota store. No
+SOC 2/ISO claims are made; these are building blocks mapped to OWASP LLM Top 10 /
+NIST AI RMF and the directive's P5.

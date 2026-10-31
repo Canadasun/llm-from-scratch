@@ -63,7 +63,7 @@ class KeyManager:
             return 403, {"error": "forbidden", "request_id": rid}
 
         # target principal must exist AND be in the actor's tenant
-        target = self.store._principals.get(target_principal_id)
+        target = self.store.get_principal(target_principal_id)
         if target is None or target.tenant_id != tid:
             self.audit.record(rid, MANAGE_ACTION, "deny", "not_found_or_forbidden",
                               tenant_id=tid, principal_id=actor.id,

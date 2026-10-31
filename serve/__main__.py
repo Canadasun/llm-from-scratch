@@ -6,6 +6,7 @@ Run the inference server.
     python -m serve --host 0.0.0.0        # expose (be deliberate about this)
     python -m serve --no-safety           # research mode; logged
     python -m serve --secured             # require an API key, tenant-scoped + audited
+    python -m serve --secured --key-db keys.db   # + PERSISTENT keys (survive restart)
 
 Then:
     curl localhost:8000/healthz
@@ -27,25 +28,43 @@ from serve.secured import SecuredInferenceService
 from serve.service import InferenceService
 
 
-def _bootstrap_demo_tenant():
-    """Build an in-memory store with one tenant/principal and a fresh API key.
+def _make_store(key_db):
+    """Return the store backing --secured. A path gives a PERSISTENT SQLite store
+    (keys survive restarts); no path gives the in-memory store (ephemeral demo)."""
+    import time
+    if key_db:
+        from enterprise.sqlstore import SqlStore
+        return SqlStore(key_db, clock=time.time)
+    from enterprise.store import Store
+    return Store()
 
-    This is a DEMO identity so `--secured` is runnable end to end; it is NOT a
-    production key store. Real deployments back the store with a database (with
-    row-level security) and issue keys through an admin flow. The plaintext key
-    is shown once here and only its hash is kept.
+
+def _bootstrap_demo_tenant(store):
+    """Ensure a demo tenant/principal exists and return a usable API key.
+
+    - In-memory store, or a fresh DB with no demo key yet: create the tenant +
+      principal, mint a key, and return (plaintext, is_new=True) so it is printed
+      once (only the hash is stored).
+    - A persistent DB that already has the demo principal: do NOT recreate or
+      re-mint — existing keys stay valid across the restart — and return
+      (None, is_new=False). This is what makes --secured keys STABLE.
+
+    Real deployments issue keys through the admin flow (enterprise.keymgmt); this
+    is just the runnable demo identity.
     """
-    from enterprise.audit import AuditLog
     from enterprise.keys import generate_key
     from enterprise.models import ApiKey, Principal, Tenant
-    from enterprise.store import Store
 
-    store = Store()
+    if store.get_principal("demo-user") is not None:
+        return None, False                      # already provisioned (persisted)
+
     store.add_tenant(Tenant("demo", "Demo Tenant"))
     store.add_principal(Principal("demo-user", "demo", ("member",)))
+    import time
     plaintext, key_hash = generate_key()
-    store.add_api_key(ApiKey("demo-key", key_hash, "demo", "demo-user", ()))
-    return store, AuditLog(), plaintext
+    store.add_api_key(ApiKey("demo-key", key_hash, "demo", "demo-user", (),
+                             created_at=time.time()))
+    return plaintext, True
 
 
 def main():
@@ -62,6 +81,9 @@ def main():
                     help="disable the use-safety policy (research use; logged)")
     ap.add_argument("--secured", action="store_true",
                     help="require an API key; requests are tenant-scoped + audited")
+    ap.add_argument("--key-db", default=None,
+                    help="path to a SQLite key store (persists keys across "
+                         "restarts); omit for an in-memory demo store")
     args = ap.parse_args()
 
     logging.basicConfig(
@@ -77,15 +99,22 @@ def main():
     service = InferenceService(engine, rate_limiter=limiter, safety=not args.no_safety)
 
     if args.secured:
-        store, audit, demo_key = _bootstrap_demo_tenant()
+        from enterprise.audit import AuditLog
+        store = _make_store(args.key_db)
+        audit = AuditLog()
+        demo_key, is_new = _bootstrap_demo_tenant(store)
         service = SecuredInferenceService(service, store, audit)
-        # Printed to stdout (not the structured log) so it is easy to copy and
-        # is not mistaken for an audit record. Demo only — see _bootstrap docs.
-        print("\n  [--secured] demo API key (tenant 'demo', role 'member'):\n"
-              f"    {demo_key}\n"
-              "  Pass it as:  -H 'authorization: Bearer <key>'\n"
-              "  This is an in-memory demo identity, not a production key store.\n",
-              flush=True)
+        backing = f"persistent SQLite ({args.key_db})" if args.key_db else "in-memory (ephemeral)"
+        if is_new:
+            # Printed to stdout (not the structured log) so it is easy to copy.
+            print("\n  [--secured] demo API key (tenant 'demo', role 'member'):\n"
+                  f"    {demo_key}\n"
+                  "  Pass it as:  -H 'authorization: Bearer <key>'\n"
+                  f"  Key store: {backing}.\n", flush=True)
+        else:
+            print(f"\n  [--secured] key store: {backing} — existing keys remain "
+                  "valid (not reprinted). Mint/rotate via enterprise.keymgmt.\n",
+                  flush=True)
 
     serve(service, host=args.host, port=args.port)
 

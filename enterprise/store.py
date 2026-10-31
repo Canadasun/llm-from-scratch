@@ -47,6 +47,11 @@ class Store:
         self._resources[resource.id] = resource
         return resource
 
+    def get_principal(self, principal_id):
+        """Look up a principal by id (no tenant scoping — callers that act on a
+        principal, e.g. key management, must themselves check it is in-tenant)."""
+        return self._principals.get(principal_id)
+
     # --- authentication ---
     def authenticate(self, presented_key):
         """Return (Principal, ApiKey) for a valid key, else (None, None).

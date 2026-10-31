@@ -23,4 +23,8 @@ ENV PYTHONUNBUFFERED=1
 # exec form via sh so ${PORT} expands at runtime. Setting SECURED=1 turns on the
 # enterprise auth layer (API-key required, tenant-scoped, audited) — used when
 # the endpoint is reachable from the internet.
-CMD ["sh", "-c", "exec python -m serve --host 0.0.0.0 --port ${PORT} --ckpt checkpoints/ckpt.pt ${SECURED:+--secured}"]
+# SECURED=1 turns on API-key auth. KEY_DB=/path turns on the PERSISTENT SQLite key
+# store (keys survive restarts); for it to persist across replica recycles on a
+# cloud host, point KEY_DB at a MOUNTED volume (e.g. Azure Files), not the
+# container's ephemeral local fs.
+CMD ["sh", "-c", "exec python -m serve --host 0.0.0.0 --port ${PORT} --ckpt checkpoints/ckpt.pt ${SECURED:+--secured} ${KEY_DB:+--key-db ${KEY_DB}}"]
