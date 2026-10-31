@@ -9,3 +9,9 @@
 {"id": "gen-token", "category": "generation", "type": "generation", "prompt": "A JSON Web Token is commonly abbreviated as ", "scorer": "contains", "target": "jwt", "max_new_tokens": 12}
 {"id": "gen-tls13", "category": "generation", "type": "generation", "prompt": "The latest major version of the TLS protocol is TLS ", "scorer": "regex", "target": "1\\.3", "max_new_tokens": 8}
 {"id": "gen-cve", "category": "generation", "type": "generation", "prompt": "A publicly catalogued software vulnerability is identified by a CVE ", "scorer": "contains_any", "target": ["id", "identifier", "number"], "max_new_tokens": 12}
+{"id": "gen2-tls", "category": "generation", "type": "generation", "prompt": "Transport Layer Security, which protects data in transit, is abbreviated ", "scorer": "contains", "target": "tls", "max_new_tokens": 12}
+{"id": "gen2-sqli", "category": "generation", "type": "generation", "prompt": "A web attack that injects malicious SQL into a query is called SQL ", "scorer": "contains", "target": "injection", "max_new_tokens": 12}
+{"id": "gen2-least", "category": "generation", "type": "generation", "prompt": "The security principle of granting only the access needed is called least ", "scorer": "contains", "target": "privilege", "max_new_tokens": 12}
+{"id": "gen2-encrypt", "category": "generation", "type": "generation", "prompt": "Converting plaintext into unreadable ciphertext is called ", "scorer": "contains", "target": "encrypt", "max_new_tokens": 12}
+{"id": "gen2-firewall", "category": "generation", "type": "generation", "prompt": "A network device that filters traffic by rules is called a ", "scorer": "contains", "target": "firewall", "max_new_tokens": 12}
+{"id": "gen2-auth", "category": "generation", "type": "generation", "prompt": "Confirming a user's identity with a password or key is called ", "scorer": "contains", "target": "authentic", "max_new_tokens": 12}
