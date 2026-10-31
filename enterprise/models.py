@@ -23,6 +23,19 @@ class ApiKey:
     tenant_id: str
     principal_id: str
     scopes: tuple = ()         # optional ceiling on actions this key may do
+    # --- lifecycle (issuance / rotation / revocation) ---
+    created_at: float = 0.0
+    expires_at: float = 0.0    # 0.0 = never expires; else a unix timestamp
+    revoked: bool = False
+    replaced_by: str = ""      # id of the key that rotated this one out (lineage)
+
+    def is_active(self, now):
+        """A key is usable only if not revoked and not past its expiry."""
+        if self.revoked:
+            return False
+        if self.expires_at and now >= self.expires_at:
+            return False
+        return True
 
 
 @dataclass(frozen=True)

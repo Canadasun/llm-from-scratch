@@ -186,9 +186,11 @@ teams can trust, in staged, evidence-backed steps.
   all are denied + audited). It is now **wired in front of `serve/`**
   (`serve/secured.py`): `/generate` requires an API key, authorizes `model:infer`
   by RBAC + key scope, rate-limits per authenticated principal, and audits every
-  path (`python -m serve --secured`). See
-  [`docs/ENTERPRISE_SECURITY.md`](docs/ENTERPRISE_SECURITY.md). Next: DB row-level
-  security, SSO/MFA, key rotation, and a shared rate-limit store.
+  path (`python -m serve --secured`). API keys have an authorized, tenant-scoped
+  lifecycle — **issuance, rotation (with a grace window), and revocation**, with
+  scopes that can only narrow the grantor's authority (`enterprise/keymgmt.py`).
+  See [`docs/ENTERPRISE_SECURITY.md`](docs/ENTERPRISE_SECURITY.md). Next: DB
+  row-level security persistence, SSO/MFA, and a shared rate-limit store.
 - [ ] Stage 4 — authorized pilot measuring reliability, security, latency, cost.
 
 Findings and fixes are always for **human review** — authorization lives in the

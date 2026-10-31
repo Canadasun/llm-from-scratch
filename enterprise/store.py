@@ -11,15 +11,18 @@ The single rule that matters: resource lookups take a Principal and filter by
 tenant — that absence is the isolation guarantee.
 """
 
+import time
+
 from enterprise.keys import verify_key
 
 
 class Store:
-    def __init__(self):
+    def __init__(self, clock=time.time):
         self._tenants = {}        # id -> Tenant
         self._principals = {}     # id -> Principal
         self._keys = {}           # key_hash -> ApiKey
         self._resources = {}      # id -> Resource
+        self._clock = clock       # injectable for deterministic expiry tests
 
     # --- registration ---
     def add_tenant(self, tenant):
@@ -47,14 +50,42 @@ class Store:
     # --- authentication ---
     def authenticate(self, presented_key):
         """Return (Principal, ApiKey) for a valid key, else (None, None).
-        Looks up by hash and verifies in constant time."""
+        Looks up by hash, verifies in constant time, and rejects a key that is
+        revoked or past its expiry (so rotation/revocation take effect here)."""
         from enterprise.keys import hash_key
         api_key = self._keys.get(hash_key(presented_key))
         if api_key is None:
             return None, None
         if not verify_key(presented_key, api_key.key_hash):   # defense in depth
             return None, None
+        if not api_key.is_active(self._clock()):              # revoked or expired
+            return None, None
         return self._principals.get(api_key.principal_id), api_key
+
+    # --- tenant-scoped API-key management (same isolation rule as resources) ---
+    def get_api_key(self, principal, key_id):
+        """Return the key with this id ONLY if it belongs to the principal's
+        tenant, else None — a key in another tenant is indistinguishable from
+        one that does not exist, exactly like get_resource."""
+        for k in self._keys.values():
+            if k.id == key_id and k.tenant_id == principal.tenant_id:
+                return k
+        return None
+
+    def list_api_keys(self, principal, principal_id=None):
+        """Keys in the caller's tenant (optionally for one principal)."""
+        return [k for k in self._keys.values()
+                if k.tenant_id == principal.tenant_id
+                and (principal_id is None or k.principal_id == principal_id)]
+
+    def update_api_key(self, api_key):
+        """Replace a stored key record. The hash is the storage slot and never
+        changes on an update (revoke/expire/rotate-link only), so a lifecycle
+        change can never alter which secret a record verifies."""
+        if api_key.key_hash not in self._keys:
+            raise KeyError("unknown api key")
+        self._keys[api_key.key_hash] = api_key
+        return api_key
 
     # --- tenant-scoped resource access (THE isolation boundary) ---
     def get_resource(self, principal, resource_id):

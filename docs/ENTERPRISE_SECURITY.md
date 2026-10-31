@@ -27,6 +27,7 @@ exactly the ones that must hold there.
 | `keys.py` | generate a key (plaintext shown once), store only a SHA-256 hash, constant-time verify |
 | `store.py` | in-memory store; **resource lookups are tenant-scoped** — the isolation boundary |
 | `authz.py` | RBAC (`viewer`/`member`/`admin`) + tenant check + key-scope ceiling |
+| `keymgmt.py` | authorized, tenant-scoped API-key **issuance / rotation / revocation** |
 | `audit.py` | structured, **redacted** audit events, queryable by tenant/decision |
 | `gateway.py` | the request pipeline: authenticate → resolve-in-tenant → authorize → act → audit |
 
@@ -90,12 +91,34 @@ curl -s localhost:8000/generate -H 'authorization: Bearer sk_...' \
 The `--secured` key store is an **in-memory demo identity**, not production key
 management (see below).
 
+## Key lifecycle: issuance, rotation, revocation
+
+API keys are the credentials the gateway authenticates, so their lifecycle is a
+privileged operation in its own right (`enterprise/keymgmt.py`, `KeyManager`).
+Every operation is **authorized, tenant-scoped and audited**:
+
+- the actor must hold `apikey:manage` (the admin role), narrowed by the actor's
+  own key scope — a member gets a `403`;
+- an actor can only mint/rotate/revoke keys for principals and keys **in its own
+  tenant**; anything else is an indistinguishable `404` (no existence leak);
+- an issued key's scopes **can only narrow**, never exceed, what the actor is
+  itself allowed to do right now (`effective_permissions`);
+- the plaintext is returned **exactly once**; only the SHA-256 hash is stored;
+- keys carry a lifecycle (`created_at`, `expires_at`, `revoked`, `replaced_by`),
+  and `store.authenticate` rejects a revoked or expired key — so revocation and
+  rotation take effect the instant they are recorded.
+
+**Rotation** mints a fresh key for the same principal and scopes, links the old
+record to it (`replaced_by`), and retires the old key either immediately or after
+a **grace window** during which both keys authenticate — so a running client can
+swap over without an outage. Each operation emits exactly one audit event and the
+secret never appears in the trail.
+
 ## Honest scope / what's next
 
-This is the security *core* plus its wiring to the endpoint, not a finished
-enterprise deployment. Still ahead for Stage 3: real persistence with DB row-level
-security, an admin flow to issue/rotate keys (the `--secured` store is in-memory
-and demo-only), SSO (OIDC/SAML) and MFA at the edge, TLS/encryption at rest, and a
-shared (not in-process) rate-limit + quota store. No SOC 2/ISO claims are made;
-these are building blocks mapped to OWASP LLM Top 10 / NIST AI RMF and the
-directive's P5.
+This is the security *core*, its wiring to the endpoint, and the key lifecycle —
+not a finished enterprise deployment. Still ahead for Stage 3: real persistence
+with DB row-level security (the `--secured` store and the key store are in-memory),
+SSO (OIDC/SAML) and MFA at the edge, TLS/encryption at rest, and a shared (not
+in-process) rate-limit + quota store. No SOC 2/ISO claims are made; these are
+building blocks mapped to OWASP LLM Top 10 / NIST AI RMF and the directive's P5.

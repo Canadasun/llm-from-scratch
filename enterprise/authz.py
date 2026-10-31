@@ -19,7 +19,7 @@ ROLE_PERMISSIONS = {
     "viewer": {"model:infer", "resource:read"},
     "member": {"model:infer", "resource:read", "resource:write"},
     "admin": {"model:infer", "resource:read", "resource:write",
-              "resource:delete", "tenant:manage"},
+              "resource:delete", "tenant:manage", "apikey:manage"},
 }
 
 ALL_ACTIONS = set().union(*ROLE_PERMISSIONS.values())
@@ -36,6 +36,17 @@ def permissions_for(roles):
     for r in roles:
         granted |= ROLE_PERMISSIONS.get(r, set())
     return granted
+
+
+def effective_permissions(principal, scopes=None):
+    """What a principal can ACTUALLY do right now: its role permissions,
+    narrowed by the presented key's scopes if the key is scoped. This is the
+    ceiling an admin may grant when issuing a key — a key can only ever narrow,
+    never widen, the authority of the principal that mints it."""
+    perms = permissions_for(principal.roles)
+    if scopes:
+        perms &= set(scopes)
+    return perms
 
 
 def authorize(principal, action, resource=None, scopes=None):

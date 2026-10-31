@@ -11,10 +11,11 @@ database with row-level security and the gateway sits behind SSO/MFA and TLS;
 here the SAME invariants are implemented in-memory so they can be enforced by
 tests — above all the P0 gate: **zero cross-tenant access**.
 
-  models.py   Tenant, Principal, ApiKey, Resource
+  models.py   Tenant, Principal, ApiKey (with lifecycle), Resource
   keys.py     generate/verify API keys (only a hash is ever stored)
   store.py    in-memory store; the tenant-isolation invariant lives here
   authz.py    RBAC + tenant check: authorize(principal, action, resource)
+  keymgmt.py  authorized, tenant-scoped API-key issuance / rotation / revocation
   audit.py    structured, redacted audit log of every decision
   gateway.py  authenticate -> authorize -> act -> audit (the request pipeline)
 """
