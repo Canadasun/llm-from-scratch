@@ -47,8 +47,13 @@ def make_handler(service):
             return None
 
         def do_GET(self):
-            if self.path.split("?")[0] == "/healthz":
+            route = self.path.split("?")[0]
+            if route == "/healthz":
                 self._send(200, service.health())
+            elif route == "/metrics" and hasattr(service, "metrics_snapshot"):
+                # Aggregate-only operational metrics (counts/rates/timings/cost).
+                # Open like /healthz: it leaks no tenant data, prompts or outputs.
+                self._send(200, service.metrics_snapshot())
             else:
                 self._send(404, {"error": "not_found"})
 

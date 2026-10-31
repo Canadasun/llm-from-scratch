@@ -84,6 +84,9 @@ def main():
     ap.add_argument("--key-db", default=None,
                     help="path to a SQLite key store (persists keys across "
                          "restarts); omit for an in-memory demo store")
+    ap.add_argument("--metrics", action="store_true",
+                    help="collect aggregate reliability/latency/cost metrics and "
+                         "expose them at GET /metrics (Stage-4 pilot)")
     args = ap.parse_args()
 
     logging.basicConfig(
@@ -115,6 +118,14 @@ def main():
             print(f"\n  [--secured] key store: {backing} — existing keys remain "
                   "valid (not reprinted). Mint/rotate via enterprise.keymgmt.\n",
                   flush=True)
+
+    if args.metrics:
+        # Outermost wrapper so it observes every outcome (incl. 401/403 before
+        # the model runs). Purely observational — it changes no behaviour.
+        from serve.metrics import MeteredInferenceService
+        service = MeteredInferenceService(service)
+        print("  [--metrics] aggregate metrics exposed at GET /metrics\n",
+              flush=True)
 
     serve(service, host=args.host, port=args.port)
 
