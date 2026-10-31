@@ -94,8 +94,8 @@ def format_report(summary, results, intrinsic=None, max_failures=5):
             lines.append(f"  [{r['category']}/{r['id']}] {r['type']}: {r.get('detail','')}")
 
     lines.append("\nLimitations:")
-    lines.append("  - This is a base model, not instruction-tuned; it is")
-    lines.append("    scored on likelihood (MC) and raw generation, not chat ability.")
+    lines.append("  - This suite scores likelihood (MC) and raw generation;")
+    lines.append("    those measurements do not establish general chat ability.")
     lines.append("  - A small, hand-authored starter suite: treat numbers as a")
     lines.append("    baseline to improve against, not a readiness claim.")
     lines.append("  - Code tasks compare sandboxed function outputs in an independent")

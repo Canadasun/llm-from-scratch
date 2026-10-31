@@ -1,0 +1,11 @@
+{
+  "source": "original templates in data/build_instructions.py; no evaluation files read",
+  "license": "MIT (project-authored)",
+  "train_examples": 300,
+  "validation_examples": 68,
+  "split": "disjoint exercise families",
+  "sha256": {
+    "train": "96d5d77bdff14bd55fb7398d0482c9344b3450cd2a46a09257afbb6bdfafc23c",
+    "validation": "b8d213c4950d03479dbe29d3317e9605dbdf2cff4006271fa25ca903796d7f90"
+  }
+}

@@ -1,5 +1,11 @@
 # Model Card — llm-from-scratch
 
+**Instruction-training trial:** a separate candidate trained for 160 CPU updates
+on a project-authored seed curriculum scored 57/170 (33.5%) versus the accepted
+checkpoint's 51/170. It still scored 0/18 on code and failed the reasoning-category
+regression floor (6/14 versus 7/14), so it was not promoted. See the
+[experiment record](docs/INSTRUCTION_TRAINING.md). The accepted checkpoint is unchanged.
+
 **Latest remeasurement (2026-10-31):** the existing M3 checkpoint scored 51/170
 overall (30.0%), 51/136 multiple-choice (37.5%), 0/18 independently sandboxed code
 tasks, 0/16 generation tasks, and 1/12 new secure-development scenarios. Bits per

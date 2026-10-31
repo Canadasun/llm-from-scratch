@@ -1,0 +1,99 @@
+{
+  "source_checkpoint": "checkpoints/ckpt.pt",
+  "candidate_checkpoint": "checkpoints/instruction-candidate/ckpt.pt",
+  "candidate_sha256": "50664e4e548b9f3d1b4e80be008ad36488aa8c5f136663dd31f1e3171198ac70",
+  "model_promoted": false,
+  "dataset": {
+    "source": "original templates in data/build_instructions.py; no evaluation files read",
+    "license": "MIT (project-authored)",
+    "train_examples": 300,
+    "validation_examples": 68,
+    "split": "disjoint exercise families",
+    "sha256": {
+      "train": "96d5d77bdff14bd55fb7398d0482c9344b3450cd2a46a09257afbb6bdfafc23c",
+      "validation": "b8d213c4950d03479dbe29d3317e9605dbdf2cff4006271fa25ca903796d7f90"
+    }
+  },
+  "training": {
+    "base_checkpoint_sha256": "6115d7a500e06a82aaae44ab9cdcd76a9879b3bced12e276acfffc5cc6c4afd7",
+    "method": "response-only supervised instruction tuning",
+    "train_sha256": "96d5d77bdff14bd55fb7398d0482c9344b3450cd2a46a09257afbb6bdfafc23c",
+    "validation_sha256": "b8d213c4950d03479dbe29d3317e9605dbdf2cff4006271fa25ca903796d7f90",
+    "replay_sha256": "21a56d21a0ff39f40adc71b3e791a13f5ed84ec249bb81a758d6b281c9fabdc3",
+    "seed": 2026,
+    "context": 192,
+    "learning_rate": 3e-05,
+    "batch_size": 2,
+    "device": "cpu",
+    "torch_version": "2.15.0+cpu",
+    "base_validation_loss": 2.5040249432225954,
+    "best_validation_loss": 1.2277583804810812,
+    "history": [
+      {
+        "step": 40,
+        "train_loss": 2.0723533630371094,
+        "validation_loss": 1.4075863125158292,
+        "elapsed_s": 76.5
+      },
+      {
+        "step": 80,
+        "train_loss": 1.9664660692214966,
+        "validation_loss": 1.245219556269442,
+        "elapsed_s": 171.28
+      },
+      {
+        "step": 120,
+        "train_loss": 1.6989665031433105,
+        "validation_loss": 1.23842060847335,
+        "elapsed_s": 254.41
+      },
+      {
+        "step": 160,
+        "train_loss": 1.949971318244934,
+        "validation_loss": 1.2277583804810812,
+        "elapsed_s": 351.02
+      }
+    ]
+  },
+  "response_loss_relative_reduction": 0.5096860421442138,
+  "limitations": [
+    "Small project-authored template curriculum, not an expert training set.",
+    "Validation loss measures token prediction, not task accuracy.",
+    "Training loss logged at 40-step intervals is from replay batches.",
+    "Checkpoint weights remain local and were not deployed."
+  ],
+  "benchmark": {
+    "base_overall": {
+      "n": 170,
+      "correct": 51,
+      "acc": 0.3,
+      "wilson_95": [
+        0.2361552780924876,
+        0.3726837154289745
+      ]
+    },
+    "candidate_overall": {
+      "n": 170,
+      "correct": 57,
+      "acc": 0.3352941176470588,
+      "wilson_95": [
+        0.2686616861546013,
+        0.40920572027483804
+      ]
+    },
+    "candidate_intrinsic": {
+      "tokens": 1275,
+      "bytes": 2636,
+      "perplexity": 12.715404654594114,
+      "bits_per_byte": 1.77440989155968,
+      "top1_acc": 0.49254901960784314,
+      "top5_acc": 0.712156862745098
+    },
+    "regression_gate_passed": false,
+    "failed_checks": [
+      "category:reasoning"
+    ],
+    "results_file": "docs/evaluations/instruction-candidate-2026-10-31.json"
+  },
+  "source_checkpoint_unchanged": true
+}

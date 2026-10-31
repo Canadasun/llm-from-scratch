@@ -44,6 +44,11 @@ python sample.py --prompt "Security " --tokens 400
 
 ## Train on a GPU (bigger model + BPE)
 
+For response-only instruction training of this project's existing weights, see
+[instruction training](docs/INSTRUCTION_TRAINING.md). The first measured CPU trial
+improved the seed benchmark from 30.0% to 33.5%, but failed a reasoning regression
+check and still scored 0/18 on code. It remains a separate local candidate.
+
 No local GPU needed — use a free Colab/Kaggle GPU. See [`docs/GPU.md`](docs/GPU.md)
 and [`notebooks/train_colab.ipynb`](notebooks/train_colab.ipynb).
 
