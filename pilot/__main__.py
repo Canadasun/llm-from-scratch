@@ -37,6 +37,9 @@ def main(argv=None):
     ap.add_argument("--timeout", type=float, default=60.0)
     ap.add_argument("--probe-only", action="store_true",
                     help="run only the security probes (no load)")
+    ap.add_argument("--scorecard", action="store_true",
+                    help="also run the AI-security eval suite and print a pilot "
+                         "readiness scorecard (reliability/latency/cost/security)")
     ap.add_argument("--json", action="store_true",
                     help="emit the raw report as JSON instead of text")
     args = ap.parse_args(argv)
@@ -60,15 +63,29 @@ def main(argv=None):
                      prompt=args.prompt, max_new_tokens=args.max_new_tokens,
                      timeout=args.timeout)
     report = run_pilot(cfg)
+
+    card = None
+    if args.scorecard:
+        from evals.security_evals import run_security_evals
+        from pilot.scorecard import score, format_scorecard
+        sec = run_security_evals()        # measures the security software (local)
+        card = score(report["load"], sec)
+        report["security_evals"] = sec
+        report["scorecard"] = card
+
     if args.json:
         print(json.dumps(report, indent=2))
     else:
         print(format_report(report))
+        if card is not None:
+            print("\n" + format_scorecard(card))
 
     # Exit non-zero if the pilot found a reliability or security problem, so it
-    # can gate a CI/CD step. "Healthy" = all security probes pass AND no errors.
+    # can gate a CI/CD step. "Healthy" = all security probes pass AND no errors
+    # (and, when a scorecard ran, the security gate held).
     healthy = (report["security_all_pass"]
-               and report["load"]["reliability"]["error_rate"] == 0.0)
+               and report["load"]["reliability"]["error_rate"] == 0.0
+               and (card is None or card["security_gate"]))
     return 0 if healthy else 1
 
 
