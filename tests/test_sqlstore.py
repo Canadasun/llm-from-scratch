@@ -157,3 +157,35 @@ def test_keymanager_rotate_persists(tmp_path):
     assert s2.authenticate(old_plain) == (None, None)   # old retired, persisted
     assert s2.authenticate(new_plain)[0] is not None    # new works after restart
     s2.close()
+
+
+# ---- URI path (nolock) for network shares (Azure Files / SMB) ----
+
+def test_uri_path_with_nolock_opens_and_roundtrips(tmp_path):
+    # A `file:...?nolock=1` URI must open, create the schema, and persist a key
+    # across a reopen — this is the mode used on an Azure Files mount where SMB
+    # can't provide SQLite's byte-range locks. (Here it just exercises the URI
+    # path on a local file; the point is that uri=True is honoured.)
+    db = tmp_path / "keys.db"
+    uri = f"file:{db}?nolock=1"
+    plaintext, key_hash = generate_key()
+
+    s1 = SqlStore(uri)
+    s1.add_tenant(Tenant("demo", "Demo"))
+    s1.add_principal(Principal("demo-user", "demo", ("member",)))
+    s1.add_api_key(ApiKey("demo-key", key_hash, "demo", "demo-user", ()))
+    s1.close()
+
+    s2 = SqlStore(uri)                       # reopen same file via URI
+    principal, key = s2.authenticate(plaintext)
+    assert principal is not None and principal.id == "demo-user"
+    assert key.id == "demo-key"
+    s2.close()
+
+
+def test_plain_path_still_opens_without_uri(tmp_path):
+    # A non-URI path must behave exactly as before (locking on).
+    s = SqlStore(str(tmp_path / "plain.db"))
+    s.add_tenant(Tenant("t", "T"))
+    assert s.get_principal("nobody") is None
+    s.close()

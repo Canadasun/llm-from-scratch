@@ -14,11 +14,14 @@ deliberately no query that returns a resource/key by id while ignoring the tenan
 — that absence is the guarantee, exactly as in the in-memory reference.
 
 Durability scope (honest): a SQLite file persists across process restarts and is
-correct for a single-node / single-replica deployment. For TRUE cross-replica
-sharing (several Container Apps replicas at once) the file must live on shared
-storage (an Azure Files mount) OR this class should be re-pointed at a networked
-database (Postgres with real RLS policies). The interface and invariants are the
-same either way; only the connection changes.
+correct for a single-node / single-replica deployment. To ALSO survive replica
+recycles on a cloud host the file must live on shared storage (an Azure Files
+mount). SQLite over SMB/CIFS, though, cannot take its usual byte-range locks, so
+the path must be opened as a `file:...?nolock=1` URI (see __init__) and the app
+pinned to ONE writer (max-replicas=1); that is the single-writer, network-durable
+configuration used live. For TRUE concurrent multi-replica writes this class
+should instead be re-pointed at a networked database (Postgres with real RLS
+policies) — same interface and invariants, only the connection changes.
 """
 
 import json
@@ -53,9 +56,18 @@ CREATE INDEX IF NOT EXISTS idx_res_tenant ON resources(tenant_id);
 
 class SqlStore:
     def __init__(self, path=":memory:", clock=time.time):
+        # A `file:...` path is opened as a SQLite URI, which lets the caller pass
+        # query parameters such as `?nolock=1`. That matters on a network share
+        # (Azure Files / SMB): CIFS does not provide the byte-range locks SQLite
+        # normally takes, so without nolock even the first CREATE TABLE fails with
+        # "database is locked". Disabling locking is safe HERE because the store
+        # is used single-writer (max-replicas=1) and already serialises every
+        # access through self._lock below. A plain path or ":memory:" is opened
+        # exactly as before (locking on), so local/default behaviour is unchanged.
+        uri = path.startswith("file:")
         # check_same_thread=False + a lock: the HTTP server is threaded, and a
         # single serialized connection is simplest and correct for this load.
-        self._db = sqlite3.connect(path, check_same_thread=False)
+        self._db = sqlite3.connect(path, uri=uri, check_same_thread=False)
         self._db.row_factory = sqlite3.Row
         self._lock = threading.Lock()
         self._clock = clock
