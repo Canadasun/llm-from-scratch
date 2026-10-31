@@ -141,12 +141,32 @@ RFCs has **not** acquired transferable security/software knowledge, reasoning, o
 coding ability. Fluent, RFC-looking samples could fool a reader; these numbers do
 not. This is the expected baseline for the scale.
 
-### Milestone 3 — in progress
-A ~31.8M-param `gpu_large` model is being trained on the broader ~19 MB RFC+NIST
-corpus, with the eval suite grown to 91 tasks (adding cloud/DevSecOps and
-AI-security categories on topics the new corpus covers). **Results will be
-measured and recorded here against the M2 baseline — no numbers are claimed until
-they are measured.**
+### Milestone 3 results (2026-10-30)
+*(~31.8M params, BPE vocab 2048, block 512, 6000 iters, ~19.2 MB RFC+NIST corpus)*
+
+Held-out intrinsic (trained vs random-init twin):
+
+| metric | M3 trained | random-init | M2 |
+|---|---|---|---|
+| bits/byte (fair, tokenizer-independent) | **1.78** | 5.43 | 2.15 |
+| perplexity¹ | 12.82 | 2,380.92 | 15.60 |
+| next-token top-1¹ | 49.3 % | 0.0 % | 44.7 % |
+| next-token top-5¹ | 70.4 % | 0.1 % | 69.1 % |
+
+Capability (overall **33.0 %**, 30/91; MC random chance ≈ 25 %): security 43.3 %,
+ai_security 50.0 %, cloud 41.7 %, reasoning 37.5 %, software 33.3 %,
+generation 0.0 %, code 0.0 %.
+
+¹ tokenizer-dependent (vocab 2048 vs M2's 1024) — shown for reference; bits/byte
+is the fair cross-model number.
+
+**Measured outcome:** the bigger model + broader corpus improved language modeling
+on the fair metric (bits/byte **2.15 → 1.78**) and moved multiple-choice capability
+from near-chance to clearly above it (**23.0 % → 33.0 %**, chance ≈ 25 %), with the
+knowledge categories that now have matching training text — security, cloud,
+AI-security — at **41–50 %**. Generation and code remain at 0 %, as expected for a
+non-instruction-tuned base model at this scale. The eval **regression gate**
+confirms no regression vs the M2 baseline. Full detail: `docs/EVALUATION.md`.
 
 ---
 

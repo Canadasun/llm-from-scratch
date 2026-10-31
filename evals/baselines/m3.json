@@ -1,0 +1,20 @@
+{
+  "name": "m3-baseline-2026-10-30",
+  "note": "Milestone 3 checkpoint (~31.8M params, BPE vocab 2048, block 512, 6000 iters, ~19.2MB RFC+NIST corpus). Measured locally on CPU over the 91-task suite + held-out intrinsic. Enforced metrics are tokenizer-independent; perplexity/top-k are recorded for reference. Supersedes m2.json as the regression floor for the M3 lineage.",
+  "enforce": ["bits_per_byte", "overall_acc"],
+  "intrinsic": {
+    "trained": {
+      "perplexity": 12.82,
+      "bits_per_byte": 1.78,
+      "top1_acc": 0.4933,
+      "top5_acc": 0.7035
+    }
+  },
+  "summary": {
+    "overall": {"n": 91, "correct": 30, "acc": 0.3297}
+  },
+  "tolerances": {
+    "bits_per_byte_abs_max_increase": 0.15,
+    "overall_acc_abs_max_drop": 0.05
+  }
+}

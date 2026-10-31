@@ -57,7 +57,7 @@ jobs:
             echo "Checkpoint present — running regression gate."
             python -m evals.regression \
               --ckpt checkpoints/ckpt.pt \
-              --baseline evals/baselines/m2.json \
+              --baseline evals/baselines/m3.json \
               --device cpu
           else
             echo "::notice::No checkpoint available (no cache, no checkpoint_url)."

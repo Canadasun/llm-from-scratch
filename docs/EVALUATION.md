@@ -85,6 +85,47 @@ suite — the fluent RFC-looking samples could fool you; these numbers don't. Th
 is the line Milestone 3 (more and broader data, a bigger model, longer training,
 later RAG + tools) must move.
 
+## Second measurement — Milestone 3 (2026-10-30)
+*(ckpt: ~31.8M params, BPE vocab 2048, block 512, 6000 iters, ~19.2 MB RFC+NIST corpus)*
+
+Held-out intrinsic (trained vs a random-init twin of the same shape):
+
+| metric | M3 trained | random-init | M2 (for reference) |
+|---|---|---|---|
+| perplexity¹ | **12.82** | 2,380.92 | 15.60 |
+| bits/byte | **1.78** | 5.43 | 2.15 |
+| next-token top-1¹ | **49.3 %** | 0.0 % | 44.7 % |
+| next-token top-5¹ | **70.4 %** | 0.1 % | 69.1 % |
+
+Capability tasks (overall **33.0 %**, 30/91; MC random chance ≈ 25 %):
+security 43.3 % (13/30) · ai_security 50.0 % (4/8) · cloud 41.7 % (5/12) ·
+reasoning 37.5 % (3/8) · software 33.3 % (5/15) · generation 0.0 % (0/10) ·
+code 0.0 % (0/8).
+
+¹ perplexity and next-token top-k are **tokenizer-dependent** (M3 uses vocab 2048
+vs M2's 1024), so they are shown for reference but are **not** the fair
+cross-model comparison. **bits-per-byte** is tokenizer-independent and is the one
+to trust across models.
+
+**What moved, honestly:**
+- **Language modeling improved** on the fair metric: bits/byte **2.15 → 1.78** on
+  unseen text. The bigger model + broader corpus genuinely learned the domain
+  better.
+- **Capability crossed from near-chance to clearly above chance:** overall
+  **23.0 % → 33.0 %** (chance ≈ 25 %). The knowledge-style multiple-choice
+  categories the broader corpus actually covers — security, cloud/DevSecOps and
+  AI-security — land at **41–50 %**, well above guessing. The NIST + RFC expansion
+  paid off where there was matching training text.
+- **Generation and code stayed at 0 %**, exactly as predicted for a ~32M-param
+  **base** (non-instruction-tuned) model: writing an exact string or passing unit
+  tests is out of reach at this scale without instruction tuning or tool use.
+
+So M3 did what it set out to do — it moved the line the M2 baseline exposed — and
+it did so by a measured, defensible margin rather than by looking at nicer
+samples. The regression gate (`evals/baselines/m2.json`) confirms it: bits/byte
+and overall accuracy both improved, no regression. `evals/baselines/m3.json` is
+now the floor for the M3 lineage.
+
 ## Adding tasks
 Append JSON lines to the files in `evals/data/`. Schemas:
 
