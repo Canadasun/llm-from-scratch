@@ -1,0 +1,87 @@
+{
+  "clean": [
+    "safe.py"
+  ],
+  "expected": [
+    {
+      "file": "vulnerable.py",
+      "line": 76,
+      "rule_id": "PY-BIND-ALL-INTERFACES"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 25,
+      "rule_id": "PY-DANGEROUS-EVAL"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 64,
+      "rule_id": "PY-DJANGO-DEBUG"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 48,
+      "rule_id": "PY-FLASK-DEBUG"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 44,
+      "rule_id": "PY-HARDCODED-SECRET"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 29,
+      "rule_id": "PY-INSECURE-DESERIALIZATION"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 33,
+      "rule_id": "PY-INSECURE-DESERIALIZATION"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 56,
+      "rule_id": "PY-INSECURE-TEMPFILE"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 72,
+      "rule_id": "PY-JINJA-AUTOESCAPE-OFF"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 17,
+      "rule_id": "PY-SHELL-INJECTION"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 21,
+      "rule_id": "PY-SHELL-INJECTION"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 52,
+      "rule_id": "PY-SQL-INJECTION"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 68,
+      "rule_id": "PY-TARFILE-TRAVERSAL"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 41,
+      "rule_id": "PY-TLS-VERIFY-DISABLED"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 37,
+      "rule_id": "PY-WEAK-HASH"
+    },
+    {
+      "file": "vulnerable.py",
+      "line": 60,
+      "rule_id": "PY-WEAK-RANDOM"
+    }
+  ]
+}

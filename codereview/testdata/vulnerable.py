@@ -5,7 +5,9 @@ Each function contains exactly one issue the scanner must detect (FN check).
 import hashlib
 import os
 import pickle
+import random
 import subprocess
+import tempfile
 
 import requests
 import yaml
@@ -48,3 +50,27 @@ def run_app(app):
 
 def sql_concat(cursor, uid):
     cursor.execute("SELECT * FROM users WHERE id = " + uid)   # PY-SQL-INJECTION CWE-89
+
+
+def insecure_tmp():
+    return tempfile.mktemp()                           # PY-INSECURE-TEMPFILE CWE-377
+
+
+def weak_random_token():
+    session_token = random.getrandbits(256)            # PY-WEAK-RANDOM CWE-330
+    return session_token
+
+
+DEBUG = True                                           # PY-DJANGO-DEBUG CWE-489
+
+
+def extract(tf):
+    tf.extractall("/tmp/out")                          # PY-TARFILE-TRAVERSAL CWE-22
+
+
+def make_env():
+    return Environment(autoescape=False)               # PY-JINJA-AUTOESCAPE-OFF CWE-79
+
+
+def serve_public(app):
+    app.run(host="0.0.0.0")                            # PY-BIND-ALL-INTERFACES CWE-668

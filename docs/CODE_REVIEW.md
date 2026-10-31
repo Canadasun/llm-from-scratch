@@ -87,13 +87,38 @@ you already trust.
 | PY-INSECURE-DESERIALIZATION | CWE-502 | high | `pickle.loads`, `yaml.load` without `SafeLoader` |
 | PY-TLS-VERIFY-DISABLED | CWE-295 | high | `verify=False`, `ssl._create_unverified_context` |
 | PY-HARDCODED-SECRET | CWE-798 | high (med conf) | string literal assigned to a secret-named variable |
+| PY-JINJA-AUTOESCAPE-OFF | CWE-79 | high | `autoescape=False` (template XSS) |
+| PY-WEAK-RANDOM | CWE-330 | high (med conf) | non-crypto `random.*` assigned to a secret/nonce/salt |
 | PY-WEAK-HASH | CWE-327 | medium | `hashlib.md5`/`sha1` (ok only for non-security checksums) |
+| PY-INSECURE-TEMPFILE | CWE-377 | medium | `tempfile.mktemp` (race-prone) |
+| PY-DJANGO-DEBUG | CWE-489 | medium | module-level `DEBUG = True` |
+| PY-TARFILE-TRAVERSAL | CWE-22 | medium | `extractall()` without a filter |
 | PY-FLASK-DEBUG | CWE-489 | medium | `app.run(debug=True)` |
+| PY-BIND-ALL-INTERFACES | CWE-668 | low | `host="0.0.0.0"` (review if unintended) |
 
 Confidence is separate from severity: a `high` severity with `medium` confidence
 is a serious issue *if* it is real, and a human verifies it. AST scoping keeps
 false positives down (a literal is told from a runtime string, a keyword from a
 coincidence) — verified on the first-party packages, which scan clean.
+
+## Measured accuracy (`--self-metrics`)
+
+Accuracy is a number, not a claim. The detector is scored against a **frozen
+labelled corpus** (`codereview/testdata/` + `labels.json`):
+
+```bash
+python -m codereview --self-metrics
+# precision=1.000  recall=1.000  F1=1.000   (TP=16 FP=0 FN=0)
+```
+
+- **precision** = of what we flagged, how much was real (FP control).
+- **recall** = of the labelled issues, how much we caught (FN control).
+
+The labels are frozen, so a rule change that starts flagging a clean line
+(precision ↓) or misses a labelled issue (recall ↓) turns the test red. **Honest
+scope:** these rates are over *this* corpus — a regression guard, not a claim
+about all code. The way to make recall a real-world number is to grow the corpus
+with independent, harder cases (including known misses) and watch it move.
 
 ## Example
 

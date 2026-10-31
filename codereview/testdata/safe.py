@@ -5,7 +5,10 @@ import ast
 import hashlib
 import json
 import os
+import random
+import secrets
 import subprocess
+import tempfile
 
 import requests
 import yaml
@@ -50,3 +53,33 @@ def run_app(app):
 
 def sql_param(cursor, uid):
     cursor.execute("SELECT * FROM users WHERE id = ?", (uid,))  # parameterised
+
+
+def safe_tmp():
+    return tempfile.mkstemp()                          # atomic, not mktemp
+
+
+def secret_token():
+    session_token = secrets.token_hex(32)              # secrets, not random
+    return session_token
+
+
+def non_secret_random():
+    shuffle_index = random.randint(0, 9)               # not a secret value
+    return shuffle_index
+
+
+DEBUG = False                                          # not True
+debug_mode = True                                      # name is not DEBUG
+
+
+def extract_safe(tf, path):
+    tf.extractall(path, filter="data")                 # filtered extract
+
+
+def make_env_safe():
+    return Environment(autoescape=True)                # autoescape on
+
+
+def serve_local(app):
+    app.run(host="127.0.0.1")                          # loopback, not 0.0.0.0

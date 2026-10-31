@@ -20,7 +20,10 @@ from codereview.scanner import collect_fixes, scan_path
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="static secure code review (Python)")
-    ap.add_argument("path", help="file or directory to scan")
+    ap.add_argument("path", nargs="?", help="file or directory to scan")
+    ap.add_argument("--self-metrics", action="store_true",
+                    help="report precision/recall of the detector against the "
+                         "built-in labelled corpus (no scan target needed)")
     ap.add_argument("--json", help="write findings as JSON here")
     ap.add_argument("--max-findings", type=int, default=100)
     ap.add_argument("--fail-on", choices=["critical", "high", "medium", "low", "none"],
@@ -47,6 +50,14 @@ def main(argv=None):
     ap.add_argument("--out-dir", default=".",
                     help="where --prepare-pr writes its artifact files")
     args = ap.parse_args(argv)
+
+    if args.self_metrics:
+        from codereview.metrics import compute_metrics, format_metrics
+        print(format_metrics(compute_metrics()))
+        return 0
+
+    if not args.path:
+        ap.error("path is required (or use --self-metrics)")
 
     scan = scan_path(args.path)
     print(format_report(scan, max_findings=args.max_findings))

@@ -30,7 +30,14 @@ EXPECTED = {
     "PY-HARDCODED-SECRET": 1,
     "PY-FLASK-DEBUG": 1,
     "PY-SQL-INJECTION": 1,
+    "PY-INSECURE-TEMPFILE": 1,
+    "PY-WEAK-RANDOM": 1,
+    "PY-DJANGO-DEBUG": 1,
+    "PY-TARFILE-TRAVERSAL": 1,
+    "PY-JINJA-AUTOESCAPE-OFF": 1,
+    "PY-BIND-ALL-INTERFACES": 1,
 }
+TOTAL_EXPECTED = sum(EXPECTED.values())   # 16
 
 
 def _scan_file(path):
@@ -127,7 +134,7 @@ def test_report_has_counts_and_limitations():
     text = format_report(scan)
     assert "SECURE CODE REVIEW" in text
     assert "Limitations" in text
-    assert summarize(scan["findings"])["total"] == 10
+    assert summarize(scan["findings"])["total"] == TOTAL_EXPECTED
 
 
 def test_report_empty_is_not_called_secure():

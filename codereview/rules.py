@@ -303,6 +303,125 @@ def rule_sql_injection(tree, lines, filename):
     return out
 
 
+def rule_insecure_tempfile(tree, lines, filename):
+    out = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Call) and _dotted(n.func) == "tempfile.mktemp":
+            out.append(_mk(
+                "PY-INSECURE-TEMPFILE", "CWE-377", "medium", "high",
+                "tempfile.mktemp is race-prone (the name can be hijacked "
+                "before you open it)",
+                filename, n, lines,
+                "Use tempfile.mkstemp()/NamedTemporaryFile(), which create the "
+                "file atomically."))
+    return out
+
+
+_SENSITIVE_EXTRA = {"nonce", "salt", "otp", "csrf"}
+# module-level random.* funcs use a non-cryptographic PRNG (Mersenne Twister)
+_INSECURE_RANDOM = {"random", "randint", "randrange", "choice", "choices",
+                    "getrandbits", "uniform", "sample", "shuffle", "randbytes"}
+
+
+def _is_sensitive_name(name):
+    if _is_secret_name(name):
+        return True
+    return bool(set(_name_words(name)) & _SENSITIVE_EXTRA)
+
+
+def rule_weak_random_for_secret(tree, lines, filename):
+    out = []
+    for n in ast.walk(tree):
+        value = targets = None
+        if isinstance(n, ast.Assign):
+            targets, value = n.targets, n.value
+        elif isinstance(n, ast.AnnAssign) and n.value is not None:
+            targets, value = [n.target], n.value
+        else:
+            continue
+        if not (isinstance(value, ast.Call)):
+            continue
+        dotted = _dotted(value.func)
+        if not (dotted and dotted.startswith("random.")
+                and dotted.split(".", 1)[1] in _INSECURE_RANDOM):
+            continue
+        for t in targets:
+            name = t.id if isinstance(t, ast.Name) else (
+                t.attr if isinstance(t, ast.Attribute) else None)
+            if name and _is_sensitive_name(name):
+                out.append(_mk(
+                    "PY-WEAK-RANDOM", "CWE-330", "high", "medium",
+                    f"non-cryptographic random used for a secret value '{name}'",
+                    filename, n, lines,
+                    "Use the `secrets` module (secrets.token_bytes/token_hex/"
+                    "randbelow) for security-sensitive randomness."))
+                break
+    return out
+
+
+def rule_django_debug(tree, lines, filename):
+    out = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Assign) and len(n.targets) == 1 \
+                and isinstance(n.targets[0], ast.Name) \
+                and n.targets[0].id == "DEBUG" and _is_true(n.value):
+            out.append(_mk(
+                "PY-DJANGO-DEBUG", "CWE-489", "medium", "medium",
+                "DEBUG = True must not ship to production (leaks tracebacks/"
+                "settings)",
+                filename, n, lines,
+                "Drive DEBUG from an environment variable, defaulting to False."))
+    return out
+
+
+def rule_tarfile_extractall(tree, lines, filename):
+    out = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Call) and _attr(n.func) == "extractall" \
+                and _kw(n, "filter") is None and _kw(n, "members") is None:
+            out.append(_mk(
+                "PY-TARFILE-TRAVERSAL", "CWE-22", "medium", "medium",
+                "extractall() without a filter can write outside the target dir "
+                "(path traversal / 'tarbomb')",
+                filename, n, lines,
+                "Pass filter='data' (3.12+) or validate each member path before "
+                "extracting."))
+    return out
+
+
+def rule_jinja_autoescape_off(tree, lines, filename):
+    out = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Call):
+            a = _kw(n, "autoescape")
+            if isinstance(a, ast.Constant) and a.value is False:
+                out.append(_mk(
+                    "PY-JINJA-AUTOESCAPE-OFF", "CWE-79", "high", "medium",
+                    "autoescape=False enables cross-site scripting via templates",
+                    filename, n, lines,
+                    "Leave autoescape on (select_autoescape) and mark trusted "
+                    "output explicitly."))
+    return out
+
+
+def rule_bind_all_interfaces(tree, lines, filename):
+    out = []
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Call):
+            continue
+        host = _kw(n, "host")
+        hit = isinstance(host, ast.Constant) and host.value == "0.0.0.0"
+        if hit:
+            out.append(_mk(
+                "PY-BIND-ALL-INTERFACES", "CWE-668", "low", "low",
+                "binding to 0.0.0.0 exposes the service on all interfaces "
+                "(fine in a container; review if not intended)",
+                filename, n, lines,
+                "Bind to 127.0.0.1 unless external exposure is intended and "
+                "protected."))
+    return out
+
+
 RULES = [
     rule_shell_injection,
     rule_eval_exec,
@@ -312,6 +431,12 @@ RULES = [
     rule_hardcoded_secret,
     rule_flask_debug,
     rule_sql_injection,
+    rule_insecure_tempfile,
+    rule_weak_random_for_secret,
+    rule_django_debug,
+    rule_tarfile_extractall,
+    rule_jinja_autoescape_off,
+    rule_bind_all_interfaces,
 ]
 
 
