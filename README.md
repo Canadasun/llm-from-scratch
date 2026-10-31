@@ -123,6 +123,13 @@ code tasks, with sample sizes, the random-chance baseline, example failures and
 explicit limitations. See [`docs/EVALUATION.md`](docs/EVALUATION.md). It reports;
 it never prints "pass" — release gating is a separate, explicit decision.
 
+## Model card
+
+[`MODEL_CARD.md`](MODEL_CARD.md) documents the model honestly: architecture and
+sizes, intended and out-of-scope uses, training-data provenance and license
+basis, the measured evaluation results (strong language modeling, near-chance
+task capability at this scale), limitations, and the security posture.
+
 ## Data note
 
 Training data comes from **public sources and the author's own notes** in
