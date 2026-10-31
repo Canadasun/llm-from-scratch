@@ -50,6 +50,33 @@ stay as manual findings.
 Every proposed fix is verified in tests with a **propose → apply → re-scan** loop:
 applying it must remove the finding and leave valid Python.
 
+## Verifying fixes against the project's tests (`--verify-fixes`)
+
+A patch is only trustworthy if it removes the finding **and** doesn't break the
+project. `--verify-fixes` proves that end to end:
+
+```
+copy the repo → run tests (baseline) → apply the reviewed fixes to the copy →
+re-scan (findings gone?) → run tests again (still pass?) → verdict
+```
+
+```bash
+python -m codereview . --verify-fixes --test-cmd "python -m pytest -q"
+```
+
+Everything happens on a **copy** in a temp dir — the original is never modified.
+Verdicts: `verified` (findings resolved, tests still pass), `rejected_regression`
+(a fix broke a test — do not apply), `baseline_failing` (tests were already red,
+so nothing can be attributed), `no_fixes`, `no_change`.
+
+**Sandbox scope (honest).** The test command runs in a child process with a
+throwaway working dir, a **scrubbed environment (no parent-process secrets)**,
+CPU-time and file-size rlimits, and a wall-clock timeout. It does **not** provide
+filesystem or network isolation — that needs OS containers/namespaces, which is
+out of scope here. Running a project's tests is arbitrary code execution, so use
+this against a **trusted** repo (this project's own tests) or inside a container
+you already trust.
+
 ## Rules (initial set)
 
 | rule id | CWE | severity | what it catches |
@@ -85,8 +112,9 @@ done). Increments:
 1. ✅ **Patch proposals** — safe, deterministic fixes proposed as diffs for a
    subset of rules, with caveats; verified by a propose→apply→re-scan loop; never
    auto-applied (`--fix`).
-2. **Verify fixes against the project's tests** — run the test suite in the
-   existing sandbox before/after applying a reviewed patch.
+2. ✅ **Verify fixes against the project's tests** — copy the repo, run the test
+   command before/after applying the reviewed fixes in a bounded sandbox, and
+   confirm findings are resolved with no test regression (`--verify-fixes`).
 3. **Evidence-backed report + PR** — open a pull request for human review (P6).
 4. Extend language/rule coverage; add FP/FN *rate* tracking across a larger
    labelled corpus.

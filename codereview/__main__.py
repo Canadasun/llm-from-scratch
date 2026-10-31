@@ -28,6 +28,13 @@ def main(argv=None):
     ap.add_argument("--fix", action="store_true",
                     help="also print proposed patch diffs for auto-fixable findings "
                          "(suggestions only — nothing is written)")
+    ap.add_argument("--verify-fixes", action="store_true",
+                    help="apply the proposed fixes to a COPY of the repo and run "
+                         "--test-cmd before/after to verify them (EXECUTES tests)")
+    ap.add_argument("--test-cmd", default=None,
+                    help="test command for --verify-fixes, e.g. 'python -m pytest -q'")
+    ap.add_argument("--timeout", type=int, default=180,
+                    help="per-run timeout (seconds) for --verify-fixes")
     args = ap.parse_args(argv)
 
     scan = scan_path(args.path)
@@ -55,6 +62,17 @@ def main(argv=None):
                        "files_scanned": scan["files_scanned"],
                        "skipped": scan["skipped"]}, f, indent=2)
         print(f"\nWrote JSON to {args.json}")
+
+    if args.verify_fixes:
+        if not args.test_cmd:
+            print("\nerror: --verify-fixes requires --test-cmd "
+                  "(e.g. --test-cmd 'python -m pytest -q')", file=sys.stderr)
+            return 2
+        from codereview.verify import format_verification, verify_fixes
+        print(f"\n[!] --verify-fixes will EXECUTE: {args.test_cmd!r} on a copy of "
+              f"{args.path} (before and after applying fixes).")
+        result = verify_fixes(args.path, args.test_cmd, timeout=args.timeout)
+        print(format_verification(result))
 
     if args.fail_on != "none":
         threshold = SEVERITY_ORDER[args.fail_on]
