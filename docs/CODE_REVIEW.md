@@ -26,9 +26,29 @@ secure coding that finds *real* issues with an acceptable false-positive rate.
 python -m codereview path/to/repo              # scan + report
 python -m codereview file.py --json out.json   # machine-readable output
 python -m codereview . --fail-on high          # exit 1 if any finding >= high (CI gate)
+python -m codereview path/to/repo --fix        # also print proposed patch diffs
 ```
 
 By default it reports and exits 0; `--fail-on` turns it into a gate.
+
+## Proposing fixes (`--fix`)
+
+For the subset of findings with a **safe, deterministic, behaviour-preserving**
+fix, the tool proposes a concrete unified diff — **it never writes anything**.
+Proposing a patch and applying it are different authority levels (applying is a
+later increment, gated on human approval and a PR).
+
+Auto-fixable: weak hash (`md5`/`sha1` → `sha256`), `yaml.load` → `yaml.safe_load`,
+`verify=False` → `verify=True`, `debug=True` → `debug=False`. Each diff carries a
+**caveat** where the change can alter behaviour (e.g. changing a hash invalidates
+previously stored digests), so the reviewer decides.
+
+Deliberately **not** auto-fixed — shell/SQL injection, `eval`/`exec`, hardcoded
+secrets — because a correct fix requires restructuring, not a local edit. Those
+stay as manual findings.
+
+Every proposed fix is verified in tests with a **propose → apply → re-scan** loop:
+applying it must remove the finding and leave valid Python.
 
 ## Rules (initial set)
 
@@ -61,10 +81,12 @@ coincidence) — verified on the first-party packages, which scan clean.
 ## Where this sits in the plan & what's next
 
 This is **Stage 2** of the endorsed staged plan (Stage 1 = prove the model learns,
-done). Next increments, in order:
-1. **Patch proposals** — for a subset of rules, generate a concrete, human-review
-   diff (never auto-applied).
-2. **Verify fixes** — run the project's tests in the sandbox before/after.
+done). Increments:
+1. ✅ **Patch proposals** — safe, deterministic fixes proposed as diffs for a
+   subset of rules, with caveats; verified by a propose→apply→re-scan loop; never
+   auto-applied (`--fix`).
+2. **Verify fixes against the project's tests** — run the test suite in the
+   existing sandbox before/after applying a reviewed patch.
 3. **Evidence-backed report + PR** — open a pull request for human review (P6).
 4. Extend language/rule coverage; add FP/FN *rate* tracking across a larger
    labelled corpus.

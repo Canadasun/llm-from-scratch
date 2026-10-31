@@ -172,8 +172,10 @@ teams can trust, in staged, evidence-backed steps.
   vulnerability detection with CWE-mapped findings, confidence levels, and
   **measured FP/FN** (every rule has vulnerable + safe ground-truth fixtures;
   zero false positives on first-party code). `python -m codereview <path>`; runs
-  in CI against its own source. See [`docs/CODE_REVIEW.md`](docs/CODE_REVIEW.md).
-  Next: patch proposals → verify with tests → open a PR for human review.
+  in CI against its own source, and proposes safe fixes as human-review diffs
+  (`--fix`, never auto-applied; verified by a propose→apply→re-scan loop). See
+  [`docs/CODE_REVIEW.md`](docs/CODE_REVIEW.md). Next: verify fixes against the
+  project's tests → open a PR for human review.
 - [ ] Stage 3 — enterprise security (identities, repo permissions, tenant
   isolation, audited tool execution, controlled deploy).
 - [ ] Stage 4 — authorized pilot measuring reliability, security, latency, cost.

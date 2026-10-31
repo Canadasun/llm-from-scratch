@@ -15,7 +15,7 @@ import sys
 
 from codereview.findings import SEVERITY_ORDER
 from codereview.report import format_report, summarize
-from codereview.scanner import scan_path
+from codereview.scanner import collect_fixes, scan_path
 
 
 def main(argv=None):
@@ -25,10 +25,28 @@ def main(argv=None):
     ap.add_argument("--max-findings", type=int, default=100)
     ap.add_argument("--fail-on", choices=["critical", "high", "medium", "low", "none"],
                     default="none", help="exit 1 if any finding is at least this severe")
+    ap.add_argument("--fix", action="store_true",
+                    help="also print proposed patch diffs for auto-fixable findings "
+                         "(suggestions only — nothing is written)")
     args = ap.parse_args(argv)
 
     scan = scan_path(args.path)
     print(format_report(scan, max_findings=args.max_findings))
+
+    if args.fix:
+        proposals = collect_fixes(args.path)
+        print("\n" + "=" * 66)
+        print("  PROPOSED FIXES — review before applying; NOTHING is written")
+        print("=" * 66)
+        if not proposals:
+            print("No auto-fixable findings. The remaining issue types (shell/SQL")
+            print("injection, eval/exec, hardcoded secrets) need manual restructuring.")
+        for p in proposals:
+            print(f"\n[{p.rule_id} {p.cwe}] {p.file}:{p.line}  "
+                  f"(fix confidence: {p.confidence})")
+            print(f"  {p.description}")
+            print(f"  caveat: {p.caveat}")
+            print(p.diff.rstrip("\n"))
 
     if args.json:
         with open(args.json, "w") as f:

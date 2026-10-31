@@ -8,6 +8,7 @@ exhausting resources.
 
 import os
 
+from codereview.fixes import propose_fixes
 from codereview.rules import analyze_source
 
 MAX_FILE_BYTES = 2_000_000
@@ -52,3 +53,23 @@ def scan_path(root, max_files=MAX_FILES, max_bytes=MAX_FILE_BYTES):
         scanned += 1
     findings.sort(key=lambda f: f.sort_key())
     return {"findings": findings, "files_scanned": scanned, "skipped": skipped}
+
+
+def collect_fixes(root, max_files=MAX_FILES, max_bytes=MAX_FILE_BYTES):
+    """Walk a path and return the proposed fixes (FixProposal) for every file.
+    Read-only: this proposes diffs, it never writes."""
+    proposals = []
+    scanned = 0
+    for path in iter_python_files(root):
+        if scanned >= max_files:
+            break
+        try:
+            if os.path.getsize(path) > max_bytes:
+                continue
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                src = fh.read()
+        except OSError:
+            continue
+        proposals.extend(propose_fixes(src, filename=path))
+        scanned += 1
+    return proposals
