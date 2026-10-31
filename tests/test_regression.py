@@ -68,13 +68,21 @@ def test_non_enforced_metric_does_not_fail_build():
     assert ppl["skipped"] is True and ppl["ok"] is True
 
 
-def test_missing_candidate_metric_is_skipped_not_failed():
+def test_missing_enforced_candidate_metric_fails_not_skipped():
+    # Integrity: a metric the baseline GATES ON that the candidate does not
+    # report must FAIL the gate — absent evidence is never "no regression".
+    # (Previously this silently passed, so an empty candidate {} could pass.)
     cand = _cand()
     del cand["intrinsic"]["trained"]["bits_per_byte"]
-    # enforce bits_per_byte, but candidate lacks it -> skipped, build not failed
     ok, checks = check(cand, BASE)
-    assert ok is True
-    assert _get(checks, "bits_per_byte")["skipped"] is True
+    assert ok is False
+    c = _get(checks, "bits_per_byte")
+    assert c["skipped"] is False and c["ok"] is False
+
+
+def test_empty_candidate_cannot_pass_against_populated_baseline():
+    ok, checks = check({}, BASE)
+    assert ok is False
 
 
 def test_committed_m2_baseline_parses_and_gates():

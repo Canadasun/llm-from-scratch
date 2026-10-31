@@ -165,3 +165,11 @@ def test_all_task_files_parse_and_are_valid():
             assert "test" in t and "solution" in t["test"]
         else:
             raise AssertionError(f"unknown type {t['type']} in {t['id']}")
+
+
+def test_sandbox_rejects_early_exit_zero():
+    # Integrity (scoring can't be faked): a solution that exits 0 before the
+    # tests actually run must NOT score a pass.
+    evil = "import os\ndef add(a, b):\n    return a + b\nos._exit(0)\n"
+    ok, _ = scorers.run_python_unittest(evil, TEST)
+    assert ok is False

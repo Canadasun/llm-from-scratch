@@ -155,9 +155,10 @@ class GPT(nn.Module):
             nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def num_params(self):
-        # Subtract the tied head so we don't count it twice.
-        n = sum(p.numel() for p in self.parameters())
-        return n - self.head.weight.numel()
+        # nn.Module.parameters() already yields each tensor once, so the tied
+        # head/embedding weight is counted a single time here. (Subtracting it
+        # again, as this once did, UNDER-counted the model by vocab*n_embd.)
+        return sum(p.numel() for p in self.parameters())
 
     def forward(self, idx, targets=None):
         B, T = idx.shape
@@ -181,8 +182,14 @@ class GPT(nn.Module):
         return logits, loss
 
     @torch.no_grad()
-    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None):
-        """Autoregressive sampling: predict the next token, append it, repeat."""
+    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None,
+                 generator=None):
+        """Autoregressive sampling: predict the next token, append it, repeat.
+
+        `generator` is an optional torch.Generator; when given, sampling draws
+        from it instead of the global RNG. That keeps a seeded request
+        reproducible even when other requests sample concurrently (the global
+        RNG is process-wide and would otherwise be a shared, racy resource)."""
         self.eval()
         for _ in range(max_new_tokens):
             # Crop context to the last block_size tokens.
@@ -193,6 +200,6 @@ class GPT(nn.Module):
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = float("-inf")
             probs = F.softmax(logits, dim=-1)
-            next_id = torch.multinomial(probs, num_samples=1)
+            next_id = torch.multinomial(probs, num_samples=1, generator=generator)
             idx = torch.cat([idx, next_id], dim=1)
         return idx

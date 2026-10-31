@@ -190,3 +190,49 @@ def test_one_audit_event_per_operation(world):
     km.rotate(P(store, "adminA"), body["key_id"])           # +1
     km.revoke(P(store, "memberA"), body["key_id"])          # +1 (denied, still audited)
     assert len(audit.events()) == before + 3
+
+
+# ---- regression: scope-ceiling bypasses (must stay closed) ----
+
+def test_empty_scopes_from_scoped_manager_cannot_escalate(world):
+    # A manager whose OWN key is scoped to just apikey:manage must not be able to
+    # mint an UNSCOPED (full-authority) key by requesting empty scopes.
+    store, km, audit, clock, keys = world
+    from enterprise.authz import authorize
+    status, body = km.issue(P(store, "adminA"), "adminA", scopes=(),
+                            actor_scopes=("apikey:manage",))
+    assert status == 200
+    # issued key is bound to the actor's grantable ceiling, not unscoped
+    assert set(body["scopes"]) == {"apikey:manage"}
+    # so the issued key cannot authorize a powerful action like resource:delete
+    assert authorize(P(store, "adminA"), "resource:delete", None,
+                     scopes=body["scopes"]).allow is False
+
+
+def test_empty_scopes_from_unscoped_admin_stays_unscoped(world):
+    # Behaviour preserved for a full (unscoped) admin: empty = a normal unscoped key.
+    store, km, *_ = world
+    status, body = km.issue(P(store, "adminA"), "memberA", scopes=())
+    assert status == 200 and body["scopes"] == []
+
+
+def test_scoped_manager_cannot_rotate_more_powerful_key(world):
+    # Rotation re-issues the old key's authority and returns the new secret, so a
+    # manager scoped to only apikey:manage must NOT be able to rotate a key that
+    # carries member authority (it would receive a more powerful secret).
+    store, km, *_ = world
+    _, issued = km.issue(P(store, "adminA"), "memberA")   # unscoped member key
+    status, body = km.rotate(P(store, "adminA"), issued["key_id"],
+                             actor_scopes=("apikey:manage",))
+    assert status == 403
+    assert "api_key" not in body
+
+
+def test_scoped_manager_can_rotate_key_within_authority(world):
+    # A manager may rotate a key whose authority is within its own grantable set.
+    store, km, *_ = world
+    scp = ("apikey:manage", "model:infer")
+    _, issued = km.issue(P(store, "adminA"), "memberA", scopes=("model:infer",),
+                         actor_scopes=scp)
+    status, body = km.rotate(P(store, "adminA"), issued["key_id"], actor_scopes=scp)
+    assert status == 200 and "api_key" in body

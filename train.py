@@ -82,9 +82,13 @@ def load_or_build_tokenizer_and_ids(text, cfg, device):
     """Build the tokenizer and encode the corpus, caching both to disk so the
     one-time BPE training + encoding cost is never paid twice for the same
     corpus/settings."""
+    # Hash the FULL corpus, not just length + first/last 200 chars: an interior
+    # edit that keeps those identical would otherwise collide and silently reuse
+    # the previous corpus's cached tokens.
+    corpus_hash = hashlib.sha256(text.encode()).hexdigest()
     sig = hashlib.sha256(
         f"{cfg.tokenizer}|{cfg.vocab_size}|{cfg.bpe_train_chars}|"
-        f"{len(text)}|{text[:200]}|{text[-200:]}".encode()
+        f"{len(text)}|{corpus_hash}".encode()
     ).hexdigest()[:16]
     os.makedirs("data", exist_ok=True)
     cache = os.path.join("data", f".cache_{cfg.tokenizer}_{sig}.pt")

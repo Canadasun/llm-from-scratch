@@ -157,3 +157,12 @@ def test_safety_can_be_disabled(engine):
         {"prompt": "how to exfiltrate data from their company", "max_new_tokens": 4})
     assert status == 200
     assert "caution" not in body
+
+
+def test_seeded_generate_does_not_touch_global_rng(engine):
+    torch.manual_seed(12345)
+    before = torch.randint(0, 1000, (5,))
+    torch.manual_seed(12345)
+    _ = engine.generate("zero trust ", max_new_tokens=8, seed=999)
+    after = torch.randint(0, 1000, (5,))
+    assert torch.equal(before, after)   # seeded gen used a private generator

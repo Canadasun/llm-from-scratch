@@ -154,3 +154,41 @@ def test_audit_filtering(world):
     gw.handle(keys["pA"], "resource:read", resource_id="rB")   # deny (cross-tenant)
     assert len(audit.events(tenant_id="tA")) == 2
     assert len(audit.events(tenant_id="tA", decision="deny")) == 1
+
+
+def test_audit_log_is_bounded_but_sink_sees_all():
+    from enterprise.audit import AuditLog
+    seen = []
+    log = AuditLog(sink=seen.append, max_events=3)
+    for i in range(10):
+        log.record(f"r{i}", "model:infer", "allow", "ok")
+    assert len(log.events()) == 3        # bounded ring buffer
+    assert len(seen) == 10               # durable sink still receives every event
+
+
+def test_secured_response_id_matches_audit_id():
+    from enterprise.store import Store
+    from enterprise.audit import AuditLog
+    from enterprise.models import Tenant, Principal, ApiKey
+    from enterprise.keys import generate_key
+    from serve.secured import SecuredInferenceService
+
+    store = Store()
+    store.add_tenant(Tenant("t", "T"))
+    store.add_principal(Principal("p", "t", ("member",)))
+    plain, h = generate_key()
+    store.add_api_key(ApiKey("k", h, "t", "p", ()))
+    audit = AuditLog()
+
+    class FakeInner:
+        def handle_generate(self, payload, client="-"):
+            return 200, {"completion": "x", "completion_tokens": 3,
+                         "request_id": "INNER_ID"}
+        def health(self):
+            return {"status": "ok"}
+
+    svc = SecuredInferenceService(FakeInner(), store, audit)
+    status, body = svc.handle_generate({"prompt": "hi"}, api_key=plain)
+    assert status == 200
+    ev = audit.events()[-1]
+    assert body["request_id"] == ev.request_id   # response correlatable to audit

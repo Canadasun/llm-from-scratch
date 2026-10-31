@@ -83,7 +83,12 @@ class SecuredInferenceService:
         # 4. audit the outcome. A 200 is an allowed success; anything else
         #    (validation 400, rate-limit 429, safety block 403, internal 500) is
         #    recorded with its cause so the trail reflects what actually happened.
-        body.setdefault("request_id", rid)
+        # Adopt the inner service's request id as the single correlation id, so
+        # the audit event, the response body and the inner's structured log line
+        # all carry the SAME id (previously the wrapper audited a different id
+        # than the one returned to the client, so they couldn't be matched up).
+        rid = body.get("request_id", rid)
+        body["request_id"] = rid
         body["tenant_id"] = tid
         if status == 200:
             self.audit.record(rid, self.action, "allow", "ok",

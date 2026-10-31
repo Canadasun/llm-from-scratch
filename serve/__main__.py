@@ -102,9 +102,14 @@ def main():
     service = InferenceService(engine, rate_limiter=limiter, safety=not args.no_safety)
 
     if args.secured:
+        import json as _json
         from enterprise.audit import AuditLog
         store = _make_store(args.key_db)
-        audit = AuditLog()
+        # Durable-ish sink: emit every audit event as one JSON line to the
+        # "audit" logger (stdout), so the trail survives the process in the
+        # container/host log aggregator instead of living only in bounded memory.
+        _audit_log = logging.getLogger("audit")
+        audit = AuditLog(sink=lambda ev: _audit_log.info(_json.dumps(ev)))
         demo_key, is_new = _bootstrap_demo_tenant(store)
         service = SecuredInferenceService(service, store, audit)
         backing = f"persistent SQLite ({args.key_db})" if args.key_db else "in-memory (ephemeral)"

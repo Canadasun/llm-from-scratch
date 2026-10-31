@@ -64,6 +64,16 @@ def check(candidate, baseline, tolerances=None):
 
     def record(metric, base_v, cand_v, limit, direction, ok, note=""):
         enforced = enforce is None or metric in enforce
+        # A metric the baseline GATES ON that is present in the baseline but
+        # MISSING from the candidate is a FAIL, not a skip: absent evidence must
+        # never read as "no regression" (otherwise an empty candidate {} would
+        # pass against a populated baseline).
+        if enforced and base_v is not None and cand_v is None:
+            checks.append({"metric": metric, "baseline": base_v, "candidate": None,
+                           "limit": limit, "direction": direction, "ok": False,
+                           "skipped": False,
+                           "note": note or "candidate missing required metric"})
+            return
         skipped = base_v is None or cand_v is None or not enforced
         if not enforced and note == "":
             note = "not enforced"
@@ -112,9 +122,12 @@ def format_report(ok, checks):
             continue
         arrow = "≤" if c["direction"] == "lower_better" else "≥"
         status = "OK  " if c["ok"] else "FAIL"
+        cand = f"{c['candidate']:.4g}" if c["candidate"] is not None else "MISSING"
+        lim = f"{c['limit']:.4g}" if c["limit"] is not None else "-"
+        base = f"{c['baseline']:.4g}" if c["baseline"] is not None else "-"
         lines.append(
-            f"  [{status}] {c['metric']:<14} candidate={c['candidate']:.4g} "
-            f"{arrow} limit={c['limit']:.4g}  (baseline={c['baseline']:.4g})")
+            f"  [{status}] {c['metric']:<14} candidate={cand} "
+            f"{arrow} limit={lim}  (baseline={base})")
     lines.append(f"\nRESULT: {'PASS — no regression' if ok else 'FAIL — regression detected'}")
     return "\n".join(lines)
 

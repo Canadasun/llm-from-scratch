@@ -89,3 +89,14 @@ def test_cli_fix_does_not_modify_the_file():
     before = _read(VULN)
     main([VULN, "--fix"])
     assert _read(VULN) == before          # suggestion-only: file untouched
+
+
+def test_fix_handles_non_ascii_before_target():
+    # A non-ASCII character earlier on the line shifts ast byte offsets vs string
+    # indices; the fix must still splice correctly and yield valid Python.
+    src = 'import hashlib\nx = "é"; h = hashlib.md5(b"a").hexdigest()\n'
+    proposals = propose_fixes(src)
+    assert any(p.rule_id for p in proposals)
+    new = apply_fixes(src, proposals)
+    ast.parse(new)                      # not corrupted
+    assert "sha256" in new and "é" in new

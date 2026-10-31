@@ -54,12 +54,18 @@ class InferenceEngine:
         """Generate a continuation. Returns a dict with the full text, the
         continuation only, and token counts. Pure function of its inputs when
         `seed` is set (reproducible)."""
+        # A per-call generator keeps a seeded request reproducible without
+        # touching the process-wide RNG, so concurrent requests can't perturb
+        # each other's seeded output (torch.manual_seed would be a shared race).
+        gen = None
         if seed is not None:
-            torch.manual_seed(seed)
+            gen = torch.Generator(device=self.device)
+            gen.manual_seed(seed)
         ids = self._encode_prompt(prompt)
         idx = torch.tensor([ids], dtype=torch.long, device=self.device)
         out = self.model.generate(
-            idx, max_new_tokens, temperature=temperature, top_k=top_k)
+            idx, max_new_tokens, temperature=temperature, top_k=top_k,
+            generator=gen)
         out_ids = out[0].tolist()
         full = self.tokenizer.decode(out_ids)
         completion = self.tokenizer.decode(out_ids[len(ids):])

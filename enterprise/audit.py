@@ -9,6 +9,7 @@ denials for a tenant) to support investigation.
 
 import json
 import time
+from collections import deque
 from dataclasses import asdict, dataclass, field
 
 from safety.scrub import scrub
@@ -31,10 +32,15 @@ class AuditEvent:
 
 
 class AuditLog:
-    def __init__(self, sink=None, redact=True):
-        """sink: optional callable(dict) for an external log line (e.g. print or
-        a file writer). redact: scrub secrets/PII from `detail` before storing."""
-        self._events = []
+    def __init__(self, sink=None, redact=True, max_events=10000):
+        """sink: optional callable(dict) for an external, durable log line (e.g.
+        a file/stdout writer) — the in-memory buffer is process-local and is lost
+        on restart, so a real deployment should pass a sink. redact: scrub
+        secrets/PII from `detail` before storing. max_events: the in-memory
+        buffer is a bounded ring (oldest dropped) so a long-running or
+        auth-failure-flooded process cannot grow memory without bound; the sink,
+        if set, still receives every event."""
+        self._events = deque(maxlen=max_events)
         self._sink = sink
         self._redact = redact
 

@@ -24,9 +24,18 @@ RG="${RG:-llm-from-scratch-rg}"
 LOCATION="${LOCATION:-canadacentral}"
 ENVIRONMENT="${ENVIRONMENT:-llm-env}"
 APP="${APP:-llm-serve}"
-IMAGE="${IMAGE:-ghcr.io/canadasun/llm-serve:m3}"   # must be PUBLIC (no ACR cost)
+IMAGE="${IMAGE:-ghcr.io/canadasun/llm-serve:m3-persist2}"  # PUBLIC; has the persistent key store
 BUDGET_CAD="${BUDGET_CAD:-5}"
 ALERT_EMAIL="${ALERT_EMAIL:-idwu1470@gmail.com}"
+# Persistent key store: an Azure Files share holds the SQLite key DB so API keys
+# survive restarts/recycles (without this, --secured mints a DIFFERENT demo key
+# per replica/restart -> intermittent 401s and key loss). Globally-unique name.
+STORAGE_ACCOUNT="${STORAGE_ACCOUNT:-stllmkeys$RANDOM$RANDOM}"
+FILE_SHARE="${FILE_SHARE:-keys}"
+STORAGE_MOUNT="${STORAGE_MOUNT:-keysvol}"
+# nolock: SQLite over SMB/CIFS can't take byte-range locks, so the URI disables
+# them; SAFE only because we pin to ONE writer (max-replicas=1) below.
+KEY_DB_URI="${KEY_DB_URI:-file:/data/keys.db?nolock=1}"
 
 echo ">> subscription=$SUBSCRIPTION rg=$RG app=$APP image=$IMAGE"
 az account set --subscription "$SUBSCRIPTION"
@@ -47,11 +56,44 @@ az containerapp up \
   --ingress external \
   --env-vars SECURED=1
 
-# Enforce scale-to-zero, a replica cap, and enough memory that torch won't OOM
-# on cold start.
-az containerapp update -n "$APP" -g "$RG" \
-  --min-replicas 0 --max-replicas 2 --cpu 1.0 --memory 2.0Gi -o none
-echo ">> scale set: min=0 max=2 cpu=1 mem=2Gi"
+# --- Persistent key store on Azure Files (tiny, ~$0; needs Microsoft.Storage) ---
+az provider register --namespace Microsoft.Storage -o none 2>/dev/null || true
+az storage account create -n "$STORAGE_ACCOUNT" -g "$RG" -l "$LOCATION" \
+  --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 \
+  --allow-blob-public-access false -o none
+SA_KEY="$(az storage account keys list --account-name "$STORAGE_ACCOUNT" -g "$RG" --query '[0].value' -o tsv)"
+az storage share create -n "$FILE_SHARE" --account-name "$STORAGE_ACCOUNT" --account-key "$SA_KEY" --quota 1 -o none
+az containerapp env storage set -n "$ENVIRONMENT" -g "$RG" \
+  --storage-name "$STORAGE_MOUNT" --azure-file-account-name "$STORAGE_ACCOUNT" \
+  --azure-file-account-key "$SA_KEY" --azure-file-share-name "$FILE_SHARE" \
+  --access-mode ReadWrite -o none
+echo ">> Azure Files share '$FILE_SHARE' mounted as env storage '$STORAGE_MOUNT'"
+
+# Apply image + mount + KEY_DB + scale together via YAML, so the new revision
+# comes up with the mount already present (KEY_DB at /data must exist at start).
+# SINGLE writer: max-replicas=1 (SQLite-over-SMB is not safe for concurrent
+# writers). scale-to-zero (min 0) keeps idle cost ~$0; 2Gi so torch won't OOM.
+TMP_YAML="$(mktemp)"
+az containerapp show -n "$APP" -g "$RG" -o yaml > "$TMP_YAML"
+python3 - "$TMP_YAML" "$IMAGE" "$KEY_DB_URI" "$STORAGE_MOUNT" <<'PY'
+import sys, yaml
+f, image, keydb, mount = sys.argv[1:5]
+d = yaml.safe_load(open(f)); t = d["properties"]["template"]; c = t["containers"][0]
+c["image"] = image
+c["env"] = [{"name": "SECURED", "value": "1"}, {"name": "KEY_DB", "value": keydb}]
+c["volumeMounts"] = [{"volumeName": mount, "mountPath": "/data"}]
+t["volumes"] = [{"name": mount, "storageType": "AzureFile", "storageName": mount}]
+t["scale"]["minReplicas"] = 0; t["scale"]["maxReplicas"] = 1
+for k in ["provisioningState","runningStatus","latestRevisionName","latestReadyRevisionName",
+          "latestRevisionFqdn","customDomainVerificationId","eventStreamEndpoint",
+          "outboundIpAddresses","delegatedIdentities","patchingMode"]:
+    d["properties"].pop(k, None)
+d.pop("systemData", None)
+yaml.safe_dump(d, open(f, "w"), sort_keys=False)
+PY
+az containerapp update -n "$APP" -g "$RG" --yaml "$TMP_YAML" -o none
+rm -f "$TMP_YAML"
+echo ">> persistence live: image=$IMAGE KEY_DB=$KEY_DB_URI scale min=0 max=1 cpu=1 mem=2Gi"
 
 # $5 budget + actual-cost alerts (50/80/100%). Uses create-with-rg + --time-period;
 # NOTE the schema has no thresholdType in this CLI, so we use actual-cost alerts.

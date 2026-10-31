@@ -65,11 +65,17 @@ def test_generation_is_deterministic_with_seed():
     assert torch.equal(a, b)
 
 
-def test_param_count_excludes_tied_head():
+def test_param_count_counts_tied_weight_once():
     cfg = tiny_cfg()
     model = GPT(cfg)
+    # The head and token embedding are tied (same tensor), and parameters()
+    # yields it once — so num_params equals the deduplicated total, with the
+    # tied weight counted a single time and NOT subtracted a second time.
+    assert model.head.weight is model.token_emb.weight
     raw = sum(p.numel() for p in model.parameters())
-    assert model.num_params() == raw - model.head.weight.numel()
+    assert model.num_params() == raw
+    # explicit guard against the old double-subtraction regression
+    assert model.num_params() > raw - model.head.weight.numel()
 
 
 def test_overfits_tiny_batch():

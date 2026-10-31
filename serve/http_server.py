@@ -22,6 +22,12 @@ def make_handler(service):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
         server_version = "llm-from-scratch/serve"
+        # Per-connection socket timeout: without it a slow or stalled client can
+        # hold a worker thread forever (a slowloris-style resource exhaustion),
+        # and the body is read before authentication, so an unauthenticated peer
+        # could tie up threads. A stalled read now raises and frees the thread.
+        # (Defense in depth; in production a managed proxy also caps this.)
+        timeout = 30
 
         def _send(self, status, obj):
             data = json.dumps(obj).encode("utf-8")

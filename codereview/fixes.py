@@ -41,15 +41,24 @@ class FixProposal:
     file: str = ""
 
 
-def _line_starts(source):
+def _line_index(source):
+    """Return (lines, starts): the source split with line endings kept, and the
+    absolute CODEPOINT offset where each line begins."""
+    lines = source.splitlines(keepends=True)
     starts = [0]
-    for line in source.splitlines(keepends=True):
+    for line in lines:
         starts.append(starts[-1] + len(line))
-    return starts
+    return lines, starts
 
 
-def _pos(line_starts, lineno, col):
-    return line_starts[lineno - 1] + col
+def _pos(lines, starts, lineno, byte_col):
+    # ast col_offset is a UTF-8 BYTE offset into the line, but `source` is indexed
+    # by codepoint. Convert by decoding the first `byte_col` bytes of the line, so
+    # a non-ASCII character earlier on the line can't shift the splice point (which
+    # previously produced corrupt, invalid Python).
+    line = lines[lineno - 1]
+    char_col = len(line.encode("utf-8")[:byte_col].decode("utf-8", "ignore"))
+    return starts[lineno - 1] + char_col
 
 
 def _segment_is_ascii(source, start, end):
@@ -110,12 +119,11 @@ def propose_fixes(source, filename="<string>"):
         tree = ast.parse(source, filename=filename)
     except SyntaxError:
         return []
-    ls = _line_starts(source)
-    src_lines = source.splitlines(keepends=True)
+    src_lines, ls = _line_index(source)
     proposals = []
     for node, repl, rule_id, cwe, desc, conf, caveat in _edits_for_tree(tree, source):
-        start = _pos(ls, node.lineno, node.col_offset)
-        end = _pos(ls, node.end_lineno, node.end_col_offset)
+        start = _pos(src_lines, ls, node.lineno, node.col_offset)
+        end = _pos(src_lines, ls, node.end_lineno, node.end_col_offset)
         if not _segment_is_ascii(source, start, end):
             continue
         new_source = source[:start] + repl + source[end:]

@@ -27,7 +27,7 @@ and revocation take effect the moment they are recorded.
 import time
 import uuid
 
-from enterprise.authz import authorize, effective_permissions
+from enterprise.authz import ALL_ACTIONS, authorize, effective_permissions
 from enterprise.keys import generate_key
 from enterprise.models import ApiKey
 
@@ -70,11 +70,11 @@ class KeyManager:
                               detail=f"target={target_principal_id}")
             return 404, {"error": "not_found", "request_id": rid}
 
-        # a key can only narrow: requested scopes must be within what the actor
-        # can itself do right now
+        # a key can only narrow: the issued key's authority must stay within what
+        # the actor can itself do right now (`grantable`).
         scopes = tuple(scopes)
+        grantable = effective_permissions(actor, actor_scopes)
         if scopes:
-            grantable = effective_permissions(actor, actor_scopes)
             over = set(scopes) - grantable
             if over:
                 self.audit.record(rid, MANAGE_ACTION, "deny", "scope_exceeds_grantor",
@@ -83,6 +83,14 @@ class KeyManager:
                 return 403, {"error": "forbidden",
                              "reason": f"cannot grant scopes beyond your own: {sorted(over)}",
                              "request_id": rid}
+        elif actor_scopes:
+            # An empty request means an UNSCOPED key (the target's full role
+            # permissions). If the actor is itself scope-limited, that would hand
+            # out more than the actor may wield, so bind the issued key to exactly
+            # the actor's grantable set. (An unscoped actor keeps empty=unscoped.)
+            # Without this, a key scoped to only `apikey:manage` could mint an
+            # unrestricted key — a privilege-escalation hole.
+            scopes = tuple(sorted(grantable))
 
         now = self.clock()
         plaintext, key_hash = generate_key()
@@ -146,6 +154,23 @@ class KeyManager:
                               tenant_id=tid, principal_id=actor.id,
                               detail=f"key_id={key_id}")
             return 404, {"error": "not_found", "request_id": rid}
+
+        # Ceiling check (was missing): rotation re-issues the old key's authority
+        # and hands the actor the new secret, so the actor must be allowed to
+        # grant that authority right now. Otherwise a key scoped only to
+        # `apikey:manage` could rotate a powerful key and obtain its replacement.
+        grantable = effective_permissions(actor, actor_scopes)
+        target = self.store.get_principal(old.principal_id)
+        old_authority = (effective_permissions(target, old.scopes) if target
+                         else set(ALL_ACTIONS))
+        over = set(old_authority) - grantable
+        if over:
+            self.audit.record(rid, MANAGE_ACTION, "deny", "scope_exceeds_grantor",
+                              tenant_id=tid, principal_id=actor.id,
+                              detail=f"old={key_id} over={sorted(over)}")
+            return 403, {"error": "forbidden",
+                         "reason": f"cannot rotate a key beyond your own authority: {sorted(over)}",
+                         "request_id": rid}
 
         now = self.clock()
         plaintext, key_hash = generate_key()
