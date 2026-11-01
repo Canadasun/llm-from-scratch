@@ -119,3 +119,27 @@ Evidence-backed findings, security regression replay, independently verified
 patches, organization-specific exposure analysis, machine-enforced authorization
 for security actions, revocable organizational knowledge, and calibrated
 abstention remain product development work.
+
+## External audit of commit e6b115b — itemized status
+
+Code defects fixed (with regression tests); capability/ops items are tracked.
+
+| # | Finding | Status |
+|---|---|---|
+| Critical | Model 0/18 coding; 30→33.5% not useful programming ability | TRACKED (capability, not code): see docs/STATUS.md. Needs training data + longer context + a GPU run; release gate added that correctly FAILS today. |
+| High | No end-to-end vuln→patch→verify→PR workflow | PARTIAL: pieces bound (scan→verify→PR, commit/patch-bound). Missing: generated reproducing test per finding, multi-repo qualification. docs/STATUS.md. |
+| High | canary.sh checkpoint/.dockerignore swap; RETURN trap unreliable under set -e | FIXED: isolated temp build context; working tree untouched; EXIT-trap cleanup. deploy/canary.sh. |
+| High | Promotion sends full traffic after 15s with no quality/rollback | FIXED: 90/10 then GATED on the exact revision (auth 401, success-rate, p95, optional authed gen) with automatic rollback. deploy/canary.sh. |
+| High | verify.py runs repo commands with host-user access | FIXED: trusted=False runs tests in a bubblewrap sandbox (no net/host creds), fail-closed. codereview/verify.py, --untrusted. |
+| High | Shared SQLite nolock; "no key changes" unenforced; startup inits DB | FIXED (enforced interim): enterprise/writer_lease.py single-writer lease gates every store write incl. init. Transactional DB (Postgres) remains the end state (Azure cost; deferred). |
+| Medium | review.py validated aggregate totals only | FIXED: validate_results checks every category/type; the gate recomputes gated metrics from outcomes so forged summary metadata cannot pass. evals/regression.py, evals/review.py. |
+| Medium | Category gate = Wilson lower bound only | FIXED: added opt-in absolute_floors as a SEPARATE release gate. docs/RELEASE_GATES.md. |
+| Medium | Substring scorer accepts negated answers | FIXED: negation-aware contains() + contains_all + forbidden phrases. evals/scorers.py, evals/tasks.py. |
+| Medium | PR recomputes fixes; repo may drift | FIXED: artifact bound to base_commit + patch_sha256; apply the exact patch via git-apply; refuse on drift/dirty/mismatch. codereview/pr.py. |
+| Medium | Scanner misses aliased subprocess / imported pickle | FIXED: import-alias resolution (_import_map/_canonical); COVERAGE.md states limits. codereview/rules.py. |
+| Medium | HTTP server lacks absolute request-read deadline | FIXED: wall-clock read watchdog tears down trickling clients, cancelled before generation. serve/http_server.py. |
+
+Not established here (require the Azure/ops and training workstreams): SSO/MFA,
+offboarding, tenant isolation on a transactional DB, secret handling, audit
+retention, tested backup/restore, quotas/load, incident response/rollback, and
+qualifying the quantized served artifact inside the deployment image.

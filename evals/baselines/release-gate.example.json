@@ -1,0 +1,17 @@
+{
+  "name": "release-gate-example-NOT-for-CI",
+  "note": "EXAMPLE release gate demonstrating absolute minimum-capability floors. These are illustrative PRODUCTION targets the current model does NOT meet (code 0/18, secure_development 2/12); running it today correctly FAILS. It is intentionally not wired into CI, which stays regression-only against m3.json. Set real floors and a frozen evaluation set before any release claim. See docs/RELEASE_GATES.md.",
+  "enforce": [],
+  "enforce_categories": [],
+  "absolute_floors": {
+    "overall": 0.60,
+    "code": 0.60,
+    "secure_development": 0.60,
+    "security": 0.70,
+    "ai_security": 0.60,
+    "reasoning": 0.60,
+    "software": 0.60,
+    "cloud": 0.60,
+    "generation": 0.50
+  }
+}
