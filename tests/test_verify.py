@@ -83,3 +83,46 @@ def test_original_repo_is_never_modified(tmp_path):
     verify_fixes(d, TEST_CMD, timeout=30)
     after = open(os.path.join(d, "mod.py"), encoding="utf-8").read()
     assert before == after and "md5" in after    # untouched (still the original)
+
+
+# ---- untrusted-repo isolation (audit: conditional execution risk) ----
+
+import shutil
+
+from codereview.verify import _isolation_prefix
+
+_HAVE_BWRAP = shutil.which("bwrap") is not None and os.path.isfile("/usr/bin/python3")
+
+
+def test_untrusted_run_fails_closed_without_sandbox(tmp_path, monkeypatch):
+    # Force "no isolation available" and confirm an untrusted run refuses to
+    # execute on the host rather than silently running with host access.
+    monkeypatch.setattr("codereview.verify._isolation_prefix", lambda cwd: None)
+    r = run_command(f"{sys.executable} -c \"print(1)\"", str(tmp_path), 10, trusted=False)
+    assert r.passed is False and "isolation_unavailable" in r.tail
+
+
+def test_untrusted_verify_fixes_errors_without_sandbox(tmp_path, monkeypatch):
+    monkeypatch.setattr("codereview.verify._isolation_prefix", lambda cwd: None)
+    d = _md5_repo(tmp_path, "    def test_type(self):\n        self.assertIsInstance(checksum(b'x'), str)")
+    r = verify_fixes(d, TEST_CMD, timeout=30, trusted=False)
+    assert r.verdict == "error" and "sandbox" in r.note.lower()
+
+
+def test_trusted_run_still_executes_on_host(tmp_path):
+    assert run_command(f"{sys.executable} -c \"import sys;sys.exit(0)\"",
+                       str(tmp_path), 10, trusted=True).passed
+
+
+@pytest.mark.skipif(not _HAVE_BWRAP, reason="bubblewrap/system python unavailable")
+def test_untrusted_sandbox_has_no_network(tmp_path):
+    # A real sandbox must block network egress (no exfiltration from a hostile repo).
+    d = str(tmp_path)
+    code = ("import socket,sys\n"
+            "try:\n"
+            "    socket.create_connection(('10.255.255.1',80),timeout=2); print('NET'); sys.exit(0)\n"
+            "except OSError:\n"
+            "    print('NONET'); sys.exit(7)\n")
+    _write(d, "probe.py", code)
+    r = run_command("python probe.py", d, 20, trusted=False)
+    assert r.returncode == 7 and "NONET" in r.tail

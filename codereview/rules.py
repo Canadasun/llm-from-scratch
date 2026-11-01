@@ -40,6 +40,41 @@ def _attr(node):
     return None
 
 
+def _import_map(tree):
+    """Resolve import aliases so a call's REAL target is known regardless of how
+    it was imported. Returns (modules, symbols):
+      modules: local name -> canonical module  (import subprocess as sp -> sp:subprocess)
+      symbols: local name -> canonical dotted   (from subprocess import run as r -> r:subprocess.run)
+    Without this, `sp.run(shell=True)` or `from pickle import loads; loads(x)`
+    slip past rules that only match the literal `subprocess.`/`pickle.` prefix."""
+    modules, symbols = {}, {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                bound = alias.asname or alias.name.split(".")[0]
+                modules[bound] = alias.name if alias.asname else alias.name.split(".")[0]
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            for alias in node.names:
+                symbols[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+    return modules, symbols
+
+
+def _canonical(func, modules, symbols):
+    """Canonical dotted target of a call node, resolving import aliases.
+    r -> 'subprocess.run'; sp.run -> 'subprocess.run'; subprocess.run -> same."""
+    if isinstance(func, ast.Name):
+        return symbols.get(func.id, func.id)
+    parts = []
+    node = func
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(modules.get(node.id, node.id))
+        return ".".join(reversed(parts))
+    return None
+
+
 def _kw(call, name):
     for k in call.keywords:
         if k.arg == name:
@@ -91,16 +126,20 @@ def _mk(rule_id, cwe, sev, conf, msg, filename, node, lines, remediation=""):
 _SUBPROCESS_FUNCS = {"run", "call", "Popen", "check_output", "check_call"}
 
 
+_SUBPROCESS_TARGETS = {f"subprocess.{f}" for f in _SUBPROCESS_FUNCS}
+
+
 def rule_shell_injection(tree, lines, filename):
     out = []
+    modules, symbols = _import_map(tree)
     for n in ast.walk(tree):
         if not isinstance(n, ast.Call):
             continue
-        dotted, attr = _dotted(n.func), _attr(n.func)
-        # subprocess.* with shell=True
+        canonical = _canonical(n.func, modules, symbols)
+        dotted = canonical          # canonical resolves import aliases
+        # subprocess.* with shell=True (even when imported/aliased)
         shell = _kw(n, "shell")
-        is_subprocess = (dotted and dotted.startswith("subprocess.")) or \
-                        (attr in _SUBPROCESS_FUNCS and dotted and "subprocess" in dotted)
+        is_subprocess = canonical in _SUBPROCESS_TARGETS
         if is_subprocess and _is_true(shell):
             cmd = n.args[0] if n.args else None
             dyn = _is_dynamic_str(cmd)
@@ -125,14 +164,18 @@ def rule_shell_injection(tree, lines, filename):
 
 def rule_eval_exec(tree, lines, filename):
     out = []
+    modules, symbols = _import_map(tree)
     for n in ast.walk(tree):
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) \
-                and n.func.id in ("eval", "exec"):
+        if not isinstance(n, ast.Call):
+            continue
+        canonical = _canonical(n.func, modules, symbols)
+        callee = canonical.split(".")[-1] if canonical else None
+        if canonical in ("eval", "exec", "builtins.eval", "builtins.exec"):
             arg = n.args[0] if n.args else None
             if _is_dynamic_str(arg) or isinstance(arg, (ast.Name, ast.Attribute)):
                 out.append(_mk(
                     "PY-DANGEROUS-EVAL", "CWE-95", "critical", "high",
-                    f"{n.func.id}() on a runtime value executes arbitrary code",
+                    f"{callee}() on a runtime value executes arbitrary code",
                     filename, n, lines,
                     "Avoid eval/exec on dynamic input; use ast.literal_eval or a "
                     "explicit dispatch table."))
@@ -141,10 +184,11 @@ def rule_eval_exec(tree, lines, filename):
 
 def rule_insecure_deserialization(tree, lines, filename):
     out = []
+    modules, symbols = _import_map(tree)
     for n in ast.walk(tree):
         if not isinstance(n, ast.Call):
             continue
-        dotted = _dotted(n.func)
+        dotted = _canonical(n.func, modules, symbols)   # resolves import aliases
         if dotted in ("pickle.load", "pickle.loads", "cPickle.load",
                       "cPickle.loads", "marshal.load", "marshal.loads"):
             out.append(_mk(

@@ -27,6 +27,9 @@ from codereview.scanner import scan_path
 from codereview.verify import _apply_to_tree, propose_all, verify_fixes
 
 
+import hashlib
+
+
 @dataclass
 class PRArtifact:
     verified: bool
@@ -37,6 +40,11 @@ class PRArtifact:
     files_changed: list = field(default_factory=list)
     verdict: str = ""
     note: str = ""
+    # Bind the verified artifact to the exact repo state it was verified against,
+    # so the commit step applies THIS patch to THAT commit and rejects any drift
+    # (audit: PR creation recomputed fixes; the repo can change after verification).
+    base_commit: str = ""
+    patch_sha256: str = ""
 
 
 def _combined_patch(repo_dir, proposals):
@@ -122,10 +130,11 @@ def build_pr_body(scan, verification, proposals, repo_dir, patch):
     return "\n".join(L)
 
 
-def prepare_pr(repo_dir, test_cmd, branch=None, timeout=180):
-    """Run scan + verification and build a PRArtifact. No git, no network."""
+def prepare_pr(repo_dir, test_cmd, branch=None, timeout=180, *, trusted=True):
+    """Run scan + verification and build a PRArtifact. No git, no network.
+    trusted=False verifies the repo's tests inside a sandbox (fail-closed)."""
     scan = scan_path(repo_dir)
-    verification = verify_fixes(repo_dir, test_cmd, timeout=timeout)
+    verification = verify_fixes(repo_dir, test_cmd, timeout=timeout, trusted=trusted)
     proposals = propose_all(repo_dir)
     verified = verification.verdict == "verified"
     files = sorted({os.path.relpath(p.file, repo_dir) for p in proposals})
@@ -137,9 +146,12 @@ def prepare_pr(repo_dir, test_cmd, branch=None, timeout=180):
         title = (f"Security: {len(scan['findings'])} code-review finding(s) "
                  f"for review")
     body = build_pr_body(scan, verification, proposals, repo_dir, patch)
+    base_commit = _git(["rev-parse", "HEAD"], repo_dir).stdout.strip()
+    patch_sha256 = hashlib.sha256(patch.encode("utf-8")).hexdigest()
     return PRArtifact(verified=verified, branch=branch, title=title, body=body,
                       patch=patch, files_changed=files,
-                      verdict=verification.verdict, note=verification.note)
+                      verdict=verification.verdict, note=verification.note,
+                      base_commit=base_commit, patch_sha256=patch_sha256)
 
 
 def write_artifact(artifact, out_dir="."):
@@ -160,25 +172,53 @@ def _git(args, cwd):
 
 
 def apply_fixes_to_branch(repo_dir, artifact):
-    """Create artifact.branch, apply the verified fixes, and commit them. Refuses
-    unless the fixes are verified and the working tree is clean. Local only (no
-    push). Returns (base_branch, new_branch)."""
+    """Create artifact.branch, apply the EXACT verified patch, and commit it.
+
+    Refuses unless the fixes are verified, the working tree is clean, the repo is
+    still at the commit the patch was verified against, and the patch matches its
+    recorded hash. It applies `artifact.patch` with `git apply` rather than
+    recomputing fixes, so the committed artifact is precisely the verified one and
+    any drift since verification is rejected (audit: patch integrity). Local only
+    (no push). Returns (base_branch, new_branch)."""
     if not artifact.verified:
         raise RuntimeError("refusing: fixes are not verified")
+    if not artifact.patch.strip():
+        raise RuntimeError("refusing: no verified patch to apply")
+    if hashlib.sha256(artifact.patch.encode("utf-8")).hexdigest() != artifact.patch_sha256:
+        raise RuntimeError("refusing: patch does not match its recorded hash")
     st = _git(["status", "--porcelain"], repo_dir)
     if st.returncode != 0:
         raise RuntimeError(f"not a git repo or git error: {st.stderr.strip()}")
     if st.stdout.strip():
         raise RuntimeError("refusing: working tree is not clean "
                            "(commit or stash first)")
+    # Reject drift: the repo must be at the exact commit the patch was verified
+    # against, so the patch applies to known-good content.
+    head = _git(["rev-parse", "HEAD"], repo_dir).stdout.strip()
+    if not artifact.base_commit:
+        raise RuntimeError("refusing: artifact is not bound to a base commit")
+    if head != artifact.base_commit:
+        raise RuntimeError(
+            f"refusing: repo drifted since verification "
+            f"(HEAD {head[:12]} != verified {artifact.base_commit[:12]})")
     base = _git(["rev-parse", "--abbrev-ref", "HEAD"], repo_dir).stdout.strip()
+    # Verify the exact patch applies cleanly BEFORE creating a branch.
+    chk = subprocess.run(["git", "apply", "--check", "-"], cwd=repo_dir,
+                         input=artifact.patch, capture_output=True, text=True)
+    if chk.returncode != 0:
+        raise RuntimeError(f"refusing: verified patch no longer applies cleanly: {chk.stderr.strip()}")
     cb = _git(["checkout", "-b", artifact.branch], repo_dir)
     if cb.returncode != 0:
         raise RuntimeError(f"could not create branch: {cb.stderr.strip()}")
-    _apply_to_tree(propose_all(repo_dir))
+    ap = subprocess.run(["git", "apply", "-"], cwd=repo_dir,
+                        input=artifact.patch, capture_output=True, text=True)
+    if ap.returncode != 0:
+        raise RuntimeError(f"applying verified patch failed: {ap.stderr.strip()}")
     _git(["add", "-A"], repo_dir)
     msg = (artifact.title + "\n\nAutomated, verified secure code-review fixes "
-           "(codereview/). Human review required; do not auto-merge.")
+           "(codereview/). Human review required; do not auto-merge.\n\n"
+           f"Verified-against: {artifact.base_commit}\n"
+           f"Patch-sha256: {artifact.patch_sha256}")
     cm = _git(["commit", "-m", msg], repo_dir)
     if cm.returncode != 0:
         raise RuntimeError(f"commit failed: {cm.stderr.strip()}")

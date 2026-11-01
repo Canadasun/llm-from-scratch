@@ -75,15 +75,57 @@ class VerificationResult:
     note: str = ""
 
 
-def run_command(test_cmd, cwd, timeout=180):
+def _isolation_prefix(workdir):
+    """A bubblewrap sandbox for running an UNTRUSTED repo's tests: a fresh
+    namespace with NO network (--unshare-all), no host home or credentials, a
+    read-only system runtime, and the repo copy bind-mounted writable. Returns an
+    argv prefix, or None if bwrap is unavailable. The sandbox uses the SYSTEM
+    /usr/bin/python3 (not this venv), so an untrusted repo must carry its own
+    dependencies / run on a prepared host — never the evaluator's interpreter."""
+    bwrap = shutil.which("bwrap")
+    if not bwrap or not os.path.isfile("/usr/bin/python3"):
+        return None
+    return [bwrap, "--unshare-all", "--die-with-parent", "--new-session",
+            "--cap-drop", "ALL",
+            "--tmpfs", "/", "--ro-bind", "/usr", "/usr",
+            "--ro-bind-try", "/lib", "/lib", "--ro-bind-try", "/lib64", "/lib64",
+            "--ro-bind-try", "/bin", "/bin", "--ro-bind-try", "/sbin", "/sbin",
+            "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp",
+            "--bind", workdir, workdir, "--chdir", workdir,
+            "--clearenv", "--setenv", "PATH", "/usr/bin:/bin",
+            "--setenv", "HOME", workdir, "--setenv", "PYTHONDONTWRITEBYTECODE", "1",
+            "--"]
+
+
+def run_command(test_cmd, cwd, timeout=180, *, trusted=True):
     """Run a test command in `cwd` under resource limits and a scrubbed env.
-    'passed' means exit code 0."""
+    'passed' means exit code 0.
+
+    trusted=True (default): the current behaviour — run on the host with this
+    interpreter and a minimal env. Only for a repo you already trust (e.g. this
+    project's own tests), since it is NOT filesystem/network isolated.
+
+    trusted=False: run inside a bubblewrap sandbox (no network, no host home/
+    credentials, read-only runtime, repo bind-mounted writable). If working
+    isolation is unavailable this FAILS CLOSED (returns a non-passing result)
+    rather than executing an untrusted repo with host access."""
     argv = shlex.split(test_cmd)
-    if argv and argv[0] in ("python", "python3"):
-        argv[0] = sys.executable           # use this interpreter / its packages
-    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-           "HOME": cwd, "PYTHONDONTWRITEBYTECODE": "1"}
     t0 = time.monotonic()
+    if trusted:
+        if argv and argv[0] in ("python", "python3"):
+            argv[0] = sys.executable       # use this interpreter / its packages
+        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+               "HOME": cwd, "PYTHONDONTWRITEBYTECODE": "1"}
+    else:
+        prefix = _isolation_prefix(cwd)
+        if prefix is None:
+            return CmdResult(-1, False, 0.0,
+                             "isolation_unavailable: refusing to run an untrusted "
+                             "repo without a working bubblewrap sandbox")
+        if argv and argv[0] in ("python", "python3"):
+            argv[0] = "/usr/bin/python3"   # the sandbox's system interpreter
+        argv = prefix + argv
+        env = {}                            # bwrap --clearenv / --setenv control the env
     try:
         proc = subprocess.run(
             argv, cwd=cwd, env=env, capture_output=True, text=True,
@@ -122,9 +164,13 @@ def _apply_to_tree(proposals):
     return changed
 
 
-def verify_fixes(repo_dir, test_cmd, timeout=180):
+def verify_fixes(repo_dir, test_cmd, timeout=180, *, trusted=True):
     """Copy repo_dir, propose+apply fixes on the copy, and verify tests + findings.
-    Returns a VerificationResult. The original repo_dir is never modified."""
+    Returns a VerificationResult. The original repo_dir is never modified.
+
+    trusted=False runs the repo's tests inside a bubblewrap sandbox and fails
+    closed (verdict 'error') if isolation is unavailable — use it for any repo
+    you do not fully trust (audit: isolate every repository job)."""
     tmp = tempfile.mkdtemp(prefix="codereview_verify_")
     dst = os.path.join(tmp, "repo")
     try:
@@ -138,14 +184,20 @@ def verify_fixes(repo_dir, test_cmd, timeout=180):
                 findings_after=len(before_scan["findings"]),
                 note="No auto-fixable findings to verify.")
 
-        before = run_command(test_cmd, dst, timeout)
+        before = run_command(test_cmd, dst, timeout, trusted=trusted)
+        if not trusted and before.returncode == -1 and "isolation_unavailable" in before.tail:
+            return VerificationResult(
+                verdict="error", before=before,
+                findings_before=len(before_scan["findings"]),
+                findings_after=len(before_scan["findings"]),
+                note="Refused: untrusted repo requires a working sandbox (no isolation available).")
         before_keys = _finding_keys(before_scan, dst)
 
         changed = _apply_to_tree(proposals)
 
         after_scan = scan_path(dst)
         after_keys = _finding_keys(after_scan, dst)
-        after = run_command(test_cmd, dst, timeout)
+        after = run_command(test_cmd, dst, timeout, trusted=trusted)
 
         resolved = sorted(before_keys - after_keys)
         introduced = sorted(after_keys - before_keys)
