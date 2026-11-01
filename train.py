@@ -157,6 +157,9 @@ def main():
     ap.add_argument("--checkpoint-interval", type=int, default=None,
                     help="save every N completed steps (default: evaluation interval)")
     ap.add_argument("--device", default="auto", help="auto|cpu|cuda|mps")
+    ap.add_argument("--corpus", default=CORPUS,
+                    help="training corpus file (default data/corpus.txt). Point at a "
+                         "mixed prose+code corpus from data/build_training_corpus.py.")
     ap.add_argument("--compile", action="store_true",
                     help="torch.compile the model (PyTorch 2.x, CUDA)")
     args = ap.parse_args()
@@ -193,9 +196,10 @@ def main():
     print(f"Preset: {args.preset} | device: {device} | tokenizer: {cfg.tokenizer}",
           flush=True)
 
-    if not os.path.exists(CORPUS):
-        raise SystemExit("data/corpus.txt not found. Run: python data/build_corpus.py")
-    with open(CORPUS, encoding="utf-8") as f:
+    if not os.path.exists(args.corpus):
+        raise SystemExit(f"{args.corpus} not found. Run: python data/build_corpus.py "
+                         f"(prose) and/or python data/build_training_corpus.py (prose+code)")
+    with open(args.corpus, encoding="utf-8") as f:
         text = f.read()
     corpus_hash = hashlib.sha256(text.encode()).hexdigest()
     if resumed is not None and corpus_hash != resumed["corpus_hash"]:

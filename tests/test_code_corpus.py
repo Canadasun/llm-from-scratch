@@ -69,3 +69,34 @@ def test_build_includes_examples_and_stdlib():
     assert "CPython standard library (PSF License)" in corpus
     assert m["sources"][1]["files"] >= 1
     assert m["policy"].startswith("public or self-authored")
+
+
+# ---- Part 2: gpu_xl preset + prose+code training mixer ----
+
+from config import PRESETS
+from data.build_training_corpus import build_training_corpus
+
+
+def test_gpu_xl_preset_is_longer_context_and_larger():
+    c = PRESETS["gpu_xl"]()
+    assert c.block_size == 1024            # doubled context for code
+    assert c.vocab_size == 4096
+    assert c.n_layer >= 12 and c.n_embd >= 768
+    assert c.tokenizer == "bpe"
+
+
+def test_training_mixer_includes_code_and_is_eval_clean(tmp_path):
+    corpus, info = build_training_corpus(prose_path=None, code_max_bytes=400_000)
+    assert "Python code corpus" in corpus
+    assert info["code_bytes"] > 0 and info["prose_bytes"] == 0   # no prose given
+    # build_training_corpus runs assert_clean internally; re-affirm here.
+    assert_clean(corpus, EVAL_DIR)
+
+
+def test_training_mixer_combines_prose_and_code(tmp_path):
+    prose = tmp_path / "prose.txt"
+    prose.write_text("# domain prose\nTLS is a protocol for secure transport.\n" * 50,
+                     encoding="utf-8")
+    corpus, info = build_training_corpus(prose_path=str(prose), code_max_bytes=400_000)
+    assert "domain prose (RFCs + NIST)" in corpus and "Python code corpus" in corpus
+    assert info["prose_bytes"] > 0 and info["code_bytes"] > 0

@@ -87,4 +87,32 @@ def gpu_large_preset():
     )
 
 
-PRESETS = {"cpu": cpu_preset, "gpu": gpu_preset, "gpu_large": gpu_large_preset}
+def gpu_xl_preset():
+    """~110M-param model with a LONGER context and a larger vocab, for the
+    coding-capability step (RFC/NIST prose + Python code corpus). 512 tokens is
+    inadequate for code, so context doubles to 1024 and the model is deeper/wider.
+
+    VRAM: fits a free T4 (16 GB) at batch_size 12 with mixed precision; raise the
+    batch (and lower max_iters proportionally) on an L4/A100. This is the preset a
+    Tier-0 (free Kaggle/Colab) run uses. Still a learning-scale model, not a
+    production coder — see docs/STATUS.md."""
+    return TrainConfig(
+        block_size=1024,        # 512 -> 1024: the biggest single lever for code
+        n_layer=16,
+        n_head=12,
+        n_embd=768,
+        dropout=0.1,
+        batch_size=12,          # sized for a 16 GB T4 at block 1024, mixed precision
+        learning_rate=4e-4,
+        max_iters=8000,
+        eval_interval=500,
+        eval_iters=50,
+        warmup_iters=400,
+        tokenizer="bpe",
+        vocab_size=4096,        # larger vocab for a code + prose corpus
+        bpe_train_chars=1_200_000,
+    )
+
+
+PRESETS = {"cpu": cpu_preset, "gpu": gpu_preset, "gpu_large": gpu_large_preset,
+           "gpu_xl": gpu_xl_preset}

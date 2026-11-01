@@ -33,3 +33,5 @@ corpus_code.txt
 data/corpus_code.txt
 code_corpus_manifest.json
 data/code_corpus_manifest.json
+data/corpus_training.txt
+corpus_training.txt
