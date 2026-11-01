@@ -27,3 +27,9 @@ data/.cache_*.pt
 # eval run outputs
 evals/results*.json
 eval_results.json
+
+# Code corpus (reproducible, built by data/build_code_corpus.py)
+corpus_code.txt
+data/corpus_code.txt
+code_corpus_manifest.json
+data/code_corpus_manifest.json

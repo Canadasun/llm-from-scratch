@@ -24,6 +24,34 @@ chosen because they densely cover this project's domains:
 Downloaded RFCs are cached under `data/rfc_cache/` so re-runs work offline. The
 cache and the generated `corpus.txt` are git-ignored (they are reproducible).
 
+### Python code corpus (for the coding-capability training step)
+
+`build_code_corpus.py` assembles a **license-safe Python code** corpus — the
+piece the RFC/NIST prose lacks, and the reason the model scores ~0 on coding:
+
+- **CPython standard library** (PSF License — permissive, redistributable), read
+  from this interpreter's own stdlib directory, so it is fully **offline** and
+  costs nothing. Tests, bundled third-party (`lib2to3`, `ensurepip`), GUI demos
+  and oversized files are skipped.
+- **Original secure-coding / insecure-counterexample / refusal examples**
+  (`build_code_examples.py`) — written for this project (license-safe). These
+  teach the secure-vs-insecure contrast and give abstention examples.
+
+Every file is secret-scrubbed, a manifest records sources/licenses/sizes/hashes,
+and the result is checked against the evaluation set for **train/eval
+contamination** (`contamination.py`) — none of the held-out text or task
+prompts/targets may appear verbatim in the corpus, so memorisation cannot look
+like progress. When repo-level code is added later, keep the eval **split by
+repository and problem family** (hold out whole repos/families) to preserve this.
+
+```bash
+python data/build_code_corpus.py                 # ~40 MB default cap, offline
+python data/build_code_corpus.py --max-bytes 8000000
+```
+
+Output `corpus_code.txt` and `code_corpus_manifest.json` are git-ignored
+(reproducible).
+
 ### Your own text (optional)
 
 Drop `.txt` or `.md` files into `data/sources/` and they are appended to the
