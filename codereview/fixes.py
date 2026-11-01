@@ -75,6 +75,12 @@ def _edits_for_tree(tree, source):
             continue
         dotted, attr = _dotted(n.func), _attr(n.func)
 
+        # Explicit compatibility/non-security use must not be rewritten (e.g.
+        # HTTP Digest algorithms). Findings remain visible for human context.
+        security = _kw(n, "usedforsecurity")
+        if isinstance(security, ast.Constant) and security.value is False:
+            continue
+
         # weak hash -> sha256
         if dotted in ("hashlib.md5", "hashlib.sha1"):
             yield (n.func, "hashlib.sha256", "PY-WEAK-HASH", "CWE-327",
@@ -88,13 +94,20 @@ def _edits_for_tree(tree, source):
                    "use sha256 in hashlib.new", "medium",
                    "changes the digest; recompute any stored hashes.")
 
-        # yaml.load -> yaml.safe_load (only the plain positional form)
-        if dotted == "yaml.load" and _kw(n, "Loader") is None:
-            yield (n.func, "yaml.safe_load", "PY-INSECURE-DESERIALIZATION",
-                   "CWE-502", "replace yaml.load with yaml.safe_load", "high",
-                   "safe_load refuses to construct arbitrary Python objects; if "
-                   "the data legitimately relied on custom tags, a safe custom "
-                   "loader is needed instead.")
+        # Replace only reviewed yaml.load call shapes. Removing an unsafe
+        # Loader keyword must not leave safe_load(..., Loader=...) behind.
+        if dotted == "yaml.load" and len(n.args) == 1 and isinstance(n.args[0], (ast.Name, ast.Constant)) and all(k.arg == "Loader" for k in n.keywords):
+            loader = _kw(n, "Loader")
+            if loader is None or _dotted(loader) in ("yaml.Loader", "yaml.UnsafeLoader", "yaml.FullLoader"):
+                replacement = f"yaml.safe_load({ast.unparse(n.args[0])})"
+                yield (n, replacement, "PY-INSECURE-DESERIALIZATION",
+                       "CWE-502", "replace yaml.load with yaml.safe_load", "high",
+                       "Rejects Python object construction; review any custom-tag requirements.")
+
+        if dotted == "ssl._create_unverified_context" and not n.args and not n.keywords:
+            yield (n.func, "ssl.create_default_context", "PY-TLS-VERIFY-DISABLED", "CWE-295",
+                   "require certificate and hostname verification", "high",
+                   "Configure a trusted private CA explicitly if needed.")
 
         # verify=False -> verify=True
         v = _kw(n, "verify")

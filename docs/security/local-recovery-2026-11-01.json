@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "scope": "temporary local synthetic database only",
+  "live_backup_qualified": false,
+  "passed": true,
+  "checks": {
+    "identity_restored": true,
+    "same_tenant_read": true,
+    "cross_tenant_read_denied": true,
+    "cross_tenant_list_denied": true,
+    "plaintext_key_absent": true,
+    "backup_permissions_private": true
+  },
+  "snapshot": {
+    "sha256": "fefbf91b4dded33d33bed03e2e6a557690d0f2365c4f8ad24474c6f7e9e4b238",
+    "bytes": 45056
+  },
+  "elapsed_s": 0.011
+}

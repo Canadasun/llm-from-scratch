@@ -37,13 +37,14 @@ class SecuredInferenceService:
     requires_auth = True
 
     def __init__(self, inner, store, audit, authorizer=authorize,
-                 action=INFER_ACTION, quota=None):
+                 action=INFER_ACTION, quota=None, organization_identity=None):
         self.inner = inner
         self.store = store
         self.audit = audit
         self.authorizer = authorizer
         self.action = action
         self.quota = quota
+        self.organization_identity = organization_identity
 
     def health(self):
         # Liveness stays open (no auth): it leaks no tenant data and is the
@@ -58,8 +59,11 @@ class SecuredInferenceService:
 
         # 1. authenticate. `client` (socket origin) is recorded for the trail but
         #    is never trusted for identity — only the API key is.
-        principal, key = (self.store.authenticate(api_key)
-                          if api_key else (None, None))
+        if self.organization_identity is not None:
+            # Organization mode cannot be bypassed with a legacy demo API key.
+            principal, key = self.organization_identity.authenticate(api_key, self.store)
+        else:
+            principal, key = (self.store.authenticate(api_key) if api_key else (None, None))
         if principal is None:
             self.audit.record(rid, self.action, "deny", "auth_failed",
                               detail=f"client={client}")

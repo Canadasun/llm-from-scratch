@@ -1,2 +1,5 @@
 # Development / test dependencies
 pytest>=8.0
+
+# Exercise optional organization identity verification in CI.
+-r requirements-identity.txt

@@ -92,6 +92,8 @@ def main():
                          "restarts); omit for an in-memory demo store")
     ap.add_argument("--quota-redis-url", default=os.environ.get("LLM_QUOTA_REDIS_URL"),
                     help="optional EXISTING shared quota endpoint; no resources are created")
+    ap.add_argument("--organization-policy", default=os.environ.get("LLM_ORGANIZATION_POLICY"),
+                    help="administrator-managed issuer/audience/JWKS/subject bindings JSON")
     ap.add_argument("--metrics", action="store_true",
                     help="collect aggregate reliability/latency/cost metrics and "
                          "expose them at GET /metrics (Stage-4 pilot)")
@@ -103,6 +105,8 @@ def main():
                     help="dynamic int8 quantization (CPU): ~2x faster generation, "
                          "negligible quality change")
     args = ap.parse_args()
+    if args.organization_policy and not args.secured:
+        ap.error("organization identity requires --secured")
     if args.quota_redis_url and not args.secured:
         ap.error("shared tenant quotas require --secured")
 
@@ -136,7 +140,12 @@ def main():
         if args.quota_redis_url:
             from enterprise.quota import from_url
             quota = from_url(args.quota_redis_url, args.rate_capacity, args.rate_per_sec)
-        service = SecuredInferenceService(service, store, audit, quota=quota)
+        identity = None
+        if args.organization_policy:
+            from enterprise.oidc import OrganizationIdentity
+            identity = OrganizationIdentity(args.organization_policy)
+        service = SecuredInferenceService(service, store, audit, quota=quota,
+                                         organization_identity=identity)
         backing = f"persistent SQLite ({args.key_db})" if args.key_db else "in-memory (ephemeral)"
         if is_new:
             # Printed to stdout (not the structured log) so it is easy to copy.

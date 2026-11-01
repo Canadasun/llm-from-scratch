@@ -151,6 +151,7 @@ def main():
     ap.add_argument("--vocab-size", type=int, default=None)
     ap.add_argument("--bpe-train-chars", type=int, default=None,
                     help="chars the BPE tokenizer learns merges from")
+    ap.add_argument("--batch-size", type=int, help="bounded GPU memory tuning; fixed when resuming")
     ap.add_argument("--max-iters", type=int, default=None)
     ap.add_argument("--resume", help="resume a training checkpoint, preserving optimizer and RNG")
     ap.add_argument("--out-dir", help="checkpoint directory")
@@ -173,6 +174,10 @@ def main():
         cfg = TrainConfig(**resumed["train_cfg"])
     else:
         cfg = PRESETS[args.preset]()
+    if args.batch_size is not None:
+        if args.batch_size < 1 or (resumed is not None and args.batch_size != cfg.batch_size):
+            ap.error("batch size must be positive and cannot change on exact resume")
+        cfg.batch_size = args.batch_size
     if args.tokenizer:
         cfg.tokenizer = args.tokenizer
     if args.vocab_size:

@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "collected_at": "2026-11-01T08:16:21.468868+00:00",
+  "app": "llm-serve",
+  "resource_group": "llm-from-scratch-rg",
+  "mutations": false,
+  "application_traffic": false,
+  "azure_budget_usd": 0,
+  "deployment": {
+    "envNames": [
+      "SECURED",
+      "KEY_DB",
+      "QUANTIZE",
+      "METRICS"
+    ],
+    "identityType": "None",
+    "images": [
+      "ghcr.io/canadasun/llm-serve:m3-instruct-canary"
+    ],
+    "ingress": {
+      "allowInsecure": false,
+      "external": true,
+      "fqdn": "llm-serve.niceforest-af33d295.canadacentral.azurecontainerapps.io"
+    },
+    "name": "llm-serve",
+    "revisionMode": "Multiple",
+    "scale": {
+      "cooldownPeriod": 300,
+      "maxReplicas": 1,
+      "minReplicas": 0,
+      "pollingInterval": 30,
+      "rules": null
+    },
+    "secretRefs": [],
+    "state": "Succeeded",
+    "traffic": [
+      {
+        "revisionName": "llm-serve--candidate",
+        "weight": 100
+      }
+    ],
+    "volumes": [
+      {
+        "name": "keysvol",
+        "storageName": "keysvol",
+        "storageType": "AzureFile"
+      }
+    ]
+  },
+  "authentication": {
+    "entraEnabled": null,
+    "platformEnabled": null,
+    "requireAuthentication": null,
+    "unauthenticatedAction": null
+  }
+}

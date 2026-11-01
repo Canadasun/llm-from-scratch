@@ -19,6 +19,13 @@
 #
 set -euo pipefail
 
+# The user requires a $0 Azure budget. This provisioning script can create
+# billable storage/revisions; budgets do not hard-stop charges. Refuse before
+# parameter expansion, credential reads, az calls, or resource mutation.
+echo 'BLOCKED: Azure budget is $0. Provisioning/deployment is disabled.' >&2
+echo 'Use local qualification; retain live changes in the Azure owner workstream.' >&2
+exit 1
+
 SUBSCRIPTION="${SUBSCRIPTION:?set SUBSCRIPTION=<personal-azure-sub-id>}"
 RG="${RG:-llm-from-scratch-rg}"
 LOCATION="${LOCATION:-canadacentral}"

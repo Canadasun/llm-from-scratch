@@ -1,6 +1,7 @@
 """Independent behavioral regression witnesses for a deliberately narrow fix.
 
-Supported: a top-level one-argument function returning
+Supported grammars: SSL context factories, single-argument YAML parsers, and
+a top-level one-argument function returning
 hashlib.md5/sha1/sha256(argument).hexdigest(). The source function is executed in
 our JSON sandbox; expected digests and verdicts stay in the controller. Other
 shapes/rules are unsupported and cannot receive a security-verified verdict.
@@ -28,22 +29,63 @@ def witness_source(path, line):
         normalized = ast.unparse(fn.body[0])
         if normalized not in [expected.replace("ALGORITHM", name) for name in ("md5", "sha1", "sha256")]:
             return None
+        fn.name = '_reviewed_candidate'
         # Reconstruct just this reviewed grammar, not decorators/import side effects.
         return ("import hashlib\n" + ast.unparse(fn) + "\n\ndef security_probe(value):\n"
                 f"    return {fn.name}(value.encode('utf-8'))\n")
     return None
 
 
-def reproduce(path, line, *, runner=None):
+def witness_spec(path, line):
     source = witness_source(path, line)
-    if source is None:
+    if source is not None:
+        return {"kind": "digest-algorithm", "source": source,
+                "cases": [{"args": [value], "expected": hashlib.sha256(value.encode()).hexdigest()}
+                          for value in INPUTS]}
+    tree = ast.parse(Path(path).read_text(encoding="utf-8"))
+    for fn in tree.body:
+        if not isinstance(fn, ast.FunctionDef) or not fn.lineno <= line <= fn.end_lineno:
+            continue
+        if fn.decorator_list or fn.args.posonlyargs or fn.args.kwonlyargs or fn.args.vararg or fn.args.kwarg or fn.args.defaults or len(fn.body) != 1:
+            return None
+        normalized = ast.unparse(fn.body[0])
+        if not fn.args.args and normalized in (
+                "return ssl._create_unverified_context()", "return ssl.create_default_context()"):
+            fn.name = '_reviewed_candidate'
+            return {"kind": "tls-context", "source": "import ssl\n" + ast.unparse(fn) +
+                    "\n\ndef security_probe():\n" + f"    context = {fn.name}()\n" +
+                    "    return {'verify_mode': int(context.verify_mode), 'check_hostname': context.check_hostname}\n",
+                    "cases": [{"args": [], "expected": {"verify_mode": 2, "check_hostname": True}}]}
+        if len(fn.args.args) == 1:
+            arg = fn.args.args[0].arg
+            shapes = [f"return yaml.load({arg})", f"return yaml.safe_load({arg})"]
+            shapes.extend(f"return yaml.load({arg}, Loader=yaml.{loader})"
+                          for loader in ("Loader", "UnsafeLoader", "FullLoader"))
+            if normalized in shapes:
+                fn.name = '_reviewed_candidate'
+                probe = ("import yaml\n" + ast.unparse(fn) + "\n\ndef security_probe(doc):\n"
+                         "    try:\n" + f"        value = {fn.name}(doc)\n"
+                         "        return {'accepted': True, 'value': value}\n"
+                         "    except yaml.YAMLError:\n"
+                         "        return {'accepted': False, 'value': None}\n")
+                return {"kind": "yaml-construction", "source": probe, "cases": [
+                    {"args": ["!!python/object/apply:builtins.sum [[1, 2]]"],
+                     "expected": {"accepted": False, "value": None}},
+                    {"args": ["!!python/object/apply:builtins.str [123]"],
+                     "expected": {"accepted": False, "value": None}},
+                    {"args": ["answer: 42"], "expected": {"accepted": True, "value": {"answer": 42}}},
+                    {"args": ["[1, 2, 3]"], "expected": {"accepted": True, "value": [1, 2, 3]}}]}
+    return None
+
+
+def reproduce(path, line, *, runner=None):
+    spec = witness_spec(path, line)
+    if spec is None:
         return {"status": "unsupported", "detail": "no reviewed behavioral witness for this code shape"}
-    cases = [{"args": [value], "expected": hashlib.sha256(value.encode()).hexdigest()}
-             for value in INPUTS]
-    verdict = evaluate_function(source, "security_probe", cases, runner=runner)
+    verdict = evaluate_function(spec["source"], "security_probe", spec["cases"], runner=runner)
     return {"status": verdict.status, "cases_passed": verdict.cases_passed,
             "cases_total": verdict.cases_total, "detail": verdict.detail,
-            "test_source": source, "cases": cases}
+            "kind": spec["kind"], "test_source": spec["source"], "cases": spec["cases"]}
 
 
 def main():

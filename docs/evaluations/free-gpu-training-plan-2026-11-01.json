@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "experiment": "code-first gpu_xl foundation training",
+  "requires": "operator-provided free CUDA runtime",
+  "azure_operations": false,
+  "paid_fallback": false,
+  "automatic_promotion": false,
+  "steps": 8000,
+  "batch_size": 4,
+  "max_seconds": 10800,
+  "out_dir": "/home/canadasun/llm-from-scratch/checkpoints/code-first-gpu-experiment",
+  "commands": [
+    [
+      "/home/canadasun/llm-from-scratch/.venv/bin/python",
+      "-m",
+      "data.build_training_corpus",
+      "--prose",
+      "",
+      "--out",
+      "/home/canadasun/llm-from-scratch/checkpoints/code-first-gpu-experiment/corpus.txt"
+    ],
+    [
+      "/home/canadasun/llm-from-scratch/.venv/bin/python",
+      "train.py",
+      "--preset",
+      "gpu_xl",
+      "--device",
+      "cuda",
+      "--corpus",
+      "/home/canadasun/llm-from-scratch/checkpoints/code-first-gpu-experiment/corpus.txt",
+      "--out-dir",
+      "/home/canadasun/llm-from-scratch/checkpoints/code-first-gpu-experiment",
+      "--max-iters",
+      "8000",
+      "--batch-size",
+      "4",
+      "--checkpoint-interval",
+      "200"
+    ]
+  ]
+}

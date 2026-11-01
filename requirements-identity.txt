@@ -1,0 +1,2 @@
+# Optional organization identity verification; no cloud service is provisioned.
+PyJWT[crypto]==2.15.1

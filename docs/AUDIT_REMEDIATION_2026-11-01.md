@@ -102,3 +102,12 @@ not an assertion that an already-running subscription currently costs zero.
 Use local/nonproduction workflows while these remain open. Do not enable paid
 services, overlap Azure revisions, or bypass qualification to hide capability or
 operational gaps.
+
+
+## Further readiness work (November 1)
+
+See [measured readiness resolution](READINESS_RESOLUTION_2026-11-01.md) for the
+170-task cached-image measurement, three pinned real-repository scans and 9/9
+controlled mutations, optional organization identity, local restore exercise, and
+free-GPU training handoff. The model still scores 0/18 coding tasks. Neither the
+local controls nor the new evidence constitutes a passing enterprise release.

@@ -1,0 +1,636 @@
+{
+  "schema": 1,
+  "scope": "real-source scans + controlled injected mutations",
+  "not_established": [
+    "natural-vulnerability precision/recall",
+    "upstream full test suites",
+    "general remediation",
+    "model coding capability"
+  ],
+  "sandbox": {
+    "available": true,
+    "status": "passed",
+    "detail": "sandbox executed the canary function correctly"
+  },
+  "repositories": [
+    {
+      "name": "requests",
+      "url": "https://github.com/psf/requests",
+      "commit": "3c7baaa05ab4aa49cc819ce3a819d260de19c157",
+      "file": "src/requests/auth.py",
+      "files_scanned": 37,
+      "skipped": [],
+      "natural_findings": [
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "pickle.loads can execute arbitrary code on untrusted data",
+          "file": "tests/test_requests.py",
+          "line": 1550,
+          "snippet": "assert pickle.loads(pickle.dumps(r.request))",
+          "remediation": "Do not unpickle untrusted data; use a safe format (JSON) or sign and verify the payload."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "pickle.loads can execute arbitrary code on untrusted data",
+          "file": "tests/test_requests.py",
+          "line": 1554,
+          "snippet": "pr = pickle.loads(pickle.dumps(r))",
+          "remediation": "Do not unpickle untrusted data; use a safe format (JSON) or sign and verify the payload."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "pickle.loads can execute arbitrary code on untrusted data",
+          "file": "tests/test_requests.py",
+          "line": 1562,
+          "snippet": "r = pickle.loads(pickle.dumps(p))",
+          "remediation": "Do not unpickle untrusted data; use a safe format (JSON) or sign and verify the payload."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "pickle.loads can execute arbitrary code on untrusted data",
+          "file": "tests/test_requests.py",
+          "line": 1578,
+          "snippet": "r = pickle.loads(pickle.dumps(p))",
+          "remediation": "Do not unpickle untrusted data; use a safe format (JSON) or sign and verify the payload."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "pickle.loads can execute arbitrary code on untrusted data",
+          "file": "tests/test_requests.py",
+          "line": 1593,
+          "snippet": "r = pickle.loads(pickle.dumps(p))",
+          "remediation": "Do not unpickle untrusted data; use a safe format (JSON) or sign and verify the payload."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "pickle.loads can execute arbitrary code on untrusted data",
+          "file": "tests/test_requests.py",
+          "line": 1623,
+          "snippet": "s = pickle.loads(pickle.dumps(s))",
+          "remediation": "Do not unpickle untrusted data; use a safe format (JSON) or sign and verify the payload."
+        },
+        {
+          "rule_id": "PY-TLS-VERIFY-DISABLED",
+          "cwe": "CWE-295",
+          "severity": "high",
+          "confidence": "high",
+          "message": "TLS certificate verification disabled (verify=False)",
+          "file": "tests/test_requests.py",
+          "line": 2949,
+          "snippet": "r1 = s.get(url, verify=False)",
+          "remediation": "Leave verification on; pin a CA bundle if needed."
+        },
+        {
+          "rule_id": "PY-TLS-VERIFY-DISABLED",
+          "cwe": "CWE-295",
+          "severity": "high",
+          "confidence": "high",
+          "message": "TLS certificate verification disabled (verify=False)",
+          "file": "tests/test_requests.py",
+          "line": 2982,
+          "snippet": "r1 = s.get(url, verify=False)",
+          "remediation": "Leave verification on; pin a CA bundle if needed."
+        },
+        {
+          "rule_id": "PY-TLS-VERIFY-DISABLED",
+          "cwe": "CWE-295",
+          "severity": "high",
+          "confidence": "high",
+          "message": "TLS certificate verification disabled (verify=False)",
+          "file": "tests/test_requests.py",
+          "line": 3015,
+          "snippet": "r1 = s.get(url, verify=False)",
+          "remediation": "Leave verification on; pin a CA bundle if needed."
+        },
+        {
+          "rule_id": "PY-TLS-VERIFY-DISABLED",
+          "cwe": "CWE-295",
+          "severity": "high",
+          "confidence": "high",
+          "message": "TLS certificate verification disabled (verify=False)",
+          "file": "tests/test_requests.py",
+          "line": 3055,
+          "snippet": "r1 = s.get(url, verify=False, cert=cert)",
+          "remediation": "Leave verification on; pin a CA bundle if needed."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "pickle.loads can execute arbitrary code on untrusted data",
+          "file": "tests/test_requests.py",
+          "line": 3093,
+          "snippet": "deserialized_error = pickle.loads(pickle.dumps(json_decode_error))",
+          "remediation": "Do not unpickle untrusted data; use a safe format (JSON) or sign and verify the payload."
+        },
+        {
+          "rule_id": "PY-HARDCODED-SECRET",
+          "cwe": "CWE-798",
+          "severity": "high",
+          "confidence": "medium",
+          "message": "possible hardcoded secret in 'PASSWORD'",
+          "file": "tests/test_utils.py",
+          "line": 443,
+          "snippet": "USER = PASSWORD = \"%!*'();:@&=+$,/?#[] \"",
+          "remediation": "Load secrets from env/secret manager, not source; rotate if this was real and committed."
+        },
+        {
+          "rule_id": "PY-WEAK-HASH",
+          "cwe": "CWE-327",
+          "severity": "medium",
+          "confidence": "medium",
+          "message": "weak hash md5 (unsuitable for passwords/signatures; ok only for non-security checksums)",
+          "file": "src/requests/auth.py",
+          "line": 179,
+          "snippet": "return hashlib.md5(x, usedforsecurity=False).hexdigest()",
+          "remediation": "Use SHA-256+ for integrity, or bcrypt/scrypt/Argon2 for passwords."
+        },
+        {
+          "rule_id": "PY-WEAK-HASH",
+          "cwe": "CWE-327",
+          "severity": "medium",
+          "confidence": "medium",
+          "message": "weak hash sha1 (unsuitable for passwords/signatures; ok only for non-security checksums)",
+          "file": "src/requests/auth.py",
+          "line": 187,
+          "snippet": "return hashlib.sha1(x, usedforsecurity=False).hexdigest()",
+          "remediation": "Use SHA-256+ for integrity, or bcrypt/scrypt/Argon2 for passwords."
+        },
+        {
+          "rule_id": "PY-WEAK-HASH",
+          "cwe": "CWE-327",
+          "severity": "medium",
+          "confidence": "medium",
+          "message": "weak hash sha1 (unsuitable for passwords/signatures; ok only for non-security checksums)",
+          "file": "src/requests/auth.py",
+          "line": 237,
+          "snippet": "cnonce = hashlib.sha1(s, usedforsecurity=False).hexdigest()[:16]",
+          "remediation": "Use SHA-256+ for integrity, or bcrypt/scrypt/Argon2 for passwords."
+        }
+      ],
+      "mutations": [
+        {
+          "kind": "digest-algorithm",
+          "rule": "PY-WEAK-HASH",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 5
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 5,
+            "cases_total": 5
+          }
+        },
+        {
+          "kind": "tls-context",
+          "rule": "PY-TLS-VERIFY-DISABLED",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 1
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 1,
+            "cases_total": 1
+          }
+        },
+        {
+          "kind": "yaml-construction",
+          "rule": "PY-INSECURE-DESERIALIZATION",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 4
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 4,
+            "cases_total": 4
+          }
+        }
+      ],
+      "source_sha256": "fdc8bb34a8a5a088b169ca13277d107b0bc94ee63ed5e89dd4f5569d9b2bb04c"
+    },
+    {
+      "name": "flask",
+      "url": "https://github.com/pallets/flask",
+      "commit": "49943b5a94413a530761350f04e896f76e8d620e",
+      "file": "src/flask/sessions.py",
+      "files_scanned": 83,
+      "skipped": [],
+      "natural_findings": [
+        {
+          "rule_id": "PY-HARDCODED-SECRET",
+          "cwe": "CWE-798",
+          "severity": "high",
+          "confidence": "medium",
+          "message": "possible hardcoded secret in 'secret_key'",
+          "file": "tests/test_basic.py",
+          "line": 415,
+          "snippet": "app.secret_key = \"? key\"",
+          "remediation": "Load secrets from env/secret manager, not source; rotate if this was real and committed."
+        },
+        {
+          "rule_id": "PY-HARDCODED-SECRET",
+          "cwe": "CWE-798",
+          "severity": "high",
+          "confidence": "medium",
+          "message": "possible hardcoded secret in 'SECRET_KEY'",
+          "file": "tests/test_config.py",
+          "line": 11,
+          "snippet": "SECRET_KEY = \"config\"",
+          "remediation": "Load secrets from env/secret manager, not source; rotate if this was real and committed."
+        },
+        {
+          "rule_id": "PY-HARDCODED-SECRET",
+          "cwe": "CWE-798",
+          "severity": "high",
+          "confidence": "medium",
+          "message": "possible hardcoded secret in 'SECRET_KEY'",
+          "file": "tests/test_config.py",
+          "line": 137,
+          "snippet": "SECRET_KEY = \"config\"",
+          "remediation": "Load secrets from env/secret manager, not source; rotate if this was real and committed."
+        },
+        {
+          "rule_id": "PY-HARDCODED-SECRET",
+          "cwe": "CWE-798",
+          "severity": "high",
+          "confidence": "medium",
+          "message": "possible hardcoded secret in 'secret_key'",
+          "file": "tests/test_reqctx.py",
+          "line": 215,
+          "snippet": "app.secret_key = \"secret_key\"",
+          "remediation": "Load secrets from env/secret manager, not source; rotate if this was real and committed."
+        },
+        {
+          "rule_id": "PY-WEAK-HASH",
+          "cwe": "CWE-327",
+          "severity": "medium",
+          "confidence": "medium",
+          "message": "weak hash sha1 (unsuitable for passwords/signatures; ok only for non-security checksums)",
+          "file": "src/flask/sessions.py",
+          "line": 281,
+          "snippet": "return hashlib.sha1(string)",
+          "remediation": "Use SHA-256+ for integrity, or bcrypt/scrypt/Argon2 for passwords."
+        },
+        {
+          "rule_id": "PY-FLASK-DEBUG",
+          "cwe": "CWE-489",
+          "severity": "medium",
+          "confidence": "medium",
+          "message": "debug=True exposes the interactive debugger / code execution",
+          "file": "tests/test_basic.py",
+          "line": 1902,
+          "snippet": "app.run(hostname, port, debug=True)",
+          "remediation": "Never run with debug=True in production."
+        },
+        {
+          "rule_id": "PY-FLASK-DEBUG",
+          "cwe": "CWE-489",
+          "severity": "medium",
+          "confidence": "medium",
+          "message": "debug=True exposes the interactive debugger / code execution",
+          "file": "tests/test_templating.py",
+          "line": 484,
+          "snippet": "app.run(debug=True)",
+          "remediation": "Never run with debug=True in production."
+        }
+      ],
+      "mutations": [
+        {
+          "kind": "digest-algorithm",
+          "rule": "PY-WEAK-HASH",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 5
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 5,
+            "cases_total": 5
+          }
+        },
+        {
+          "kind": "tls-context",
+          "rule": "PY-TLS-VERIFY-DISABLED",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 1
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 1,
+            "cases_total": 1
+          }
+        },
+        {
+          "kind": "yaml-construction",
+          "rule": "PY-INSECURE-DESERIALIZATION",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 4
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 4,
+            "cases_total": 4
+          }
+        }
+      ],
+      "source_sha256": "26fa7cc311b841f8409ad93933d3a3a52b068150c6f15fc3cd0c107e7a9aaf9d"
+    },
+    {
+      "name": "pyyaml",
+      "url": "https://github.com/yaml/pyyaml",
+      "commit": "f5e4504a92f169f65350a1047dccb23bc97028be",
+      "file": "lib/yaml/__init__.py",
+      "files_scanned": 47,
+      "skipped": [],
+      "natural_findings": [
+        {
+          "rule_id": "PY-DANGEROUS-EVAL",
+          "cwe": "CWE-95",
+          "severity": "critical",
+          "confidence": "high",
+          "message": "exec() on a runtime value executes arbitrary code",
+          "file": "tests/legacy_tests/test_constructor.py",
+          "line": 13,
+          "snippet": "exec(code)",
+          "remediation": "Avoid eval/exec on dynamic input; use ast.literal_eval or a explicit dispatch table."
+        },
+        {
+          "rule_id": "PY-DANGEROUS-EVAL",
+          "cwe": "CWE-95",
+          "severity": "critical",
+          "confidence": "high",
+          "message": "eval() on a runtime value executes arbitrary code",
+          "file": "tests/legacy_tests/test_constructor.py",
+          "line": 235,
+          "snippet": "return eval(expression)",
+          "remediation": "Avoid eval/exec on dynamic input; use ast.literal_eval or a explicit dispatch table."
+        },
+        {
+          "rule_id": "PY-DANGEROUS-EVAL",
+          "cwe": "CWE-95",
+          "severity": "critical",
+          "confidence": "high",
+          "message": "exec() on a runtime value executes arbitrary code",
+          "file": "tests/legacy_tests/test_errors.py",
+          "line": 59,
+          "snippet": "exec(code)",
+          "remediation": "Avoid eval/exec on dynamic input; use ast.literal_eval or a explicit dispatch table."
+        },
+        {
+          "rule_id": "PY-DANGEROUS-EVAL",
+          "cwe": "CWE-95",
+          "severity": "critical",
+          "confidence": "high",
+          "message": "eval() on a runtime value executes arbitrary code",
+          "file": "tests/legacy_tests/test_multi_constructor.py",
+          "line": 6,
+          "snippet": "return eval(expression)",
+          "remediation": "Avoid eval/exec on dynamic input; use ast.literal_eval or a explicit dispatch table."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/canonical.py",
+          "line": 353,
+          "snippet": "return yaml.load(stream, Loader=CanonicalLoader)",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_constructor.py",
+          "line": 290,
+          "snippet": "yaml.load(file.read(), MyFullLoader)",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_emitter.py",
+          "line": 93,
+          "snippet": "events = list(yaml.load(file, Loader=EventsLoader))",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_errors.py",
+          "line": 31,
+          "snippet": "yaml.load(file.read(), yaml.FullLoader)",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_errors.py",
+          "line": 42,
+          "snippet": "events = list(yaml.load(file, Loader=test_emitter.EventsLoader))",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_multi_constructor.py",
+          "line": 41,
+          "snippet": "data = yaml.load(input, Loader=Multi1)",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_multi_constructor.py",
+          "line": 52,
+          "snippet": "data = yaml.load(input, Loader=Multi2)",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_representer.py",
+          "line": 16,
+          "snippet": "native2 = yaml.load(output, Loader=test_constructor.MyLoader)",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_sort_keys.py",
+          "line": 10,
+          "snippet": "data = yaml.load(input, Loader=yaml.FullLoader)",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/legacy_tests/test_yaml_ext.py",
+          "line": 254,
+          "snippet": "yaml.load(temp_file, Loader=yaml.CLoader)",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        },
+        {
+          "rule_id": "PY-INSECURE-DESERIALIZATION",
+          "cwe": "CWE-502",
+          "severity": "high",
+          "confidence": "high",
+          "message": "yaml.load without SafeLoader can construct arbitrary objects",
+          "file": "tests/test_dump_load.py",
+          "line": 11,
+          "snippet": "yaml.load(\"- foo\\n\")",
+          "remediation": "Use yaml.safe_load(...) or yaml.load(..., Loader=SafeLoader)."
+        }
+      ],
+      "mutations": [
+        {
+          "kind": "digest-algorithm",
+          "rule": "PY-WEAK-HASH",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 5
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 5,
+            "cases_total": 5
+          }
+        },
+        {
+          "kind": "tls-context",
+          "rule": "PY-TLS-VERIFY-DISABLED",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 1
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 1,
+            "cases_total": 1
+          }
+        },
+        {
+          "kind": "yaml-construction",
+          "rule": "PY-INSECURE-DESERIALIZATION",
+          "injected": true,
+          "detected_and_fixable": true,
+          "passed": true,
+          "before": {
+            "status": "failed",
+            "detail": "case 1 output mismatch",
+            "cases_passed": 0,
+            "cases_total": 4
+          },
+          "after": {
+            "status": "passed",
+            "detail": "all function cases passed",
+            "cases_passed": 4,
+            "cases_total": 4
+          }
+        }
+      ],
+      "source_sha256": "ebfdbfdc502be2e8aea886f00e0d4454c2b4c2b3f7b2d0928f196136e735827c"
+    }
+  ],
+  "mutations_total": 9,
+  "mutations_passed": 9
+}

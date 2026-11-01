@@ -65,10 +65,10 @@ def test_apply_all_fixes_reduces_findings_and_keeps_valid_python():
     assert after == before - 4                   # the 4 auto-fixable ones resolved
 
 
-def test_yaml_load_with_explicit_unsafe_loader_is_not_auto_fixed():
-    # If a Loader is already passed, we don't blindly swap to safe_load.
+def test_yaml_load_with_explicit_unsafe_loader_removes_loader_keyword():
+    # A reviewed Loader must be removed as part of the call replacement.
     src = "import yaml\nyaml.load(d, Loader=yaml.Loader)\n"
-    assert propose_fixes(src) == []
+    assert "yaml.safe_load(d)" in apply_fixes(src, propose_fixes(src))
 
 
 def test_fix_carries_a_caveat():

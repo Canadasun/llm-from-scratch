@@ -82,3 +82,12 @@ resolved those findings. Cloud rollout is blocked under a $0 Azure budget.
 The default untrusted review workflow now requires a narrowly supported independent
 behavioral witness; unsupported rules require manual review. Model qualification,
 real-repository validation and live enterprise evidence remain outstanding.
+
+
+## Further readiness work (November 1)
+
+See [measured readiness resolution](READINESS_RESOLUTION_2026-11-01.md) for the
+170-task cached-image measurement, three pinned real-repository scans and 9/9
+controlled mutations, optional organization identity, local restore exercise, and
+free-GPU training handoff. The model still scores 0/18 coding tasks. Neither the
+local controls nor the new evidence constitutes a passing enterprise release.

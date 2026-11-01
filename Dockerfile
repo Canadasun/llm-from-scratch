@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 
 # App code + the baked-in checkpoint (filtered by .gcloudignore / .dockerignore).
 COPY . /app
+RUN pip install --no-cache-dir -r requirements-identity.txt
 
 # Cloud Run injects $PORT (defaults to 8080). Bind all interfaces INSIDE the
 # container — the only network path in is Cloud Run's managed proxy.

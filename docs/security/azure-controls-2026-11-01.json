@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "ready": false,
+  "checks": [
+    {
+      "control": "immutable_deployment",
+      "status": "blocked",
+      "detail": "Every deployed image must be pinned by digest, not tag."
+    },
+    {
+      "control": "platform_authentication",
+      "status": "blocked",
+      "detail": "Require enabled organizational authentication; no configured settings were returned by this snapshot."
+    },
+    {
+      "control": "tls_ingress",
+      "status": "pass",
+      "detail": "Require explicit rejection of insecure ingress."
+    },
+    {
+      "control": "service_identity",
+      "status": "blocked",
+      "detail": "Managed service identity must be configured and its least-privilege grants reviewed."
+    },
+    {
+      "control": "supported_persistence",
+      "status": "blocked",
+      "detail": "Azure Files SQLite is not qualified. A supported database and tenant-isolation evidence are required."
+    },
+    {
+      "control": "identity_offboarding_mfa",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    },
+    {
+      "control": "tenant_isolation",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    },
+    {
+      "control": "secret_lifecycle",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    },
+    {
+      "control": "audit_retention",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    },
+    {
+      "control": "backup_restore",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    },
+    {
+      "control": "load_and_recovery",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    },
+    {
+      "control": "incident_and_rollback",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    },
+    {
+      "control": "model_capability",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    },
+    {
+      "control": "serving_image_qualification",
+      "status": "unmeasured",
+      "detail": "Not established by this management snapshot; requires independent execution evidence."
+    }
+  ]
+}

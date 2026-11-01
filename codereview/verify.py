@@ -212,7 +212,7 @@ def verify_fixes(repo_dir, test_cmd, timeout=180, *, trusted=False):
         if not trusted:
             from codereview.security_tests import reproduce
             for proposal in proposals:
-                if proposal.rule_id != "PY-WEAK-HASH":
+                if proposal.rule_id not in {"PY-WEAK-HASH", "PY-TLS-VERIFY-DISABLED", "PY-INSECURE-DESERIALIZATION"}:
                     return VerificationResult(verdict="error", note=
                         "No independent behavioral security test for this rule; manual review required.")
                 witness = reproduce(proposal.file, proposal.line)

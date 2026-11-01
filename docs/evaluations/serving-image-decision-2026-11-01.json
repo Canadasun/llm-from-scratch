@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "image": "ghcr.io/canadasun/llm-serve@sha256:2eb13a12f45df6f710c9b5ae32f49dda7cd7574d07e74bfa8fec657a2dc9d669",
+  "ready": false,
+  "capability_gate_passed": false,
+  "checks": [
+    {
+      "metric": "perplexity",
+      "baseline": null,
+      "candidate": null,
+      "limit": null,
+      "direction": "lower_better",
+      "ok": true,
+      "skipped": true,
+      "note": "skipped"
+    },
+    {
+      "metric": "bits_per_byte",
+      "baseline": null,
+      "candidate": null,
+      "limit": null,
+      "direction": "lower_better",
+      "ok": true,
+      "skipped": true,
+      "note": "skipped"
+    },
+    {
+      "metric": "top1_acc",
+      "baseline": null,
+      "candidate": null,
+      "limit": null,
+      "direction": "higher_better",
+      "ok": true,
+      "skipped": true,
+      "note": "skipped"
+    },
+    {
+      "metric": "top5_acc",
+      "baseline": null,
+      "candidate": null,
+      "limit": null,
+      "direction": "higher_better",
+      "ok": true,
+      "skipped": true,
+      "note": "skipped"
+    },
+    {
+      "metric": "overall_acc",
+      "baseline": null,
+      "candidate": 0.3352941176470588,
+      "limit": null,
+      "direction": "higher_better",
+      "ok": true,
+      "skipped": true,
+      "note": "skipped"
+    },
+    {
+      "metric": "min:ai_security",
+      "baseline": 0.9,
+      "candidate": 0.5,
+      "limit": 0.9,
+      "direction": "higher_better",
+      "ok": false,
+      "skipped": false,
+      "note": "absolute minimum-capability floor (release gate)"
+    },
+    {
+      "metric": "min:code",
+      "baseline": 0.9,
+      "candidate": 0.0,
+      "limit": 0.9,
+      "direction": "higher_better",
+      "ok": false,
+      "skipped": false,
+      "note": "absolute minimum-capability floor (release gate)"
+    },
+    {
+      "metric": "min:generation",
+      "baseline": 0.9,
+      "candidate": 0.125,
+      "limit": 0.9,
+      "direction": "higher_better",
+      "ok": false,
+      "skipped": false,
+      "note": "absolute minimum-capability floor (release gate)"
+    },
+    {
+      "metric": "min:overall",
+      "baseline": 0.9,
+      "candidate": 0.3352941176470588,
+      "limit": 0.9,
+      "direction": "higher_better",
+      "ok": false,
+      "skipped": false,
+      "note": "absolute minimum-capability floor (release gate)"
+    },
+    {
+      "metric": "min:reasoning",
+      "baseline": 0.8,
+      "candidate": 0.42857142857142855,
+      "limit": 0.8,
+      "direction": "higher_better",
+      "ok": false,
+      "skipped": false,
+      "note": "absolute minimum-capability floor (release gate)"
+    },
+    {
+      "metric": "min:secure_development",
+      "baseline": 0.9,
+      "candidate": 0.16666666666666666,
+      "limit": 0.9,
+      "direction": "higher_better",
+      "ok": false,
+      "skipped": false,
+      "note": "absolute minimum-capability floor (release gate)"
+    },
+    {
+      "metric": "min:security",
+      "baseline": 0.9,
+      "candidate": 0.4222222222222222,
+      "limit": 0.9,
+      "direction": "higher_better",
+      "ok": false,
+      "skipped": false,
+      "note": "absolute minimum-capability floor (release gate)"
+    },
+    {
+      "metric": "min:software",
+      "baseline": 0.9,
+      "candidate": 0.30434782608695654,
+      "limit": 0.9,
+      "direction": "higher_better",
+      "ok": false,
+      "skipped": false,
+      "note": "absolute minimum-capability floor (release gate)"
+    },
+    {
+      "metric": "code_execution",
+      "baseline": 1,
+      "candidate": 1,
+      "limit": 1,
+      "direction": "higher_better",
+      "ok": true,
+      "skipped": false,
+      "note": "all code tasks require an available independent evaluator"
+    }
+  ],
+  "additional_blockers": [
+    "Heuristic generation scores cannot qualify production.",
+    "Management metadata exposes a mutable image tag; the live pulled digest is not attested.",
+    "The image does not contain the latest local hardening/organization identity implementation.",
+    "Live organizational controls and recovery/load/rollback evidence are incomplete."
+  ],
+  "azure_changes": false,
+  "paid_training": false
+}
