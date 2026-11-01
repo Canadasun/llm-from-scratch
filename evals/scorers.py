@@ -33,8 +33,37 @@ def exact_match(output, expected):
     return output.strip() == expected.strip()
 
 
+# Words that invert the meaning of a following expected phrase, so that merely
+# containing the phrase is NOT evidence of the right answer. "Do NOT use
+# parameterized queries" contains "parameterized" but recommends the opposite.
+_NEGATORS = ("not", "never", "don't", "dont", "do not", "avoid", "without",
+             "no ", "shouldn't", "should not", "instead of", "rather than",
+             "except", "unless")
+# How far back (characters) to look for a negator before an expected phrase.
+_NEGATION_WINDOW = 40
+
+
+def _is_negated(low_output, phrase_start):
+    """True if a negation word appears shortly before phrase_start, in the same
+    sentence (we stop at sentence boundaries so a prior sentence's 'not' does
+    not spuriously negate this one)."""
+    window = low_output[max(0, phrase_start - _NEGATION_WINDOW):phrase_start]
+    window = re.split(r"[.!?;\n]", window)[-1]  # current sentence fragment only
+    return any(re.search(r"(?:^|\b)" + re.escape(n.strip()) + r"\b", window)
+               for n in _NEGATORS)
+
+
 def contains(output, expected):
-    return expected.strip().lower() in output.lower()
+    """Substring match that FAILS when the expected phrase is negated nearby, so
+    an answer recommending the opposite of the expected concept is not scored
+    correct (audit: negated security advice passed a plain substring check)."""
+    low, needle = output.lower(), expected.strip().lower()
+    start = low.find(needle)
+    while start != -1:
+        if not _is_negated(low, start):
+            return True          # at least one non-negated occurrence
+        start = low.find(needle, start + 1)
+    return False
 
 
 def regex_match(output, pattern):
@@ -42,8 +71,19 @@ def regex_match(output, pattern):
 
 
 def contains_any(output, expecteds):
+    return any(contains(output, e) for e in expecteds)
+
+
+def contains_all(output, expecteds):
+    """Every expected phrase must be present and non-negated."""
+    return all(contains(output, e) for e in expecteds)
+
+
+def lacks_forbidden(output, forbidden):
+    """True when NONE of the forbidden phrases appear (case-insensitive). Used to
+    reject unsafe recommendations even when the expected phrase is also present."""
     low = output.lower()
-    return any(e.strip().lower() in low for e in expecteds)
+    return not any(f.strip().lower() in low for f in (forbidden or []))
 
 
 def extract_code(text):

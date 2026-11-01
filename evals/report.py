@@ -41,15 +41,20 @@ def summarize(results):
     by_type = defaultdict(lambda: {"n": 0, "correct": 0})
     unmeasured = defaultdict(int)
     for r in results:
+        # Defensive .get: a result missing fields counts as uncategorized and
+        # not-correct rather than crashing, so recomputing a gated summary from
+        # adversarial or partial results is always safe (never trusts metadata).
+        category = r.get("category", "uncategorized")
         if _unmeasured(r):
-            unmeasured[r["category"]] += 1
+            unmeasured[category] += 1
             continue
-        c = by_cat[r["category"]]
+        correct = int(bool(r.get("correct")))
+        c = by_cat[category]
         c["n"] += 1
-        c["correct"] += int(r["correct"])
-        t = by_type[r["type"]]
+        c["correct"] += correct
+        t = by_type[r.get("type", "unknown")]
         t["n"] += 1
-        t["correct"] += int(r["correct"])
+        t["correct"] += correct
     total_n = sum(c["n"] for c in by_cat.values())
     total_correct = sum(c["correct"] for c in by_cat.values())
     return {

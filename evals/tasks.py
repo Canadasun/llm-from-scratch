@@ -63,9 +63,9 @@ def validate_task(task):
             raise ValueError("answer must index a choice")
     elif kind == "generation":
         scorer, target = task.get("scorer", "contains"), task.get("target")
-        if scorer not in {"contains", "contains_any", "exact", "regex"}:
+        if scorer not in {"contains", "contains_any", "contains_all", "exact", "regex"}:
             raise ValueError("unknown generation scorer")
-        targets = target if scorer == "contains_any" else [target]
+        targets = target if scorer in ("contains_any", "contains_all") else [target]
         if not isinstance(targets, list) or not targets or any(not isinstance(t, str) or not t.strip() for t in targets):
             raise ValueError("nonempty scorer targets are required")
         if scorer == "regex":
@@ -73,6 +73,12 @@ def validate_task(task):
                 re.compile(target)
             except re.error as exc:
                 raise ValueError("invalid scoring regex") from exc
+        # Optional negative examples: unsafe phrases that must NOT appear, even
+        # when the expected phrase is also present (audit: add negative examples).
+        forbidden = task.get("forbidden")
+        if forbidden is not None and (not isinstance(forbidden, list)
+                or any(not isinstance(f, str) or not f.strip() for f in forbidden)):
+            raise ValueError("forbidden must be a list of nonempty strings")
     elif kind == "code":
         if not isinstance(task.get("test"), str) or not task["test"].strip():
             raise ValueError("code task needs reviewed test metadata")
@@ -110,8 +116,14 @@ def run_task(model, tokenizer, task, device="cpu", seed=1337):
             correct = scorers.regex_match(out, target)
         elif scorer == "contains_any":
             correct = scorers.contains_any(out, target)
+        elif scorer == "contains_all":
+            correct = scorers.contains_all(out, target)
         else:
             correct = scorers.contains(out, target)
+        # A forbidden (unsafe) phrase fails the task even if the expected phrase
+        # is also present, so a mixed/unsafe answer is never scored correct.
+        if correct and not scorers.lacks_forbidden(out, task.get("forbidden")):
+            correct = False
         return {**base, "correct": correct, "detail": repr(out[:80])}
 
     if ttype == "code":

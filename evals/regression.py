@@ -24,7 +24,7 @@ import argparse
 import json
 import sys
 
-from evals.report import _metrics
+from evals.report import _metrics, summarize
 
 # Default tolerances (overridable per-baseline via a "tolerances" block).
 #   *_rel_max_increase : metric may rise by at most this FRACTION (lower is better)
@@ -59,8 +59,17 @@ def _category_floor(base_category, tol):
     return bv - tol.get("category_acc_abs_max_drop", 0.05)
 
 
-def _overall_acc(d):
-    return ((d or {}).get("summary") or {}).get("overall", {}).get("acc")
+def _trusted_summary(run):
+    """The summary to GATE ON. Never trust a run's self-reported summary for a
+    gated metric: when the run carries its own task outcomes, recompute the
+    summary from them so edited `summary`/`by_category` metadata cannot make a
+    failing run pass (audit: category-accuracy metadata forgery). Falls back to
+    the recorded summary only when no raw results are present (e.g. a baseline
+    artifact, or a crafted comparison with no results)."""
+    results = run.get("results")
+    if isinstance(results, list) and results:
+        return summarize(results)
+    return run.get("summary", {})
 
 
 def check(candidate, baseline, tolerances=None):
@@ -70,6 +79,11 @@ def check(candidate, baseline, tolerances=None):
     tol.update(baseline.get("tolerances") or {})
     if tolerances:
         tol.update(tolerances)
+
+    # Gated accuracy metrics are recomputed from task outcomes, not trusted from
+    # the (attacker-editable) candidate summary. See _trusted_summary.
+    cand_summary = _trusted_summary(candidate)
+    base_summary = _trusted_summary(baseline)
 
     # Optional allow-list of metrics to actually gate on. If a baseline sets
     # "enforce", any metric outside it is recorded for reference but not enforced.
@@ -136,7 +150,8 @@ def check(candidate, baseline, tolerances=None):
     higher = [
         ("top1_acc", "top1_acc_abs_max_drop", base_i.get("top1_acc"), cand_i.get("top1_acc")),
         ("top5_acc", "top5_acc_abs_max_drop", base_i.get("top5_acc"), cand_i.get("top5_acc")),
-        ("overall_acc", "overall_acc_abs_max_drop", _overall_acc(baseline), _overall_acc(candidate)),
+        ("overall_acc", "overall_acc_abs_max_drop",
+         base_summary.get("overall", {}).get("acc"), cand_summary.get("overall", {}).get("acc")),
     ]
     for metric, tkey, bv, cv in higher:
         if bv is None or cv is None:
@@ -156,15 +171,33 @@ def check(candidate, baseline, tolerances=None):
     # a net-positive candidate on one flip in a 14-task category.) When the
     # baseline carries no interval, fall back to the fixed-drop tolerance.
     for category in baseline.get("enforce_categories", []):
-        base_category = baseline.get("summary", {}).get("by_category", {}).get(category, {})
-        candidate_category = candidate.get("summary", {}).get("by_category", {}).get(category, {})
+        base_category = base_summary.get("by_category", {}).get(category, {})
+        candidate_category = cand_summary.get("by_category", {}).get(category, {})
         bv, cv = base_category.get("acc"), candidate_category.get("acc")
         limit = _category_floor(base_category, tol)
         passed = bv is not None and cv is not None and limit is not None and cv >= limit
         checks.append({"metric": f"category:{category}", "baseline": bv, "candidate": cv,
                        "limit": limit, "direction": "higher_better", "ok": passed,
                        "skipped": False,
-                       "note": "category floor = baseline Wilson 95% lower bound"})
+                       "note": "regression floor = baseline Wilson 95% lower bound"})
+
+    # Absolute minimum-capability floors, kept SEPARATE from the regression
+    # comparison above (audit: do not conflate "did not regress" with "meets a
+    # minimum quality bar"). Optional: enforced only when a baseline declares
+    # them, so the CI regression gate stays regression-only while a RELEASE gate
+    # can require real minimums. Each is an absolute accuracy the candidate's
+    # recomputed outcomes must meet, independent of the baseline's own score.
+    floors = baseline.get("absolute_floors") or {}
+    for key, minimum in sorted(floors.items()):
+        if key == "overall":
+            cv = cand_summary.get("overall", {}).get("acc")
+        else:
+            cv = cand_summary.get("by_category", {}).get(key, {}).get("acc")
+        ok_floor = cv is not None and cv >= minimum
+        checks.append({"metric": f"min:{key}", "baseline": minimum, "candidate": cv,
+                       "limit": minimum, "direction": "higher_better", "ok": ok_floor,
+                       "skipped": False,
+                       "note": "absolute minimum-capability floor (release gate)"})
 
     code_results = [r for r in candidate.get("results", []) if r.get("type") == "code"]
     if code_results:

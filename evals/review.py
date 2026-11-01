@@ -36,10 +36,30 @@ def validate_results(run):
             raise ValueError("unknown result type")
         seen.add(result["id"])
     # Never record a headline that contradicts the underlying task outcomes.
+    # Validate EVERY gated surface (overall AND each category AND each type),
+    # not just the overall total, so edited per-category accuracy metadata cannot
+    # pass review (audit: category-metadata forgery slipped past an overall-only
+    # check). Only validate a summary that is actually present; a run may omit it
+    # entirely, but any value it reports must match the recomputed outcomes.
     actual = summarize(results)
-    for key in ("n", "correct", "acc"):
-        if run.get("summary", {}).get("overall", {}).get(key) != actual["overall"][key]:
-            raise ValueError("overall summary does not match task outcomes")
+    reported = run.get("summary") or {}
+
+    def _mismatch(reported_block, actual_block):
+        for key in ("n", "correct", "acc"):
+            if key in (reported_block or {}) and reported_block[key] != actual_block.get(key):
+                return True
+        return False
+
+    if _mismatch(reported.get("overall"), actual["overall"]):
+        raise ValueError("overall summary does not match task outcomes")
+    for scope, actual_groups in (("by_category", actual["by_category"]),
+                                 ("by_type", actual["by_type"])):
+        reported_groups = reported.get(scope) or {}
+        if set(reported_groups) - set(actual_groups):
+            raise ValueError(f"{scope} reports categories with no task outcomes")
+        for name, actual_block in actual_groups.items():
+            if _mismatch(reported_groups.get(name), actual_block):
+                raise ValueError(f"{scope} summary for {name!r} does not match task outcomes")
     return actual
 
 

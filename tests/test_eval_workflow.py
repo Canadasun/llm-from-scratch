@@ -76,8 +76,17 @@ def test_duplicate_or_reordered_results_cannot_pass_full_suite_gate():
 def test_category_decline_cannot_hide_behind_overall_score():
     run = measured()
     baseline = make_baseline(run)
-    run["summary"]["by_category"]["security"]["acc"] = 0
-    assert not check(run, baseline)[0]
+    # Forging the summary metadata has NO effect: the gate recomputes category
+    # accuracy from task OUTCOMES, so a lie in either direction is ignored
+    # (audit: category-metadata forgery must not change the verdict).
+    forged = copy.deepcopy(run)
+    forged["summary"]["by_category"]["security"]["acc"] = 0
+    assert check(forged, baseline)[0]
+    # A REAL decline in the outcomes (the security task now fails) blocks it.
+    declined = copy.deepcopy(run)
+    declined["results"][0]["correct"] = False
+    declined["summary"] = summarize(declined["results"])
+    assert not check(declined, baseline)[0]
 
 
 @pytest.mark.parametrize("change", ["unavailable", "timeout", "nan", "miscount"])
