@@ -19,6 +19,24 @@ python -m pytest -q tests/test_code_executor.py
 python -m evals.run --suite tasks
 ```
 
+## Preflight and monitoring
+
+Before scoring, verify the sandbox actually works on this host — not merely that
+`bwrap` is on PATH. The preflight runs a known-correct canary function (`x ->
+x + 1`) through the real sandbox and checks the returned value, so a host with
+`bwrap` present but broken user namespaces or libseccomp is reported unavailable:
+
+```bash
+python -m evals.code_executor --preflight   # exit 0 = usable, 1 = not; prints JSON
+```
+
+Wire this into CI and deployment health checks. `evals.run` calls it automatically
+when the suite contains code tasks and records the result in `meta.sandbox`. When
+the sandbox is unavailable, unexecuted code tasks are reported as **unmeasured**
+(a loud banner), are NOT counted as wrong answers, and the regression gate blocks
+(both the `code_execution` check and the incomplete-suite check) rather than
+silently emitting a lower-but-passing capability number.
+
 `LLM_EVAL_BWRAP=/absolute/path/to/bwrap` selects a deployment-managed binary when
 it is not on PATH. This is trusted deployment configuration, never a task field.
 Set `LLM_REQUIRE_SANDBOX_TESTS=1` to fail rather than skip integration tests if

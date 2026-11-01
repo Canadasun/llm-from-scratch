@@ -104,7 +104,19 @@ def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
     results = []
     summary = {"by_category": {}, "overall": {"n": 0, "correct": 0, "acc": 0.0},
                "mc_random_baseline": None}
+    sandbox = None
     if suite in ("all", "tasks"):
+        # If the suite contains code tasks, actively verify the isolated evaluator
+        # works on this host BEFORE scoring, so an unavailable sandbox is surfaced
+        # as "not measured" (and blocks the gate) rather than silently scoring
+        # every code task 0 and looking like a model failure.
+        if any(t.get("type") == "code" for t in selected_tasks):
+            from evals.code_executor import sandbox_preflight
+            sandbox = sandbox_preflight()
+            if not sandbox["available"]:
+                say(f"  SANDBOX UNAVAILABLE — code tasks will NOT be measured "
+                    f"({sandbox['detail']}); install bubblewrap+libseccomp or use "
+                    f"an approved host.")
         tasks = selected_tasks
         say(f"Running {len(tasks)} capability tasks...")
         for i, task in enumerate(tasks, 1):
@@ -124,6 +136,7 @@ def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
                      "suite_sha256": suite_hash,
                      "heldout_sha256": file_sha256(HELDOUT) if os.path.exists(HELDOUT) else None,
                      "scoring_version": SCORING_VERSION, "code_evaluator": CODE_EVALUATOR,
+                     "sandbox": sandbox,
                      "evaluated_at": datetime.now(timezone.utc).isoformat(),
                      "torch_version": str(torch.__version__), "seed": 1337,
                      "suite": suite, "limit": limit, "tasks_total": len(all_tasks),

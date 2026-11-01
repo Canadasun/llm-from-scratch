@@ -28,10 +28,22 @@ def _mc_chance(results):
     return sum(chances) / len(chances) if chances else None
 
 
+def _unmeasured(r):
+    """A task the host could NOT execute (e.g. the code sandbox is unavailable).
+    Such a task was never scored, so counting it as a wrong answer would silently
+    depress the capability number and hide that code was not measured at all. It
+    is excluded from accuracy and reported separately instead."""
+    return r.get("execution_status") == "unavailable"
+
+
 def summarize(results):
     by_cat = defaultdict(lambda: {"n": 0, "correct": 0})
     by_type = defaultdict(lambda: {"n": 0, "correct": 0})
+    unmeasured = defaultdict(int)
     for r in results:
+        if _unmeasured(r):
+            unmeasured[r["category"]] += 1
+            continue
         c = by_cat[r["category"]]
         c["n"] += 1
         c["correct"] += int(r["correct"])
@@ -46,6 +58,8 @@ def summarize(results):
         "by_type": {k: _metrics(v["correct"], v["n"]) for k, v in sorted(by_type.items())},
         "overall": _metrics(total_correct, total_n),
         "mc_random_baseline": _mc_chance(results),
+        "unmeasured": {"total": sum(unmeasured.values()),
+                       "by_category": dict(sorted(unmeasured.items()))},
     }
 
 
@@ -87,7 +101,18 @@ def format_report(summary, results, intrinsic=None, max_failures=5):
         lines.append(f"  (random-guess baseline on the MC tasks ≈ "
                      f"{summary['mc_random_baseline']*100:.1f}%)")
 
-    failures = [r for r in results if not r["correct"]][:max_failures]
+    unmeasured = summary.get("unmeasured", {})
+    if unmeasured.get("total"):
+        by_cat = ", ".join(f"{k}: {v}" for k, v in unmeasured["by_category"].items())
+        lines.append("")
+        lines.append("  " + "!" * 58)
+        lines.append(f"  SANDBOX UNAVAILABLE — {unmeasured['total']} task(s) could NOT be executed")
+        lines.append(f"  and are NOT counted above (not failures): {by_cat}.")
+        lines.append("  Install bubblewrap + libseccomp or use an approved host to")
+        lines.append("  measure them (python -m evals.code_executor --preflight).")
+        lines.append("  " + "!" * 58)
+
+    failures = [r for r in results if not r["correct"] and not _unmeasured(r)][:max_failures]
     if failures:
         lines.append("\nExample failures (first few):")
         for r in failures:

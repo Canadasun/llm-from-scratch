@@ -268,3 +268,51 @@ def evaluate_function(code, function, cases, *, timeout=10, runner=None):
         if not _equal(result.value, case["expected"]):
             return Verdict("failed", False, index, len(cases), f"case {index + 1} output mismatch")
     return Verdict("passed", True, len(cases), len(cases), "all function cases passed")
+
+
+# A trivial, controller-owned canary: a correct `x -> x + 1`. If the real sandbox
+# cannot run even this and return the right value, the host cannot measure code
+# at all, so the evaluation must BLOCK rather than silently score code tasks 0.
+_PREFLIGHT_FUNCTION = "llm_eval_canary"
+_PREFLIGHT_CODE = "def llm_eval_canary(x):\n    return x + 1\n"
+_PREFLIGHT_CASES = [{"args": [41], "expected": 42}]
+
+
+def sandbox_preflight(runner=None):
+    """Actively verify the isolated evaluator works on THIS host.
+
+    Runs a known-correct canary function through the REAL sandbox and checks the
+    returned value. This is a true execution check, not a PATH probe: a host with
+    `bwrap` installed but broken user namespaces or libseccomp reports
+    `available=False`, so the gate can block instead of trusting a dead sandbox.
+
+    Returns {"available": bool, "status": str, "detail": str}. `runner` is a
+    trusted dependency-injection seam for tests, never a task field.
+    """
+    verdict = evaluate_function(_PREFLIGHT_CODE, _PREFLIGHT_FUNCTION,
+                                _PREFLIGHT_CASES, timeout=10, runner=runner)
+    available = verdict.status == "passed"
+    detail = ("sandbox executed the canary function correctly" if available
+              else (verdict.detail or verdict.status))
+    return {"available": available, "status": verdict.status, "detail": detail}
+
+
+def main(argv=None):
+    """CLI for ops/CI/monitoring: `python -m evals.code_executor --preflight`
+    prints a one-line JSON verdict and exits 0 when the sandbox is usable, 1 when
+    it is not. Wire this into deployment health checks and CI before an eval run."""
+    import argparse
+    ap = argparse.ArgumentParser(description="Independent code evaluator sandbox")
+    ap.add_argument("--preflight", action="store_true",
+                    help="verify the sandbox works on this host (exit 0 usable, 1 not)")
+    args = ap.parse_args(argv)
+    if args.preflight:
+        result = sandbox_preflight()
+        print(json.dumps(result, sort_keys=True))
+        return 0 if result["available"] else 1
+    ap.print_help()
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
