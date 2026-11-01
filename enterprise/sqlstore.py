@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_res_tenant ON resources(tenant_id);
 
 
 class SqlStore:
-    def __init__(self, path=":memory:", clock=time.time):
+    def __init__(self, path=":memory:", clock=time.time, writer_lease=None):
         # A `file:...` path is opened as a SQLite URI, which lets the caller pass
         # query parameters such as `?nolock=1`. That matters on a network share
         # (Azure Files / SMB): CIFS does not provide the byte-range locks SQLite
@@ -73,11 +73,26 @@ class SqlStore:
         self._lock = threading.RLock()
         self._transaction_depth = 0
         self._clock = clock
+        # Optional enforced single-writer lease (see enterprise/writer_lease.py).
+        # None -> today's behaviour (local/in-memory stores). When set, every
+        # write (including the schema init below) must hold the lease, so two
+        # overlapping revisions sharing a nolock DB cannot both write.
+        self._writer_lease = writer_lease
         with self._lock:
+            self._require_writer()
             self._db.executescript(_SCHEMA)
             self._commit()
 
+    def _require_writer(self):
+        """Guard every write path: acquire/renew the single-writer lease, or raise
+        WriterConflict if another live writer holds it. No-op when no lease is
+        configured. Reads never call this."""
+        if self._writer_lease is not None:
+            self._writer_lease.ensure()
+
     def close(self):
+        if self._writer_lease is not None:
+            self._writer_lease.release()
         self._db.close()
 
     def _commit(self):
@@ -94,6 +109,7 @@ class SqlStore:
         with self._lock:
             outer = self._transaction_depth == 0
             if outer:
+                self._require_writer()
                 self._db.execute("BEGIN IMMEDIATE")
             self._transaction_depth += 1
             try:
@@ -127,6 +143,7 @@ class SqlStore:
     # --- registration ---
     def add_tenant(self, tenant):
         with self._lock:
+            self._require_writer()
             self._db.execute("INSERT OR REPLACE INTO tenants(id,name) VALUES(?,?)",
                              (tenant.id, tenant.name))
             self._commit()
@@ -134,6 +151,7 @@ class SqlStore:
 
     def add_principal(self, principal):
         with self._lock:
+            self._require_writer()
             if not self._db.execute("SELECT 1 FROM tenants WHERE id=?",
                                     (principal.tenant_id,)).fetchone():
                 raise ValueError(f"unknown tenant {principal.tenant_id}")
@@ -145,6 +163,7 @@ class SqlStore:
 
     def add_api_key(self, api_key):
         with self._lock:
+            self._require_writer()
             if not self._db.execute("SELECT 1 FROM principals WHERE id=?",
                                     (api_key.principal_id,)).fetchone():
                 raise ValueError(f"unknown principal {api_key.principal_id}")
@@ -160,6 +179,7 @@ class SqlStore:
 
     def add_resource(self, resource):
         with self._lock:
+            self._require_writer()
             if not self._db.execute("SELECT 1 FROM tenants WHERE id=?",
                                     (resource.tenant_id,)).fetchone():
                 raise ValueError(f"unknown tenant {resource.tenant_id}")
@@ -221,6 +241,7 @@ class SqlStore:
 
     def update_api_key(self, api_key):
         with self._lock:
+            self._require_writer()
             cur = self._db.execute(
                 "UPDATE api_keys SET scopes=?,created_at=?,expires_at=?,revoked=?,"
                 "replaced_by=? WHERE key_hash=?",

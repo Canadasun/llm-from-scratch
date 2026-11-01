@@ -30,11 +30,17 @@ from serve.service import InferenceService
 
 def _make_store(key_db):
     """Return the store backing --secured. A path gives a PERSISTENT SQLite store
-    (keys survive restarts); no path gives the in-memory store (ephemeral demo)."""
+    (keys survive restarts); no path gives the in-memory store (ephemeral demo).
+
+    A `file:` key DB (the Azure Files / shared-share deployment, opened nolock)
+    gets an enforced single-writer lease so two overlapping revisions cannot both
+    write the store; if another live writer holds it, startup raises rather than
+    corrupting the DB. Local/in-memory stores are unchanged (no lease)."""
     import time
     if key_db:
         from enterprise.sqlstore import SqlStore
-        return SqlStore(key_db, clock=time.time)
+        from enterprise.writer_lease import lease_for_key_db
+        return SqlStore(key_db, clock=time.time, writer_lease=lease_for_key_db(key_db))
     from enterprise.store import Store
     return Store()
 
