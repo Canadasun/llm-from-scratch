@@ -73,6 +73,16 @@ binding. No cloud deployment or repository setting was changed by this follow-up
    protocols. Add fleet quotas, job isolation/patching procedures and monitoring.
    Configure a Linux host with bubblewrap/libseccomp and working namespaces;
    unavailability blocks the evaluation gate rather than silently lowering scores.
+   - DONE: active `sandbox_preflight()` runs a known-correct canary through the
+     real sandbox (a present-but-broken bwrap/seccomp/namespaces reports
+     unavailable); `python -m evals.code_executor --preflight` (exit 0/1, JSON)
+     is the CI/health-check hook; `evals.run` records `meta.sandbox`; an
+     unexecuted code task is reported UNMEASURED (excluded from accuracy, loud
+     banner) instead of scored 0, and the gate blocks on unavailability via the
+     `code_execution` and incomplete-suite checks. See docs/CODE_EVALUATION.md.
+   - REMAINING: a deployed multi-host service with real fleet quotas, job
+     isolation/patching procedures, and independent protocols for unittest,
+     stateful, repository-level, and multi-language tasks.
 2. Establish a useful narrow model workflow with independently measured secure
    coding and instruction-following. Current weights and training data quality
    are unchanged. Passing infrastructure tests does not establish model skill.
