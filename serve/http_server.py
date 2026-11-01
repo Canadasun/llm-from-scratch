@@ -13,10 +13,17 @@ file is replaced. Bind to 127.0.0.1 unless you intend to expose it.
 
 import json
 import logging
+import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MAX_BODY_BYTES = 64 * 1024  # cap request bodies; prompt limit is enforced in validation
+# Absolute wall-clock cap on READING a whole request (headers + body). The
+# per-read socket `timeout` only bounds INACTIVITY, so a slow client that dribbles
+# one byte just under that timeout could hold a worker indefinitely. This deadline
+# tears the connection down regardless of such trickling, then is cancelled before
+# generation so a legitimate request's model work is not time-limited by it.
+MAX_REQUEST_READ_SECONDS = 30
 
 
 class BoundedHTTPServer(ThreadingHTTPServer):
@@ -71,6 +78,35 @@ def make_handler(service):
         # could tie up threads. A stalled read now raises and frees the thread.
         # (Defense in depth; in production a managed proxy also caps this.)
         timeout = 30
+        max_request_read_seconds = MAX_REQUEST_READ_SECONDS
+
+        def handle_one_request(self):
+            # Start an ABSOLUTE read deadline for the request. do_POST cancels it
+            # once the body is fully read, so generation time is not bounded by it;
+            # for a GET or a stalled read it is cancelled in the finally below.
+            self._read_watchdog = threading.Timer(
+                self.max_request_read_seconds, self._abort_slow_read)
+            self._read_watchdog.daemon = True
+            self._read_watchdog.start()
+            try:
+                super().handle_one_request()
+            finally:
+                self._cancel_read_watchdog()
+
+        def _cancel_read_watchdog(self):
+            watchdog = getattr(self, "_read_watchdog", None)
+            if watchdog is not None:
+                watchdog.cancel()
+                self._read_watchdog = None
+
+        def _abort_slow_read(self):
+            # Fired when the absolute read deadline passes: shut the socket down so
+            # any in-progress read raises and the worker thread is freed. Defense
+            # in depth with `timeout`; in production a managed proxy also caps this.
+            try:
+                self.connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
 
         def _send(self, status, obj):
             data = json.dumps(obj).encode("utf-8")
@@ -130,6 +166,9 @@ def make_handler(service):
                 self._send(413, {"error": "payload_too_large"})
                 return
             raw = self.rfile.read(length)
+            # Body fully read: stop the absolute read deadline so a legitimate
+            # request's generation time is not cut off by it.
+            self._cancel_read_watchdog()
             try:
                 payload = json.loads(raw.decode("utf-8"))
             except (ValueError, UnicodeDecodeError):
