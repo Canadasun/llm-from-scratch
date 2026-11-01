@@ -1,39 +1,12 @@
 #!/usr/bin/env bash
+# Local build / release qualification entry point. Azure budget: $0.
+# canary/promote are intentionally blocked before any cloud command. The rollout
+# implementation below is retained for the Azure owner's future review; it is
+# NOT operationally qualified and must not be enabled under the current budget.
 #
-# Canary-deploy a new checkpoint to the live Azure Container Apps endpoint and
-# (optionally) promote it with a gradual, GATED traffic cutover and automatic
-# rollback. Two explicit phases (promotion is never automatic):
-#
-#   # 1) build + push + deploy a 0-traffic canary on an ISOLATED key store, verify
-#   CKPT=checkpoints/instruction-candidate/ckpt.pt TAG=m3-instruct-canary \
-#     ./deploy/canary.sh canary
-#
-#   # 2) promote it: 90/10 -> measured gate -> 100, else automatic rollback
-#   TAG=m3-instruct-canary ./deploy/canary.sh promote
-#
-# DESIGN NOTES THAT ENCODE PRIOR AUDIT FINDINGS:
-#
-# * Isolated build context (audit "deployment integrity"): the image is built
-#   from a TEMP directory containing the repo plus the candidate baked in as
-#   checkpoints/ckpt.pt. The working tree's real checkpoint and .dockerignore are
-#   NEVER modified, so there is nothing to restore and no cleanup trap on which
-#   correctness depends. The only trap removes the temp dir and uses EXIT (which
-#   DOES fire when `set -e` aborts after a failed build/push), unlike a RETURN
-#   trap. Even if that cleanup is skipped, only a temp dir leaks.
-#
-# * Gated promotion with rollback (audit "release safety"): before sending full
-#   traffic, the promotion revision is measured on its OWN direct FQDN -- the
-#   EXACT deployed image/model -- for health, enforced auth (401 without a key),
-#   error rate and p95 latency (and, if PROBE_KEY is supplied, a real authed
-#   generation). Failing any gate triggers an automatic rollback: traffic returns
-#   to the previous revision and the new one is deactivated.
-#
-# * Single-writer key store (audit "persistence"): the /generate hot-path is
-#   read-only on the key store, so a 90/10 split may share keys.db SAFELY as long
-#   as no key issuance/rotation runs in the window; the app also enforces a writer
-#   lease (enterprise/writer_lease.py) so two writers cannot both initialise/write.
-#   The canary verify phase still uses an isolated keys-canary.db.
-#
+# CKPT=checkpoints/ckpt.pt IMAGE=llm-local:candidate ./deploy/canary.sh build
+# IMAGE=repo@sha256:... RELEASE_RECORD=release.json ./deploy/canary.sh qualify
+# IMAGE=repo@sha256:... RELEASE_RECORD=release.json ./deploy/canary.sh verify
 set -euo pipefail
 
 PHASE="${1:-canary}"
@@ -43,28 +16,42 @@ RG="${RG:-llm-from-scratch-rg}"
 APP="${APP:-llm-serve}"
 GH_USER="${GH_USER:-canadasun}"
 TAG="${TAG:-m3-instruct-canary}"
-IMAGE="ghcr.io/${GH_USER}/${APP}:${TAG}"
+IMAGE="${IMAGE:-ghcr.io/${GH_USER}/${APP}:${TAG}}"
 CKPT="${CKPT:-checkpoints/instruction-candidate/ckpt.pt}"
 SUFFIX="${SUFFIX:-candidate}"
 CANARY_SUFFIX="${CANARY_SUFFIX:-instruct-canary}"
-SHARED_DB="file:/data/keys.db?nolock=1"
-CANARY_DB="file:/data/keys-canary.db?nolock=1"
+SHARED_DB="${SHARED_DB:-}"
+CANARY_DB="${CANARY_DB:-}"
 # Promotion gate thresholds (measured on the new revision before full cutover).
 GATE_SAMPLES="${GATE_SAMPLES:-20}"
 MIN_SUCCESS_RATE="${MIN_SUCCESS_RATE:-0.95}"
 MAX_P95_MS="${MAX_P95_MS:-3000}"
-PROBE_KEY="${PROBE_KEY:-}"   # optional: enables a real authed /generate check
+PROBE_KEY="${PROBE_KEY:-}"   # mandatory for any future promotion
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-az account set --subscription "$SUBSCRIPTION"
+cd "$REPO_ROOT"
+# This repository is operated under a $0 Azure budget. Offline work remains
+# available; cloud rollouts cannot guarantee zero incremental cost and are blocked.
+case "$PHASE" in
+  build|qualify|verify) ;;
+  canary|promote)
+    echo 'BLOCKED: Azure budget is $0; no cloud rollout or overlapping revisions permitted.'
+    echo "Use local build/qualify/verify. Azure owner must resolve storage, cost and operations separately."
+    exit 1 ;;
+  *) echo "usage: $0 {build|qualify|verify|canary|promote}"; exit 2 ;;
+esac
+if [ "$PHASE" = qualify ] || [ "$PHASE" = verify ]; then
+  : "${RELEASE_RECORD:?RELEASE_RECORD is required}"
+  exec python -m deploy.release "$PHASE" --image "$IMAGE" --record "$RELEASE_RECORD"
+fi
 
-build_and_push() {
+build_local() {
   [ -f "$CKPT" ] || { echo "ERROR: $CKPT not found"; exit 1; }
   command -v rsync >/dev/null || { echo "ERROR: rsync is required for an isolated build context"; exit 1; }
-  local ctx
-  ctx="$(mktemp -d)"
+  BUILD_CONTEXT="$(mktemp -d)"
+  local ctx="$BUILD_CONTEXT"
   # EXIT (not RETURN) so cleanup runs even when set -e aborts on a failed build.
-  trap 'rm -rf "$ctx"' EXIT
+  trap 'rm -rf "$BUILD_CONTEXT"' EXIT
   # Copy only what the image needs; exclude heavy/dev trees and ALL checkpoints,
   # then overlay ONLY the candidate as the baked checkpoint. The working tree is
   # untouched.
@@ -77,7 +64,7 @@ build_and_push() {
   cp "$CKPT" "$ctx/checkpoints/ckpt.pt"
   echo ">> building $IMAGE from isolated context (candidate sha $(sha256sum "$CKPT" | cut -c1-12))"
   docker build -t "$IMAGE" "$ctx"
-  docker push "$IMAGE"   # tag inherits the package's existing PUBLIC visibility
+  echo ">> Built locally. No push or Azure operation performed."
 }
 
 fqdn_of() { az containerapp revision show -n "$APP" -g "$RG" --revision "$1" --query properties.fqdn -o tsv; }
@@ -94,42 +81,22 @@ wait_healthz() {
 # Measure the EXACT deployed revision on its own FQDN. Returns 0 if every gate
 # passes, 1 otherwise. No secrets handled unless PROBE_KEY is explicitly provided.
 gate_revision() {
-  local fqdn="$1" base="https://$1" ok=0 n="$GATE_SAMPLES" code lat sum=0 i p95
-  echo ">> gating revision at $base ($n samples; min_success=$MIN_SUCCESS_RATE p95<=${MAX_P95_MS}ms)"
-  # Enforced auth: a request WITHOUT a key must be rejected (401).
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$base/generate" \
-         -H 'content-type: application/json' -d '{"prompt":"x","max_new_tokens":4}' || echo 000)
-  [ "$code" = 401 ] || { echo "   FAIL: unauthenticated /generate returned $code, expected 401"; return 1; }
-  echo "   auth gate OK (no-key -> 401)"
-  # Availability + latency over N health probes (no secret needed).
-  local lats=()
-  for i in $(seq 1 "$n"); do
-    out=$(curl -s -o /dev/null -w '%{http_code} %{time_total}' --max-time 20 "$base/healthz" 2>/dev/null || echo "000 20")
-    code=${out%% *}; lat=${out##* }
-    if [ "$code" = 200 ]; then ok=$((ok+1)); lats+=("$lat"); fi
-  done
-  local rate; rate=$(awk "BEGIN{print $ok/$n}")
-  # p95 of successful latencies (seconds -> ms)
-  p95=$(printf '%s\n' "${lats[@]:-0}" | sort -n | awk '{a[NR]=$1} END{if(NR==0){print 99999;exit} i=int(0.95*NR); if(i<1)i=1; print a[i]*1000}')
-  echo "   success_rate=$rate  p95=${p95}ms  ($ok/$n)"
-  awk "BEGIN{exit !($rate >= $MIN_SUCCESS_RATE)}" || { echo "   FAIL: success rate below $MIN_SUCCESS_RATE"; return 1; }
-  awk "BEGIN{exit !($p95 <= $MAX_P95_MS)}" || { echo "   FAIL: p95 latency above ${MAX_P95_MS}ms"; return 1; }
-  # Optional deep check: a real authed generation (only if the operator supplies a key).
-  if [ -n "$PROBE_KEY" ]; then
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 40 -X POST "$base/generate" \
-           -H 'content-type: application/json' -H "authorization: Bearer $PROBE_KEY" \
-           -d '{"prompt":"Q: What is TLS?\nA: ","max_new_tokens":8}' || echo 000)
-    [ "$code" = 200 ] || { echo "   FAIL: authed /generate returned $code, expected 200"; return 1; }
-    echo "   functional gate OK (authed /generate -> 200)"
-  else
-    echo "   (set PROBE_KEY to also gate a real authed generation)"
-  fi
-  echo ">> all promotion gates PASSED"; return 0
+  python -m deploy.probe --base "https://$1" --samples "$GATE_SAMPLES" \
+    --min-success "$MIN_SUCCESS_RATE" --max-p95-ms "$MAX_P95_MS"
+
 }
 
 case "$PHASE" in
+  build)
+    build_local
+    ;;
   canary)
-    build_and_push
+    : "${RELEASE_RECORD:?passing release evidence is required}"
+    python -m deploy.release verify --image "$IMAGE" --record "$RELEASE_RECORD"
+    : "${CANARY_DB:?locking-capable isolated storage is required}"
+    [[ "$CANARY_DB" != *nolock* ]] || exit 1
+    az account set --subscription "$SUBSCRIPTION"
+    az containerapp revision set-mode -n "$APP" -g "$RG" --mode multiple -o none
     echo ">> deploying 0-traffic canary --$CANARY_SUFFIX on ISOLATED $CANARY_DB"
     az containerapp update -n "$APP" -g "$RG" --image "$IMAGE" --revision-suffix "$CANARY_SUFFIX" \
       --set-env-vars SECURED=1 "KEY_DB=$CANARY_DB" QUANTIZE=1 METRICS=1 -o none
@@ -138,6 +105,12 @@ case "$PHASE" in
     echo ">> canary up (0 traffic). Verify, then: TAG=$TAG ./deploy/canary.sh promote"
     ;;
   promote)
+    : "${RELEASE_RECORD:?passing release evidence is required}"
+    python -m deploy.release verify --image "$IMAGE" --record "$RELEASE_RECORD"
+    : "${SHARED_DB:?supported storage is required}"
+    : "${PROBE_KEY:?authenticated quality probes are mandatory}"
+    [[ "$SHARED_DB" != *nolock* ]] || exit 1
+    az account set --subscription "$SUBSCRIPTION"
     echo ">> creating promotion revision --$SUFFIX on SHARED $SHARED_DB"
     az containerapp update -n "$APP" -g "$RG" --image "$IMAGE" --revision-suffix "$SUFFIX" \
       --set-env-vars SECURED=1 "KEY_DB=$SHARED_DB" QUANTIZE=1 METRICS=1 -o none

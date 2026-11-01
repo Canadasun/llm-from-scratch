@@ -10,6 +10,8 @@ line. Nothing here depends on a web framework, so it is fully unit-testable.
 """
 
 import json
+import math
+import os
 import logging
 import time
 import uuid
@@ -17,13 +19,17 @@ import threading
 
 from safety import content_policy
 from serve.validation import ValidationError, validate_generate
+from serve.lifecycle import GenerationStopped, generation_scope
 
 
 class InferenceService:
     def __init__(self, engine, rate_limiter=None, safety=True, logger=None,
-                 max_concurrent=2):
+                 max_concurrent=2, generation_timeout=60):
         if isinstance(max_concurrent, bool) or not isinstance(max_concurrent, int) or max_concurrent < 1:
             raise ValueError("max_concurrent must be a positive integer")
+        if not math.isfinite(generation_timeout) or generation_timeout <= 0:
+            raise ValueError("generation_timeout must be finite and positive")
+        self.generation_timeout = generation_timeout
         self.engine = engine
         self.rate_limiter = rate_limiter
         self.safety = safety
@@ -33,6 +39,9 @@ class InferenceService:
     def health(self):
         return {
             "status": "ok",
+            "quantized": getattr(self.engine, "quantized", False),
+            "checkpoint_sha256": getattr(self.engine, "checkpoint_sha256", None),
+            "image": os.environ.get("RELEASE_IMAGE"),
             "block_size": self.engine.block_size,
             "vocab_size": self.engine.vocab_size,
             "tokenizer": getattr(self.engine.tokenizer, "kind", "?"),
@@ -75,14 +84,20 @@ class InferenceService:
         if not self._slots.acquire(blocking=False):
             return done(503, {"error": "overloaded", "detail": "generation capacity is busy; retry later"})
         try:
-            result = self.engine.generate(
-                prompt=params["prompt"],
-                max_new_tokens=params["max_new_tokens"],
-                temperature=params["temperature"],
-                top_k=params["top_k"],
-                seed=params["seed"])
+            with generation_scope(self.generation_timeout) as budget:
+                budget.check()
+                result = self.engine.generate(
+                    prompt=params["prompt"],
+                    max_new_tokens=params["max_new_tokens"],
+                    temperature=params["temperature"],
+                    top_k=params["top_k"],
+                    seed=params["seed"])
+                budget.check()
         except ValidationError as e:
             return done(400, {"error": "invalid_request", "detail": str(e)})
+        except GenerationStopped as e:
+            return done(504 if e.reason == "generation_deadline" else 499,
+                        {"error": e.reason})
         except Exception as e:  # keep internals off the wire
             self.log.exception("generation failed rid=%s", rid)
             return done(500, {"error": "generation_failed"})

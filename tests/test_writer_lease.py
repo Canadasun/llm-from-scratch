@@ -40,20 +40,16 @@ def test_holder_can_renew_repeatedly(tmp_path):
     assert a.held()
 
 
-def test_abandoned_lease_is_reclaimed_after_ttl(tmp_path):
+def test_expired_holder_is_never_stolen(tmp_path):
     clk = _Clock()
     path = str(tmp_path / "l.lock")
-    dead = WriterLease(path, ttl=60, clock=clk, holder="dead")
-    dead.ensure()
-    # Holder stops heart-beating (e.g. a deactivated revision). Before TTL a new
-    # writer is refused; after TTL it may steal the lease.
-    clk.advance(30)
-    fresh = WriterLease(path, ttl=60, clock=clk, holder="fresh")
+    first = WriterLease(path, clock=clk)
+    first.ensure()
+    clk.advance(10000)
     with pytest.raises(WriterConflict):
-        fresh.ensure()
-    clk.advance(31)  # now 61s since the dead holder's last beat
-    fresh.ensure()
-    assert fresh.held()
+        WriterLease(path, clock=clk).ensure()
+    first.ensure()
+    assert first.held()
 
 
 def test_release_frees_the_lease(tmp_path):
@@ -70,12 +66,12 @@ def test_release_frees_the_lease(tmp_path):
 def test_lease_for_key_db_only_for_file_uris(tmp_path):
     assert lease_for_key_db(":memory:") is None
     assert lease_for_key_db(str(tmp_path / "keys.db")) is None   # plain local path
-    lease = lease_for_key_db("file:/data/keys.db?nolock=1")
+    lease = lease_for_key_db("file:/data/keys.db")
     assert lease is not None and lease.path == "/data/keys.db.writer.lock"
 
 
 def test_sqlstore_write_blocked_without_lease_when_held_by_another(tmp_path):
-    db = f"file:{tmp_path}/keys.db?nolock=1"
+    db = f"file:{tmp_path}/keys.db"
     lock = str(tmp_path / "keys.db.writer.lock")
     # A different holder already owns the lease.
     other = WriterLease(lock, ttl=60, holder="other-revision")
@@ -87,7 +83,7 @@ def test_sqlstore_write_blocked_without_lease_when_held_by_another(tmp_path):
 
 
 def test_sqlstore_writes_ok_while_holding_lease(tmp_path):
-    db = f"file:{tmp_path}/keys.db?nolock=1"
+    db = f"file:{tmp_path}/keys.db"
     lease = lease_for_key_db(db)
     store = SqlStore(db, writer_lease=lease)
     store.add_tenant(Tenant("t1", "Tenant One"))   # a guarded write
@@ -100,3 +96,36 @@ def test_sqlstore_without_lease_is_unchanged(tmp_path):
     store = SqlStore(":memory:")          # no lease -> today's behaviour
     store.add_tenant(Tenant("t1", "Tenant One"))
     store.close()
+
+
+def test_concurrent_acquisition_has_exactly_one_winner(tmp_path):
+    import concurrent.futures
+    import threading
+    barrier = threading.Barrier(16)
+    leases = [WriterLease(str(tmp_path / "lock")) for _ in range(16)]
+    def claim(lease):
+        barrier.wait()
+        try:
+            lease.ensure()
+            return True
+        except WriterConflict:
+            return False
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+        assert sum(pool.map(claim, leases)) == 1
+    assert sum(lease.held() for lease in leases) == 1
+
+
+def test_legacy_lock_is_not_overwritten(tmp_path):
+    path = tmp_path / "lock"
+    path.write_text('{"holder": "legacy"}')
+    with pytest.raises(WriterConflict):
+        WriterLease(str(path)).ensure()
+    assert path.read_text() == '{"holder": "legacy"}'
+
+
+@pytest.mark.parametrize("option", ["nolock=1", "nolock=true", "nolock=on", "nolock=yes", "nolock="])
+def test_disabled_sqlite_locking_is_refused_before_open(tmp_path, option):
+    path = tmp_path / "keys.db"
+    with pytest.raises(ValueError, match="nolock"):
+        SqlStore(f"file:{path}?{option}")
+    assert not path.exists()

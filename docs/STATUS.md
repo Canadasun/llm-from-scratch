@@ -6,8 +6,8 @@ audit of commit e6b115b. It is deliberately not promotional.
 ## Headline
 
 **This is not a production cybersecurity/Python coding assistant.** It is a
-from-scratch research model with a hardened evaluation and serving harness. The
-software controls are solid; the *model's demonstrated coding ability is not*.
+from-scratch research model with a hardened evaluation and serving harness. Neither software changes nor passing infrastructure tests establish enterprise
+readiness; the model's demonstrated coding ability remains inadequate.
 
 ## What the measured evidence actually shows
 
@@ -63,8 +63,8 @@ finding, and qualification across real repositories.
   the deployment image and bind image digest + checkpoint/tokenizer/evaluator
   versions + results into one release record (`docs/RELEASE_GATES.md`).
 - Enterprise operations from the Azure workstream: SSO/MFA and offboarding,
-  tenant isolation and a transactional datastore (the current shared SQLite uses
-  an enforced single-writer lease as interim defense, not a substitute — see
+  tenant isolation and a transactional datastore (lock-disabled SQLite is now refused; atomic writer locks supplement normal
+  locking on supported local storage — see
   [AUDIT_FOLLOWUP.md](AUDIT_FOLLOWUP.md)), secret handling, audit retention,
   tested backup/restore, quotas and load behavior, incident response, rollback.
 - Reviewable UX: IDE/CLI or PR integration with exact diffs, reproducible
@@ -72,3 +72,13 @@ finding, and qualification across real repositories.
 
 See [AUDIT_FOLLOWUP.md](AUDIT_FOLLOWUP.md) for the itemized status of every audit
 finding (which are fixed in code, and which are capability/ops work).
+
+
+## November 1 local remediation
+
+[Detailed status and limitations](AUDIT_REMEDIATION_2026-11-01.md) supersede older
+claims that the lease, keyword scorer or optional promotion checks completely
+resolved those findings. Cloud rollout is blocked under a $0 Azure budget.
+The default untrusted review workflow now requires a narrowly supported independent
+behavioral witness; unsupported rules require manual review. Model qualification,
+real-repository validation and live enterprise evidence remain outstanding.

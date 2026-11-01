@@ -20,6 +20,7 @@ With --secured, a demo tenant + key are printed at startup; pass the key as:
 
 import argparse
 import logging
+import os
 
 from serve.engine import DEFAULT_CKPT, InferenceEngine
 from serve.http_server import serve
@@ -32,10 +33,9 @@ def _make_store(key_db):
     """Return the store backing --secured. A path gives a PERSISTENT SQLite store
     (keys survive restarts); no path gives the in-memory store (ephemeral demo).
 
-    A `file:` key DB (the Azure Files / shared-share deployment, opened nolock)
-    gets an enforced single-writer lease so two overlapping revisions cannot both
-    write the store; if another live writer holds it, startup raises rather than
-    corrupting the DB. Local/in-memory stores are unchanged (no lease)."""
+    A locking-capable local SQLite path is supported. Lock-disabled network
+    storage is refused; no managed database is provisioned automatically.
+    """
     import time
     if key_db:
         from enterprise.sqlstore import SqlStore
@@ -90,6 +90,8 @@ def main():
     ap.add_argument("--key-db", default=None,
                     help="path to a SQLite key store (persists keys across "
                          "restarts); omit for an in-memory demo store")
+    ap.add_argument("--quota-redis-url", default=os.environ.get("LLM_QUOTA_REDIS_URL"),
+                    help="optional EXISTING shared quota endpoint; no resources are created")
     ap.add_argument("--metrics", action="store_true",
                     help="collect aggregate reliability/latency/cost metrics and "
                          "expose them at GET /metrics (Stage-4 pilot)")
@@ -101,6 +103,8 @@ def main():
                     help="dynamic int8 quantization (CPU): ~2x faster generation, "
                          "negligible quality change")
     args = ap.parse_args()
+    if args.quota_redis_url and not args.secured:
+        ap.error("shared tenant quotas require --secured")
 
     logging.basicConfig(
         level=logging.INFO,
@@ -128,7 +132,11 @@ def main():
         _audit_log = logging.getLogger("audit")
         audit = AuditLog(sink=lambda ev: _audit_log.info(_json.dumps(ev)))
         demo_key, is_new = _bootstrap_demo_tenant(store)
-        service = SecuredInferenceService(service, store, audit)
+        quota = None
+        if args.quota_redis_url:
+            from enterprise.quota import from_url
+            quota = from_url(args.quota_redis_url, args.rate_capacity, args.rate_per_sec)
+        service = SecuredInferenceService(service, store, audit, quota=quota)
         backing = f"persistent SQLite ({args.key_db})" if args.key_db else "in-memory (ephemeral)"
         if is_new:
             # Printed to stdout (not the structured log) so it is easy to copy.

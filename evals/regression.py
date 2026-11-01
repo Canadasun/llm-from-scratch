@@ -43,20 +43,15 @@ def _intrinsic(d):
 
 
 def _category_floor(base_category, tol):
-    """Per-category pass floor: the baseline's Wilson 95% LOWER bound (a floor
-    that scales with the category's sample size). Uses the stored interval when
-    present, recomputes it from n/correct otherwise, and falls back to a fixed
-    absolute-drop tolerance only when neither is available."""
-    wl = base_category.get("wilson_95")
-    if wl:
-        return wl[0]
-    n, correct = base_category.get("n"), base_category.get("correct")
-    if n:
-        return _metrics(correct, n)["wilson_95"][0]
+    """Predeclared practical regression tolerance, not a significance test.
+
+    Confidence intervals remain descriptive in reports. The baseline interval
+    alone cannot establish a candidate's equivalence or non-inferiority.
+    """
     bv = base_category.get("acc")
     if bv is None:
         return None
-    return bv - tol.get("category_acc_abs_max_drop", 0.05)
+    return max(0.0, bv - tol.get("category_acc_abs_max_drop", 0.05))
 
 
 def _trusted_summary(run):
@@ -163,13 +158,8 @@ def check(candidate, baseline, tolerances=None):
     # Overall accuracy must not hide a security/coding decline behind gains in
     # another category. Category floors are opt-in for historical baselines.
     #
-    # The floor is the baseline's Wilson 95% LOWER bound, not a fixed point drop:
-    # a sample-size-aware threshold. With few tasks (e.g. reasoning n=14) the
-    # interval is wide, so a single borderline likelihood flip — statistically
-    # indistinguishable from the baseline — does NOT fail; with many tasks the
-    # interval is tight, so a genuine decline still does. (A fixed 5% drop failed
-    # a net-positive candidate on one flip in a 14-task category.) When the
-    # baseline carries no interval, fall back to the fixed-drop tolerance.
+    # Use an explicit practical loss budget. This is a policy threshold, not
+    # evidence of statistical equivalence; qualify releases independently.
     for category in baseline.get("enforce_categories", []):
         base_category = base_summary.get("by_category", {}).get(category, {})
         candidate_category = cand_summary.get("by_category", {}).get(category, {})
@@ -179,7 +169,7 @@ def check(candidate, baseline, tolerances=None):
         checks.append({"metric": f"category:{category}", "baseline": bv, "candidate": cv,
                        "limit": limit, "direction": "higher_better", "ok": passed,
                        "skipped": False,
-                       "note": "regression floor = baseline Wilson 95% lower bound"})
+                       "note": "regression floor = baseline accuracy minus predeclared drop tolerance"})
 
     # Absolute minimum-capability floors, kept SEPARATE from the regression
     # comparison above (audit: do not conflate "did not regress" with "meets a

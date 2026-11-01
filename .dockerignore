@@ -12,7 +12,6 @@ data/
 notebooks/
 docs/
 tests/
-evals/baselines/
 *.md
 
 # Duplicate / unused checkpoints (ckpt.pt is the one the image uses; keep it).

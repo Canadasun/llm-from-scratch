@@ -124,7 +124,9 @@ def run_task(model, tokenizer, task, device="cpu", seed=1337):
         # is also present, so a mixed/unsafe answer is never scored correct.
         if correct and not scorers.lacks_forbidden(out, task.get("forbidden")):
             correct = False
-        return {**base, "correct": correct, "detail": repr(out[:80])}
+        return {**base, "correct": correct, "detail": repr(out[:80]),
+                "scorer": scorer,
+                "verification": "exact" if scorer == "exact" else "heuristic"}
 
     if ttype == "code":
         from evals.code_executor import evaluate_function, task_spec

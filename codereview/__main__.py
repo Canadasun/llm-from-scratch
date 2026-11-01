@@ -36,7 +36,10 @@ def main(argv=None):
                          "--test-cmd before/after to verify them (EXECUTES tests)")
     ap.add_argument("--test-cmd", default=None,
                     help="test command for --verify-fixes, e.g. 'python -m pytest -q'")
-    ap.add_argument("--untrusted", action="store_true",
+    trust = ap.add_mutually_exclusive_group()
+    trust.add_argument("--trusted", action="store_true",
+                       help="explicitly allow trusted repository tests to execute on the host")
+    trust.add_argument("--untrusted", action="store_true",
                     help="run the repo's tests inside a bubblewrap sandbox (no "
                          "network/host access); fails closed without isolation. "
                          "Use for any repo you do not fully trust.")
@@ -97,7 +100,7 @@ def main(argv=None):
         from codereview.verify import format_verification, verify_fixes
         print(f"\n[!] --verify-fixes will EXECUTE: {args.test_cmd!r} on a copy of "
               f"{args.path} (before and after applying fixes).")
-        result = verify_fixes(args.path, args.test_cmd, timeout=args.timeout, trusted=not args.untrusted)
+        result = verify_fixes(args.path, args.test_cmd, timeout=args.timeout, trusted=args.trusted)
         print(format_verification(result))
 
     if args.prepare_pr or args.open_pr:
@@ -109,7 +112,7 @@ def main(argv=None):
                                     push_and_create_pr, write_artifact)
         print(f"\n[!] Preparing PR: this EXECUTES {args.test_cmd!r} on a copy to "
               f"verify fixes (before/after).")
-        artifact = prepare_pr(args.path, args.test_cmd, timeout=args.timeout, trusted=not args.untrusted)
+        artifact = prepare_pr(args.path, args.test_cmd, timeout=args.timeout, trusted=args.trusted)
         print(f"\nVerdict: {artifact.verdict} — {artifact.note}")
         print(f"Branch:  {artifact.branch}")
         print(f"Title:   {artifact.title}")

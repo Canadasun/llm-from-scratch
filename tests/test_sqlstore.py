@@ -161,13 +161,12 @@ def test_keymanager_rotate_persists(tmp_path):
 
 # ---- URI path (nolock) for network shares (Azure Files / SMB) ----
 
-def test_uri_path_with_nolock_opens_and_roundtrips(tmp_path):
-    # A `file:...?nolock=1` URI must open, create the schema, and persist a key
-    # across a reopen — this is the mode used on an Azure Files mount where SMB
-    # can't provide SQLite's byte-range locks. (Here it just exercises the URI
-    # path on a local file; the point is that uri=True is honoured.)
+def test_uri_path_opens_and_roundtrips(tmp_path):
+    # A `file:...` URI must open, create the schema, and persist a key across a
+    # reopen (exercises uri=True). nolock is refused separately; a locking-capable
+    # URI is the supported persistent mode.
     db = tmp_path / "keys.db"
-    uri = f"file:{db}?nolock=1"
+    uri = f"file:{db}"
     plaintext, key_hash = generate_key()
 
     s1 = SqlStore(uri)

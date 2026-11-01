@@ -4,7 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
-SCORING_VERSION = "context-preserving-v2"
+SCORING_VERSION = "context-preserving-v3-conservative-text"
 CODE_EVALUATOR = "function-json-v1"
 
 

@@ -1,5 +1,12 @@
 # Enterprise audit implementation and remaining work
 
+**November 1 update:** [current remediation and remaining blockers](AUDIT_REMEDIATION_2026-11-01.md)
+supersedes the historical itemized table below. The old lease was racy; the new
+lock does not expire/steal, and SQLite nolock is refused. Keyword scoring remains
+heuristic and cannot qualify production. Rollout is blocked under a $0 Azure
+budget; capability and live controls are not established by these code fixes.
+
+
 This follow-up implements local code fixes. It does not establish enterprise
 readiness or improve the trained model's instruction-following capability.
 

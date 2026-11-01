@@ -5,6 +5,9 @@
 FROM python:3.13-slim
 
 WORKDIR /app
+# Needed for independent evaluation of this same immutable serving image.
+RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap libseccomp2 \
+    && rm -rf /var/lib/apt/lists/*
 
 # CPU build of PyTorch only (no CUDA, no pymupdf — that is a corpus-build dep,
 # not a serving dep). Pinned to the CPU wheel index.

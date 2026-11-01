@@ -5,8 +5,8 @@ Two separate questions, kept separate on purpose (external audit: do not conflat
 
 1. **Regression gate** (CI, `evals/regression.py` against `evals/baselines/m3.json`):
    did this change make the model *worse* than the recorded baseline? It is
-   statistically appropriate (per-category Wilson 95% lower bound) and is the
-   right bar for everyday development. It never asserts the model is *good*.
+   a predeclared practical loss budget (not a statistical significance test) and is a
+   development regression guard. It never asserts the model is *good*.
 
 2. **Release gate** (a deliberate, pre-release check): does the model meet the
    **absolute minimum capability** required to present it for a given use? This
@@ -51,3 +51,14 @@ digest, tokenizer, evaluator version, scoring version, and results. The baseline
 `meta` already carries checkpoint/suite/heldout SHAs, scoring_version and
 code_evaluator; the image digest and a quantized-artifact evaluation are the
 remaining pieces and must be added to the release record before any release.
+
+
+## November 1 enforcement update (supersedes optional release procedure above)
+
+See [AUDIT_REMEDIATION_2026-11-01.md](AUDIT_REMEDIATION_2026-11-01.md).
+`production.json` and `python -m deploy.release qualify|verify` enforce minimum
+capability and immutable, quantized-image evidence. Heuristic generation scorers
+cannot qualify, even if their reported accuracy is high. The old example remains
+illustrative only. Historical v2 results require remeasurement under scoring v3.
+Azure canary/promotion is blocked under the user's $0 Azure budget. These controls
+do not themselves establish model capability or operational enterprise readiness.

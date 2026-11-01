@@ -1,0 +1,14 @@
+{
+  "name": "python-security-production-v1",
+  "enforce": [],
+  "absolute_floors": {
+    "code": 0.9,
+    "secure_development": 0.9,
+    "security": 0.9,
+    "ai_security": 0.9,
+    "reasoning": 0.8,
+    "software": 0.9,
+    "generation": 0.9,
+    "overall": 0.9
+  }
+}

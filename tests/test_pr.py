@@ -38,7 +38,7 @@ def _md5_repo(d, exact=False):
 def test_prepare_pr_verified_builds_patch_and_body(tmp_path):
     d = str(tmp_path)
     _md5_repo(d)
-    art = prepare_pr(d, TEST_CMD, branch="security/test", timeout=30)
+    art = prepare_pr(d, TEST_CMD, branch="security/test", timeout=30, trusted=True)
     assert art.verified is True
     assert art.verdict == "verified"
     assert "mod.py" in art.files_changed
@@ -57,7 +57,7 @@ def test_prepare_pr_unfixable_is_not_verified(tmp_path):
     _write(d, "test_mod.py",
            "import unittest\n\n\nclass T(unittest.TestCase):\n"
            "    def test_ok(self):\n        self.assertTrue(True)\n")
-    art = prepare_pr(d, TEST_CMD, timeout=30)
+    art = prepare_pr(d, TEST_CMD, timeout=30, trusted=True)
     assert art.verified is False
     assert art.patch == ""
     assert "for review" in art.title
@@ -66,7 +66,7 @@ def test_prepare_pr_unfixable_is_not_verified(tmp_path):
 def test_write_artifact_creates_files(tmp_path):
     d = str(tmp_path)
     _md5_repo(d)
-    art = prepare_pr(d, TEST_CMD, timeout=30)
+    art = prepare_pr(d, TEST_CMD, timeout=30, trusted=True)
     out = str(tmp_path / "out")
     os.makedirs(out)
     body_path, patch_path = write_artifact(art, out)
@@ -96,7 +96,7 @@ def test_apply_fixes_to_branch_commits_on_new_branch(tmp_path):
     _init_git_repo(d)
     base = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=d,
                           capture_output=True, text=True).stdout.strip()
-    art = prepare_pr(d, TEST_CMD, branch="security/fixes-x", timeout=30)
+    art = prepare_pr(d, TEST_CMD, branch="security/fixes-x", timeout=30, trusted=True)
     ret_base, branch = apply_fixes_to_branch(d, art)
     assert ret_base == base and branch == "security/fixes-x"
     # new branch has the fix; base branch is untouched
@@ -108,7 +108,7 @@ def test_apply_refuses_dirty_tree(tmp_path):
     d = str(tmp_path)
     _md5_repo(d)
     _init_git_repo(d)
-    art = prepare_pr(d, TEST_CMD, timeout=30)
+    art = prepare_pr(d, TEST_CMD, timeout=30, trusted=True)
     _write(d, "mod.py", "# uncommitted edit\nimport hashlib\n")   # dirty
     with pytest.raises(RuntimeError, match="not clean"):
         apply_fixes_to_branch(d, art)
@@ -126,7 +126,7 @@ def test_apply_refuses_when_repo_drifts_after_verification(tmp_path):
     d = str(tmp_path)
     _md5_repo(d)
     _init_git_repo(d)
-    art = prepare_pr(d, TEST_CMD, branch="security/fixes-drift", timeout=30)
+    art = prepare_pr(d, TEST_CMD, branch="security/fixes-drift", timeout=30, trusted=True)
     # The repo moves on (a new commit) AFTER verification: the artifact is bound
     # to the old commit and must be refused rather than applied to drifted code.
     _write(d, "another.py", "x = 1\n")
@@ -140,7 +140,7 @@ def test_apply_refuses_tampered_patch(tmp_path):
     d = str(tmp_path)
     _md5_repo(d)
     _init_git_repo(d)
-    art = prepare_pr(d, TEST_CMD, branch="security/fixes-tamper", timeout=30)
+    art = prepare_pr(d, TEST_CMD, branch="security/fixes-tamper", timeout=30, trusted=True)
     art.patch = art.patch + "\n# tampered\n"           # hash no longer matches
     with pytest.raises(RuntimeError, match="hash"):
         apply_fixes_to_branch(d, art)
@@ -150,7 +150,7 @@ def test_apply_commits_the_exact_verified_patch(tmp_path):
     d = str(tmp_path)
     _md5_repo(d)
     _init_git_repo(d)
-    art = prepare_pr(d, TEST_CMD, branch="security/fixes-exact", timeout=30)
+    art = prepare_pr(d, TEST_CMD, branch="security/fixes-exact", timeout=30, trusted=True)
     assert art.base_commit and art.patch_sha256
     _base, branch = apply_fixes_to_branch(d, art)
     # The committed content is exactly the verified fix.

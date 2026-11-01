@@ -26,9 +26,9 @@ def _write(d, name, text):
 
 def test_run_command_pass_fail_timeout(tmp_path):
     d = str(tmp_path)
-    assert run_command(f"{sys.executable} -c \"import sys;sys.exit(0)\"", d, 10).passed
-    assert not run_command(f"{sys.executable} -c \"import sys;sys.exit(1)\"", d, 10).passed
-    slow = run_command(f"{sys.executable} -c \"import time;time.sleep(5)\"", d, 1)
+    assert run_command(f"{sys.executable} -c \"import sys;sys.exit(0)\"", d, 10, trusted=True).passed
+    assert not run_command(f"{sys.executable} -c \"import sys;sys.exit(1)\"", d, 10, trusted=True).passed
+    slow = run_command(f"{sys.executable} -c \"import time;time.sleep(5)\"", d, 1, trusted=True)
     assert slow.passed is False and slow.tail == "timeout"
 
 
@@ -48,7 +48,7 @@ def test_verified_when_fix_resolves_and_tests_pass(tmp_path):
     # test only checks the return type, so md5->sha256 keeps it green
     d = _md5_repo(tmp_path, "    def test_type(self):\n"
                             "        self.assertIsInstance(checksum(b'x'), str)")
-    r = verify_fixes(d, TEST_CMD, timeout=30)
+    r = verify_fixes(d, TEST_CMD, timeout=30, trusted=True)
     assert r.verdict == "verified"
     assert r.before.passed and r.after.passed
     assert r.findings_after == r.findings_before - 1
@@ -61,7 +61,7 @@ def test_rejected_when_fix_breaks_a_test(tmp_path):
     empty_md5 = "d41d8cd98f00b204e9800998ecf8427e"
     d = _md5_repo(tmp_path, "    def test_exact(self):\n"
                             f"        self.assertEqual(checksum(b''), '{empty_md5}')")
-    r = verify_fixes(d, TEST_CMD, timeout=30)
+    r = verify_fixes(d, TEST_CMD, timeout=30, trusted=True)
     assert r.verdict == "rejected_regression"
     assert r.before.passed and not r.after.passed
 
@@ -72,7 +72,7 @@ def test_no_fixes_when_only_unfixable_findings(tmp_path):
     _write(d, "test_mod.py",
            "import unittest\n\n\nclass T(unittest.TestCase):\n"
            "    def test_ok(self):\n        self.assertTrue(True)\n")
-    r = verify_fixes(d, TEST_CMD, timeout=30)
+    r = verify_fixes(d, TEST_CMD, timeout=30, trusted=True)
     assert r.verdict == "no_fixes"
 
 
@@ -80,7 +80,7 @@ def test_original_repo_is_never_modified(tmp_path):
     d = _md5_repo(tmp_path, "    def test_type(self):\n"
                             "        self.assertIsInstance(checksum(b'x'), str)")
     before = open(os.path.join(d, "mod.py"), encoding="utf-8").read()
-    verify_fixes(d, TEST_CMD, timeout=30)
+    verify_fixes(d, TEST_CMD, timeout=30, trusted=True)
     after = open(os.path.join(d, "mod.py"), encoding="utf-8").read()
     assert before == after and "md5" in after    # untouched (still the original)
 

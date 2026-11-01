@@ -18,6 +18,8 @@ SKIP_DIRS = {".git", ".venv", "venv", "env", "node_modules", "__pycache__",
 
 
 def iter_python_files(root):
+    if os.path.islink(root):
+        return
     if os.path.isfile(root):
         if root.endswith(".py"):
             yield root
@@ -25,9 +27,10 @@ def iter_python_files(root):
     for dirpath, dirnames, filenames in os.walk(root):
         # prune noisy / vendored / hidden directories in place
         dirnames[:] = [d for d in dirnames
-                       if d not in SKIP_DIRS and not d.startswith(".")]
+                       if d not in SKIP_DIRS and not d.startswith(".")
+                       and not os.path.islink(os.path.join(dirpath, d))]
         for f in sorted(filenames):
-            if f.endswith(".py"):
+            if f.endswith(".py") and not os.path.islink(os.path.join(dirpath, f)):
                 yield os.path.join(dirpath, f)
 
 

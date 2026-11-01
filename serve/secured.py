@@ -37,12 +37,13 @@ class SecuredInferenceService:
     requires_auth = True
 
     def __init__(self, inner, store, audit, authorizer=authorize,
-                 action=INFER_ACTION):
+                 action=INFER_ACTION, quota=None):
         self.inner = inner
         self.store = store
         self.audit = audit
         self.authorizer = authorizer
         self.action = action
+        self.quota = quota
 
     def health(self):
         # Liveness stays open (no auth): it leaks no tenant data and is the
@@ -74,6 +75,19 @@ class SecuredInferenceService:
                               tenant_id=tid, principal_id=pid, detail=d.reason)
             return 403, {"error": "forbidden", "reason": d.reason,
                          "request_id": rid}
+
+        if self.quota is not None:
+            from enterprise.quota import QuotaUnavailable
+            try:
+                allowed = self.quota.allow(tid, pid)
+            except QuotaUnavailable:
+                self.audit.record(rid, self.action, "deny", "quota_unavailable",
+                                  tenant_id=tid, principal_id=pid)
+                return 503, {"error": "quota_unavailable", "request_id": rid}
+            if not allowed:
+                self.audit.record(rid, self.action, "deny", "tenant_quota_exceeded",
+                                  tenant_id=tid, principal_id=pid)
+                return 429, {"error": "tenant_quota_exceeded", "request_id": rid}
 
         # 3. delegate to the inner service. Rate-limit + validation + use-safety
         #    + generation all happen there; we key the limiter by principal so a

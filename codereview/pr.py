@@ -16,6 +16,7 @@ auto-merged. Authorization is a human decision, never the tool's.
 """
 
 import difflib
+import json
 import os
 import subprocess
 from dataclasses import dataclass, field
@@ -45,6 +46,7 @@ class PRArtifact:
     # (audit: PR creation recomputed fixes; the repo can change after verification).
     base_commit: str = ""
     patch_sha256: str = ""
+    security_tests: list = field(default_factory=list)
 
 
 def _combined_patch(repo_dir, proposals):
@@ -125,12 +127,15 @@ def build_pr_body(scan, verification, proposals, repo_dir, patch):
              "cites a **CWE**, not a CVE.")
     L.append("- Each fix was verified: apply to a copy → finding removed → the "
              "project's tests still pass.")
+    for witness in verification.security_tests:
+        L.append(f"- Independent behavioral witness: `{witness['file']}:{witness['line']}` "
+                 f"{witness['before']['status']} → {witness.get('after', {}).get('status', 'not run')}")
     L.append("- Static analysis has no taint tracking; **absence of findings is "
              "not proof of security**. Review every change.")
     return "\n".join(L)
 
 
-def prepare_pr(repo_dir, test_cmd, branch=None, timeout=180, *, trusted=True):
+def prepare_pr(repo_dir, test_cmd, branch=None, timeout=180, *, trusted=False):
     """Run scan + verification and build a PRArtifact. No git, no network.
     trusted=False verifies the repo's tests inside a sandbox (fail-closed)."""
     scan = scan_path(repo_dir)
@@ -151,7 +156,8 @@ def prepare_pr(repo_dir, test_cmd, branch=None, timeout=180, *, trusted=True):
     return PRArtifact(verified=verified, branch=branch, title=title, body=body,
                       patch=patch, files_changed=files,
                       verdict=verification.verdict, note=verification.note,
-                      base_commit=base_commit, patch_sha256=patch_sha256)
+                      base_commit=base_commit, patch_sha256=patch_sha256,
+                      security_tests=verification.security_tests)
 
 
 def write_artifact(artifact, out_dir="."):
@@ -162,6 +168,9 @@ def write_artifact(artifact, out_dir="."):
         f.write(artifact.body + "\n")
     with open(patch_path, "w", encoding="utf-8") as f:
         f.write(artifact.patch)
+    with open(os.path.join(out_dir, "codereview_security_tests.json"), "w") as f:
+        json.dump(artifact.security_tests, f, indent=2)
+        f.write("\n")
     return body_path, patch_path
 
 

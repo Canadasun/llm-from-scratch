@@ -183,7 +183,7 @@ class GPT(nn.Module):
 
     @torch.no_grad()
     def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None,
-                 generator=None):
+                 generator=None, check_cancelled=None):
         """Autoregressive sampling: predict the next token, append it, repeat.
 
         `generator` is an optional torch.Generator; when given, sampling draws
@@ -192,6 +192,8 @@ class GPT(nn.Module):
         RNG is process-wide and would otherwise be a shared, racy resource)."""
         self.eval()
         for _ in range(max_new_tokens):
+            if check_cancelled is not None:
+                check_cancelled()
             # Crop context to the last block_size tokens.
             idx_cond = idx[:, -self.cfg.block_size:]
             logits, _ = self(idx_cond)

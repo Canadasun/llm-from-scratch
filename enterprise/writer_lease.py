@@ -1,36 +1,19 @@
-"""Application-enforced single-writer lease for the shared key store.
+"""Fail-closed writer exclusion using atomic directory creation.
 
-The key store is SQLite opened with `nolock=1` on an Azure Files (SMB) share,
-which disables the byte-range locks SQLite would normally use for cross-process
-exclusion. Prior deployments relied on a written *instruction* ("do not change
-keys during overlapping revisions") that nothing enforced (audit finding:
-conditional persistence risk). This lease ENFORCES it: a writer must hold an
-exclusive, time-limited lease file before it may initialise or write the store.
-
-This is defense-in-depth for the current design, NOT a substitute for a real
-transactional database. A managed Postgres with DB-enforced exclusion remains the
-supported end state; this makes the interim safe instead of merely documented.
-
-Mechanics (SMB-friendly, no byte-range locks required):
-  - The lease is a small JSON file: {"holder": "<host:pid:uuid>", "ts": <epoch>}.
-  - To claim, a writer atomically renames a unique temp file over the lease path
-    (os.replace is atomic on POSIX and on SMB), then RE-READS it: only the writer
-    whose holder id survived actually won, so a simultaneous race resolves to one
-    winner and every loser raises WriterConflict.
-  - An active writer refreshes `ts` on every write (ensure()). A lease older than
-    `ttl` is considered abandoned (e.g. a deactivated revision that never
-    released) and may be stolen. Keep ttl well above the write cadence.
+There is deliberately no expiry/stealing: a paused writer cannot be fenced by a
+clock. After a crash an operator must stop all holders before removing the lock.
+This supplements SQLite's normal locking; it does not make nolock/network SQLite
+safe. A legacy file lock is treated as occupied and must be recovered offline.
 """
-
-import json
 import os
 import socket
+import threading
 import time
 import uuid
 
 
 class WriterConflict(RuntimeError):
-    """Raised when another live writer holds the lease."""
+    """Another writer owns the lock, or ownership cannot be established."""
 
 
 class WriterLease:
@@ -38,80 +21,60 @@ class WriterLease:
         if ttl <= 0:
             raise ValueError("ttl must be positive")
         self.path = path
-        self.ttl = float(ttl)
+        self.ttl = float(ttl)  # compatibility only; locks never expire
         self._clock = clock
-        self.holder = holder or f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
+        self.holder = holder or f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex}"
+        self._token = uuid.uuid4().hex
         self._held = False
+        self._pid = os.getpid()
+        self._mutex = threading.RLock()
 
-    def _read(self):
+    def _owns(self):
+        if not self._held or os.getpid() != self._pid:
+            return False
         try:
-            with open(self.path, encoding="utf-8") as fh:
-                data = json.load(fh)
-            return data if isinstance(data, dict) else None
-        except (OSError, ValueError):
-            return None
-
-    def _write_atomic(self, data):
-        tmp = f"{self.path}.{os.getpid()}.{uuid.uuid4().hex}"
-        try:
-            with open(tmp, "w", encoding="utf-8") as fh:
-                json.dump(data, fh)
-                fh.flush()
-                os.fsync(fh.fileno())
-            os.replace(tmp, self.path)       # atomic publish (POSIX and SMB)
-        finally:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
-
-    def _claim(self, now):
-        self._write_atomic({"holder": self.holder, "ts": now})
-        # Resolve a simultaneous race: last atomic replace wins; everyone re-reads
-        # and only the surviving holder considers itself the writer.
-        current = self._read()
-        if not current or current.get("holder") != self.holder:
-            self._held = False
-            raise WriterConflict("lost a lease race to another writer")
-        self._held = True
+            with open(os.path.join(self.path, "owner"), encoding="ascii") as f:
+                return f.read() == self._token
+        except OSError:
+            return False
 
     def ensure(self):
-        """Acquire the lease, renew it if already ours, or steal it if the current
-        holder's lease has expired. Raise WriterConflict if a live writer holds
-        it. Call before every store write; it also serves as the heartbeat."""
-        now = self._clock()
-        current = self._read()
-        if current is None:
-            self._claim(now)                 # free
-        elif current.get("holder") == self.holder:
-            self._claim(now)                 # renew (heartbeat)
-        elif now - float(current.get("ts", 0)) > self.ttl:
-            self._claim(now)                 # abandoned -> steal
-        else:
-            self._held = False
-            raise WriterConflict(f"another writer holds the lease: {current.get('holder')!r}")
+        with self._mutex:
+            if self._held:
+                if self._owns():
+                    return
+                self._held = False
+                raise WriterConflict("writer ownership lost; stop writes and recover offline")
+            try:
+                os.mkdir(self.path, 0o700)  # create-if-absent: never overwrite a holder
+            except FileExistsError as exc:
+                raise WriterConflict("writer lock occupied; no automatic expiry or stealing") from exc
+            # If publishing ownership fails, leave the directory occupied. Safety
+            # takes precedence over availability until offline recovery.
+            with open(os.path.join(self.path, "owner"), "x", encoding="ascii") as f:
+                f.write(self._token)
+                f.flush()
+                os.fsync(f.fileno())
+            self._pid = os.getpid()
+            self._held = True
 
     def held(self):
-        return self._held
+        with self._mutex:
+            return self._owns()
 
     def release(self):
-        """Give up the lease if we still hold it (best effort)."""
-        if self._held and (self._read() or {}).get("holder") == self.holder:
-            try:
-                os.unlink(self.path)
-            except OSError:
-                pass
-        self._held = False
+        with self._mutex:
+            if self._owns():
+                os.unlink(os.path.join(self.path, "owner"))
+                os.rmdir(self.path)
+            self._held = False
 
 
 def lease_for_key_db(key_db, *, ttl=60.0, clock=time.time):
-    """Build a WriterLease beside a persistent key DB, or None for non-persistent
-    stores (":memory:" / plain local paths keep today's lease-free behaviour).
-    Only a `file:` URI store (the Azure Files / shared-share deployment) gets a
-    lease, since that is where nolock removes SQLite's own exclusion."""
     if not isinstance(key_db, str) or not key_db.startswith("file:"):
         return None
-    fs_path = key_db[len("file:"):].split("?", 1)[0]
-    if not fs_path:
+    from urllib.parse import unquote
+    fs_path = unquote(key_db[len("file:"):].split("?", 1)[0])
+    if not fs_path or fs_path == ":memory:":
         return None
     return WriterLease(fs_path + ".writer.lock", ttl=ttl, clock=clock)

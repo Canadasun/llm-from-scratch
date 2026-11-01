@@ -98,7 +98,7 @@ def test_committed_m2_baseline_parses_and_gates():
     assert ok2 is False
 
 
-def test_category_floor_uses_wilson_lower_bound_not_fixed_drop():
+def test_category_floor_uses_predeclared_loss_budget():
     # Small category (n=14): the floor is the baseline's wide Wilson lower bound,
     # so a single borderline flip (7/14 -> 6/14), statistically indistinguishable
     # from the baseline, must NOT fail (the old fixed 5% drop wrongly did).
@@ -110,8 +110,10 @@ def test_category_floor_uses_wilson_lower_bound_not_fixed_drop():
     noise = {"summary": {"overall": {"acc": 0.5},
                          "by_category": {"reasoning": {"n": 14, "correct": 6, "acc": 6/14}}}}
     ok, checks = check(noise, base)
+    assert ok is False
+    assert _get(checks, "category:reasoning")["ok"] is False
+    ok, _ = check(noise, base, {"category_acc_abs_max_drop": 0.08})
     assert ok is True
-    assert _get(checks, "category:reasoning")["ok"] is True
 
     # A genuine collapse (3/14 = 0.214) falls below the Wilson lower bound -> FAIL.
     collapse = {"summary": {"overall": {"acc": 0.5},

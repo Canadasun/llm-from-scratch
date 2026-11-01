@@ -12,6 +12,8 @@ reports. Release gating is a separate, explicit decision (see docs/EVALUATION.md
 """
 
 import argparse
+import hashlib
+from pathlib import Path
 import json
 import os
 import signal
@@ -25,6 +27,18 @@ from evals.loader import DEFAULT_CKPT, load_checkpoint, random_baseline, pick_de
 from evals import report as report_mod
 from evals.scoring import corpus_metrics
 from evals.tasks import default_task_files, load_tasks, run_task
+
+
+def implementation_sha256():
+    root = Path(__file__).resolve().parents[1]
+    paths = [root / "model.py", root / "tokenization.py"]
+    for folder in ("evals", "serve"):
+        paths.extend(sorted((root / folder).rglob("*.py")))
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(str(path.relative_to(root)).encode() + b"\0")
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
 
 
 class _TaskTimeout(Exception):
@@ -73,7 +87,7 @@ def run_intrinsic(model, tokenizer, cfg, device):
 
 
 def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
-             progress=None, task_timeout=None):
+             progress=None, task_timeout=None, quantize=False):
     """Run the eval suite and return {"summary","intrinsic","results","meta"}.
 
     This is the reusable core shared by the CLI (main) and the regression gate
@@ -89,6 +103,11 @@ def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
     device = pick_device(device)
     checkpoint_hash = file_sha256(ckpt)
     model, tokenizer, cfg = load_checkpoint(ckpt, device)
+    if quantize:
+        if str(device) != "cpu":
+            raise ValueError("serving quantization requires CPU")
+        from serve.engine import InferenceEngine
+        model = InferenceEngine._quantize(model)
     say(f"Loaded {ckpt} | device {device} | tokenizer {tokenizer.kind} "
         f"vocab {tokenizer.vocab_size} | block {cfg['block_size']} "
         f"layers {cfg['n_layer']}")
@@ -133,6 +152,11 @@ def evaluate(ckpt=DEFAULT_CKPT, device="auto", suite="all", limit=None,
     return {"summary": summary, "intrinsic": intrinsic, "results": results,
             "meta": {"ckpt": ckpt, "device": device,
                      "checkpoint_sha256": checkpoint_hash,
+                     "quantized": quantize, "image": os.environ.get("RELEASE_IMAGE"),
+                     "tokenizer_sha256": hashlib.sha256(json.dumps(
+                         tokenizer.to_dict(), sort_keys=True).encode()).hexdigest(),
+                     "implementation_sha256": implementation_sha256(),
+                     "task_ids": [t["id"] for t in selected_tasks],
                      "suite_sha256": suite_hash,
                      "heldout_sha256": file_sha256(HELDOUT) if os.path.exists(HELDOUT) else None,
                      "scoring_version": SCORING_VERSION, "code_evaluator": CODE_EVALUATOR,
@@ -150,6 +174,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default=DEFAULT_CKPT)
     ap.add_argument("--device", default="auto")
+    ap.add_argument("--quantize", action="store_true", help="evaluate the CPU int8 serving model")
     ap.add_argument("--threads", type=int, default=2, help="CPU threads (default 2)")
     ap.add_argument("--suite", choices=["all", "tasks", "intrinsic"], default="all")
     ap.add_argument("--limit", type=int, default=None,
@@ -165,7 +190,7 @@ def main():
 
     out = evaluate(args.ckpt, args.device, args.suite, args.limit,
                    progress=lambda s: print(s, flush=True),
-                   task_timeout=args.task_timeout)
+                   task_timeout=args.task_timeout, quantize=args.quantize)
     summary, intrinsic, results = out["summary"], out["intrinsic"], out["results"]
 
     print("\n" + report_mod.format_report(summary, results, intrinsic))

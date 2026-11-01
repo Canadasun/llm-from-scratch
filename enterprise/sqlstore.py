@@ -13,15 +13,10 @@ The isolation boundary is enforced in SQL: every tenant-scoped lookup carries a
 deliberately no query that returns a resource/key by id while ignoring the tenant
 — that absence is the guarantee, exactly as in the in-memory reference.
 
-Durability scope (honest): a SQLite file persists across process restarts and is
-correct for a single-node / single-replica deployment. To ALSO survive replica
-recycles on a cloud host the file must live on shared storage (an Azure Files
-mount). SQLite over SMB/CIFS, though, cannot take its usual byte-range locks, so
-the path must be opened as a `file:...?nolock=1` URI (see __init__) and the app
-pinned to ONE writer (max-replicas=1); that is the single-writer, network-durable
-configuration used live. For TRUE concurrent multi-replica writes this class
-should instead be re-pointed at a networked database (Postgres with real RLS
-policies) — same interface and invariants, only the connection changes.
+Durability scope: normal SQLite locking on suitable local storage supports a
+single node. Lock-disabled/network-share SQLite is not supported and nolock
+URIs are refused. A writer directory lock supplements, never replaces, SQLite's
+own exclusion. No external database is provisioned automatically.
 """
 
 import json
@@ -57,15 +52,13 @@ CREATE INDEX IF NOT EXISTS idx_res_tenant ON resources(tenant_id);
 
 class SqlStore:
     def __init__(self, path=":memory:", clock=time.time, writer_lease=None):
-        # A `file:...` path is opened as a SQLite URI, which lets the caller pass
-        # query parameters such as `?nolock=1`. That matters on a network share
-        # (Azure Files / SMB): CIFS does not provide the byte-range locks SQLite
-        # normally takes, so without nolock even the first CREATE TABLE fails with
-        # "database is locked". Disabling locking is safe HERE because the store
-        # is used single-writer (max-replicas=1) and already serialises every
-        # access through self._lock below. A plain path or ":memory:" is opened
-        # exactly as before (locking on), so local/default behaviour is unchanged.
+        # Disabling SQLite locks is unsafe even with a separate writer lock:
+        # readers may race a commit. Refuse it before opening or modifying a DB.
+        from urllib.parse import parse_qsl, urlsplit
         uri = path.startswith("file:")
+        if uri and any(k.lower() == "nolock" and v.lower() not in ("0", "false", "no", "off")
+                       for k, v in parse_qsl(urlsplit(path).query, keep_blank_values=True)):
+            raise ValueError("SQLite nolock is unsupported; use locking-capable local storage or a transactional database")
         # check_same_thread=False + a lock: the HTTP server is threaded, and a
         # single serialized connection is simplest and correct for this load.
         self._db = sqlite3.connect(path, uri=uri, check_same_thread=False)
@@ -76,7 +69,7 @@ class SqlStore:
         # Optional enforced single-writer lease (see enterprise/writer_lease.py).
         # None -> today's behaviour (local/in-memory stores). When set, every
         # write (including the schema init below) must hold the lease, so two
-        # overlapping revisions sharing a nolock DB cannot both write.
+        # cooperating processes cannot both initialise/write. Normal SQLite locks stay enabled.
         self._writer_lease = writer_lease
         with self._lock:
             self._require_writer()
@@ -103,8 +96,7 @@ class SqlStore:
     def key_transaction(self):
         """Atomic lifecycle operation, including across connections to a local DB.
 
-        SQLite locking must be enabled for cross-process exclusion. A nolock
-        network-share deployment still requires an externally enforced writer.
+        SQLite locking must be enabled for cross-process exclusion. Lock-disabled network-share deployment is refused at construction.
         """
         with self._lock:
             outer = self._transaction_depth == 0

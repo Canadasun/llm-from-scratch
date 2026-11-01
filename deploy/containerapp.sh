@@ -36,9 +36,13 @@ ALERT_EMAIL="${ALERT_EMAIL:-idwu1470@gmail.com}"
 STORAGE_ACCOUNT="${STORAGE_ACCOUNT:-stllmkeys$(printf '%s' "$SUBSCRIPTION$RG" | sha1sum | cut -c1-12)}"
 FILE_SHARE="${FILE_SHARE:-keys}"
 STORAGE_MOUNT="${STORAGE_MOUNT:-keysvol}"
-# nolock: SQLite over SMB/CIFS can't take byte-range locks, so the URI disables
-# them; SAFE only because we pin to ONE writer (max-replicas=1) below.
-KEY_DB_URI="${KEY_DB_URI:-file:/data/keys.db?nolock=1}"
+# The key store now REFUSES nolock (SQLite's own locking must be available). We pin
+# to ONE writer (max-replicas=1) and the app enforces a single-writer lease. NOTE:
+# plain SQLite over Azure Files (SMB) may not provide byte-range locks at all; if the
+# store fails to open on the mount, move persistence to local-disk (single replica)
+# or a managed transactional DB (Postgres). Cloud rollout is blocked under the $0
+# Azure budget regardless (see docs/AUDIT_REMEDIATION_2026-11-01.md).
+KEY_DB_URI="${KEY_DB_URI:-file:/data/keys.db}"
 
 echo ">> subscription=$SUBSCRIPTION rg=$RG app=$APP image=$IMAGE"
 az account set --subscription "$SUBSCRIPTION"

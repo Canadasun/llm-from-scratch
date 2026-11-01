@@ -14,6 +14,9 @@ file is replaced. Bind to 127.0.0.1 unless you intend to expose it.
 import json
 import logging
 import socket
+import select
+import time
+from serve.lifecycle import generation_scope
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -174,14 +177,34 @@ def make_handler(service):
             except (ValueError, UnicodeDecodeError):
                 self._send(400, {"error": "invalid_request", "detail": "body is not valid JSON"})
                 return
-            if getattr(service, "requires_auth", False):
-                # Secured service: the bearer token is the identity; a missing
-                # or bad token becomes a 401 inside the service (and is audited).
-                status, body = service.handle_generate(
-                    payload, api_key=self._bearer(), client=self._client())
-            else:
-                status, body = service.handle_generate(payload, client=self._client())
-            self._send(status, body)
+            monitor_done = threading.Event()
+            # Scope is propagated through service wrappers via a ContextVar.
+            with generation_scope() as budget:
+                def monitor_disconnect():
+                    while not monitor_done.wait(0.1):
+                        if time.monotonic() >= budget.deadline:
+                            return  # model observes the deadline before its next token
+                        try:
+                            readable, _, _ = select.select([self.connection], [], [], 0)
+                            if readable and not self.connection.recv(1, socket.MSG_PEEK | socket.MSG_DONTWAIT):
+                                budget.cancelled.set()
+                                return
+                        except OSError:
+                            budget.cancelled.set()
+                            return
+                watcher = threading.Thread(target=monitor_disconnect, daemon=True)
+                watcher.start()
+                try:
+                    if getattr(service, "requires_auth", False):
+                        status, body = service.handle_generate(
+                            payload, api_key=self._bearer(), client=self._client())
+                    else:
+                        status, body = service.handle_generate(payload, client=self._client())
+                    if not budget.cancelled.is_set():
+                        self._send(status, body)
+                finally:
+                    monitor_done.set()
+                    watcher.join(timeout=1)
 
         def log_message(self, *args):
             pass  # structured logging happens in the service, not here

@@ -12,6 +12,7 @@ import torch
 import tokenization
 from model import GPT, GPTConfig
 from serve.validation import ValidationError
+from serve.lifecycle import check_generation
 
 DEFAULT_CKPT = os.path.join(os.path.dirname(os.path.dirname(__file__)), "checkpoints", "ckpt.pt")
 
@@ -52,7 +53,10 @@ class InferenceEngine:
         tokenizer = tokenization.from_dict(ckpt["tokenizer"])
         model = GPT(GPTConfig(**ckpt["model_cfg"]))
         model.load_state_dict(ckpt["model_state"])
-        return cls(model, tokenizer, device=device, quantize=quantize)
+        engine = cls(model, tokenizer, device=device, quantize=quantize)
+        from evals.evidence import file_sha256
+        engine.checkpoint_sha256 = file_sha256(path)
+        return engine
 
     def _encode_prompt(self, prompt):
         p = prompt
@@ -85,6 +89,7 @@ class InferenceEngine:
         if seed is not None:
             gen = torch.Generator(device=self.device)
             gen.manual_seed(seed)
+        check_generation()
         ids = self._encode_prompt(prompt)
         if len(ids) > self.block_size:
             raise ValidationError(
@@ -92,7 +97,8 @@ class InferenceEngine:
         idx = torch.tensor([ids], dtype=torch.long, device=self.device)
         out = self.model.generate(
             idx, max_new_tokens, temperature=temperature, top_k=top_k,
-            generator=gen)
+            generator=gen, check_cancelled=check_generation)
+        check_generation()
         out_ids = out[0].tolist()
         full = self.tokenizer.decode(out_ids)
         completion = self.tokenizer.decode(out_ids[len(ids):])

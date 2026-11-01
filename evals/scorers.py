@@ -58,12 +58,21 @@ def contains(output, expected):
     an answer recommending the opposite of the expected concept is not scored
     correct (audit: negated security advice passed a plain substring check)."""
     low, needle = output.lower(), expected.strip().lower()
-    start = low.find(needle)
-    while start != -1:
-        if not _is_negated(low, start):
-            return True          # at least one non-negated occurrence
-        start = low.find(needle, start + 1)
-    return False
+    if not needle:
+        return False
+    positions = [m.start() for m in re.finditer(re.escape(needle), low)]
+    if not positions:
+        return False
+    # Reject contradictory mentions too, rather than letting a later keyword
+    # launder an unsafe recommendation. This remains a heuristic, not a semantic
+    # correctness verdict; release qualification rejects heuristic scoring.
+    for start in positions:
+        suffix = re.split(r"[.!?;\n]", low[start + len(needle):])[0][:80]
+        if _is_negated(low, start) or re.search(
+                r"\b(unnecessary|unsafe|useless|insecure|not needed|not required|"
+                r"should be avoided|must be avoided|should not|must not)\b", suffix):
+            return False
+    return True
 
 
 def regex_match(output, pattern):
