@@ -65,7 +65,8 @@ checkpoint artifacts were not modified.
 
 Configure `MODEL_CHECKPOINT_URL` and `MODEL_CHECKPOINT_SHA256` repository variables
 with the candidate artifact, or provide both on manual workflow dispatch. Missing
-configuration fails the evaluation workflow. Configure branch/release protection
+configuration fails release-tag and manual evaluation runs; scheduled and PR runs
+are skipped with a notice until the variables are set. Configure branch/release protection
 to require the check. The artifact publisher must ensure the selected checkpoint
 belongs to the candidate release; a repository variable alone cannot prove that
 binding. No cloud deployment or repository setting was changed by this follow-up.
