@@ -1,8 +1,8 @@
 name: Eval regression gate
 
-# Candidate checkpoint evaluation fails closed when the artifact is unavailable.
-# Configure MODEL_CHECKPOINT_URL and MODEL_CHECKPOINT_SHA256 repository variables
-# for scheduled, PR and tag runs, or supply both on manual dispatch.
+# Candidate checkpoint evaluation fails closed for release tags and manual runs
+# when the artifact is unavailable. Scheduled and PR runs are skipped with a
+# notice until MODEL_CHECKPOINT_URL and MODEL_CHECKPOINT_SHA256 are configured.
 
 on:
   workflow_dispatch:
@@ -21,7 +21,15 @@ on:
     - cron: "17 6 * * *"   # nightly 06:17 UTC
 
 jobs:
+  checkpoint-not-configured:
+    if: github.event_name != 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/') && vars.MODEL_CHECKPOINT_URL == ''
+    runs-on: ubuntu-22.04
+    permissions: {}
+    steps:
+      - run: echo "::notice::Eval regression gate skipped - set the MODEL_CHECKPOINT_URL and MODEL_CHECKPOINT_SHA256 repository variables to evaluate a candidate checkpoint."
+
   regression:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || vars.MODEL_CHECKPOINT_URL != ''
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     permissions:
