@@ -1,0 +1,11 @@
+{
+  "currency": "CAD",
+  "monthly_cap": 10,
+  "alert_actual": 5,
+  "stop_actual": 8,
+  "stop_forecast": 10,
+  "resource_group": "llm-from-scratch-rg",
+  "app": "llm-serve",
+  "owner_only": true,
+  "go_live_approved": false
+}

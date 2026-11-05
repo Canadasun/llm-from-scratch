@@ -18,6 +18,24 @@ permissions:
   contents: read
 
 jobs:
+  owner-ingress:
+    if: ${{ vars.LLM_OWNER_INGRESS_PROBE != '' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Verify a non-owner cannot reach the app
+        env:
+          PROBE_URL: ${{ vars.LLM_OWNER_INGRESS_PROBE }}
+        run: |
+          case "$PROBE_URL" in
+            https://*.canadacentral.azurecontainerapps.io/healthz) ;;
+            *) echo "Unexpected ingress probe target"; exit 1 ;;
+          esac
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 45 "$PROBE_URL")
+          echo "Non-owner HTTP status: $status"
+          test "$status" = 403
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 45 -H 'X-Forwarded-For: 127.0.0.1' "$PROBE_URL")
+          echo "Spoofed-forwarded-header HTTP status: $status"
+          test "$status" = 403
   test:
     # Pin the sandbox host rather than inheriting namespace-policy changes from latest.
     runs-on: ubuntu-22.04
