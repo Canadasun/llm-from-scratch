@@ -1,5 +1,4 @@
 import json
-import os
 from unittest.mock import Mock
 
 import pytest
@@ -59,8 +58,36 @@ def test_owner_ip_update_rejects_networks_and_replaces_all_rules():
     client = Mock()
     rules = [{"name": "owner", "action": "Allow", "ipAddressRange": "192.0.2.1/32",
               "description": "Owner access only"}]
-    client.request.return_value = {"properties": {"configuration": {"ingress": {"ipSecurityRestrictions": rules}}}}
+    client.request.return_value = {"location": "canadacentral", "properties": {"configuration": {"ingress": {"ipSecurityRestrictions": rules}}}}
     assert lockdown.allow_ip(client, "192.0.2.1")["owner_prefix_length"] == 32
-    assert client.request.call_args_list[0].args[3]["properties"]["configuration"]["ingress"]["ipSecurityRestrictions"] == rules
+    assert client.request.call_args_list[1].args[3]["properties"]["configuration"]["ingress"]["ipSecurityRestrictions"] == rules
     with pytest.raises(ValueError):
         lockdown.allow_ip(client, "192.0.2.1/24")
+
+
+def test_cooldown_waits_for_completed_stop_before_mutation(monkeypatch):
+    monkeypatch.setattr(lockdown, "verify_controls", lambda client: {})
+    sleeps = Mock()
+    monkeypatch.setattr(lockdown.time, "sleep", sleeps)
+    client = Mock()
+    client.app = "app"
+    app = {"location": "canadacentral", "properties": {"template": {
+        "scale": {"minReplicas": 0, "maxReplicas": 1}, "containers": [{"image": "old"}]}}}
+    client.request.side_effect = [app, {},
+        {"properties": {"runningStatus": "Stopped", "provisioningState": "InProgress"}},
+        {"properties": {"runningStatus": "Stopped", "provisioningState": "Succeeded"}}, {},
+        {"properties": {"provisioningState": "Succeeded", "template": {"scale": {"cooldownPeriod": 30}},
+                        "latestRevisionName": "llm-serve--phase0-cooldown"}}, {}]
+    image = "ghcr.io/canadasun/llm-serve@sha256:" + "a" * 64
+    assert lockdown.cooldown(client, image)["cooldown_seconds"] == 30
+    sleeps.assert_called_once_with(5)
+    methods = [call.args[0] for call in client.request.call_args_list]
+    assert methods == ["GET", "POST", "GET", "GET", "PATCH", "GET", "POST"]
+
+
+def test_mutable_image_cannot_start_cooldown_maintenance(monkeypatch):
+    monkeypatch.setattr(lockdown, "verify_controls", lambda client: {})
+    client = Mock()
+    with pytest.raises(ValueError, match="immutable digest"):
+        lockdown.cooldown(client, "ghcr.io/canadasun/llm-serve:latest")
+    client.request.assert_not_called()

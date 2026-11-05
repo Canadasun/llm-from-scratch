@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import ipaddress
 import json
 import os
+import re
 import time
 import urllib.request
 import uuid
@@ -23,10 +24,11 @@ def allow_ip(client, address=None):
         with urllib.request.urlopen("https://api.ipify.org", timeout=15) as response:
             address = response.read(64).decode().strip()
     address = ipaddress.IPv4Address(address)
+    app = client.request("GET", client.app, APP_API)
     rules = [{"name": "owner", "action": "Allow", "ipAddressRange": f"{address}/32",
               "description": "Owner access only"}]
     client.request("PATCH", client.app, APP_API,
-                   {"properties": {"configuration": {"ingress": {"ipSecurityRestrictions": rules}}}})
+                   {"location": app["location"], "properties": {"configuration": {"ingress": {"ipSecurityRestrictions": rules}}}})
     actual = client.request("GET", client.app, APP_API)["properties"]["configuration"]["ingress"]
     if actual["ipSecurityRestrictions"] != rules:
         raise ValueError("owner ingress readback failed")
@@ -79,6 +81,8 @@ def setup_stopper(client):
                     break
     if not email or "@" not in email or any(c in email for c in "\r\n"):
         raise ValueError("ALERT_EMAIL is required; no existing budget recipient found")
+    if not existing["value"]:
+        raise ValueError("an existing budget with verified CAD billing currency is required")
     for item in existing["value"]:
         spend = item["properties"].get("currentSpend", {})
         if spend.get("unit") != "CAD":
@@ -89,7 +93,7 @@ def setup_stopper(client):
     principal = result["identity"]["principalId"]
     role_id = str(uuid.uuid5(uuid.NAMESPACE_URL, client.scope + "/llm-budget-stop-only"))
     role = client.scope + "/providers/Microsoft.Authorization/roleDefinitions/" + role_id
-    client.request("PUT", role, "2022-04-01", {"properties": {
+    role_result = client.request("PUT", role, "2022-04-01", {"properties": {
         "roleName": "LLM budget stop only", "description": "Stop the owner LLM app only",
         "type": "CustomRole", "assignableScopes": [client.scope],
         "permissions": [{"actions": ["Microsoft.App/containerApps/read", "Microsoft.App/containerApps/stop/action"],
@@ -97,7 +101,7 @@ def setup_stopper(client):
     assignment = client.app + "/providers/Microsoft.Authorization/roleAssignments/" + str(
         uuid.uuid5(uuid.NAMESPACE_URL, client.app + principal + role_id))
     client.request("PUT", assignment, "2022-04-01", {"properties": {
-        "roleDefinitionId": role, "principalId": principal, "principalType": "ServicePrincipal"}})
+        "roleDefinitionId": role_result["id"], "principalId": principal, "principalType": "ServicePrincipal"}})
     callback = client.request("POST", workflow + "/triggers/budget/listCallbackUrl", "2016-06-01")["value"]
     client.request("PUT", group, "2023-01-01", {"location": "Global", "properties": {
         "groupShortName": "llm-stop", "enabled": True, "logicAppReceivers": [{
@@ -128,6 +132,40 @@ def verify_controls(client):
         for field in ("enabled", "operator", "threshold", "thresholdType", "contactGroups"):
             if actual.get(field) != notification[field]:
                 raise ValueError("budget notification readback mismatch: " + name + "/" + field)
+    scale = app["properties"]["template"]["scale"]
+    if scale.get("minReplicas") != 0 or scale.get("maxReplicas") != 1:
+        raise ValueError("scale must be min 0, max 1")
+    workflow_id = client.scope + "/providers/Microsoft.Logic/workflows/" + WORKFLOW
+    workflow = client.request("GET", workflow_id, LOGIC_API)
+    if workflow["properties"]["state"] != "Enabled":
+        raise ValueError("budget stopper must be enabled")
+    expected_definition = workflow_body(client.app, app["location"])["properties"]["definition"]
+    if workflow["properties"]["definition"] != expected_definition:
+        raise ValueError("budget stopper definition mismatch")
+    principal = workflow["identity"]["principalId"]
+    role_id = str(uuid.uuid5(uuid.NAMESPACE_URL, client.scope + "/llm-budget-stop-only"))
+    role = client.scope + "/providers/Microsoft.Authorization/roleDefinitions/" + role_id
+    role_result = client.request("GET", role, "2022-04-01")
+    permissions = role_result["properties"]["permissions"]
+    if len(permissions) != 1 or set(permissions[0]["actions"]) != {
+            "Microsoft.App/containerApps/read", "Microsoft.App/containerApps/stop/action"}:
+        raise ValueError("stopper role must permit only app read and stop")
+    if any(permissions[0].get(field) for field in ("notActions", "dataActions", "notDataActions")):
+        raise ValueError("unexpected stopper role permissions")
+    assignment_id = client.app + "/providers/Microsoft.Authorization/roleAssignments/" + str(
+        uuid.uuid5(uuid.NAMESPACE_URL, client.app + principal + role_id))
+    assignment = client.request("GET", assignment_id, "2022-04-01")["properties"]
+    if (assignment["scope"].lower() != client.app.lower() or
+            assignment["principalId"] != principal or assignment["roleDefinitionId"].lower() != role_result["id"].lower()):
+        raise ValueError("stopper identity assignment must be scoped to this app")
+    group = client.request("GET", client.scope + "/providers/Microsoft.Insights/actionGroups/" + ACTION_GROUP,
+                           "2023-01-01")["properties"]
+    receivers = group.get("logicAppReceivers", [])
+    if not group.get("enabled") or len(receivers) != 1 or receivers[0]["resourceId"].lower() != workflow_id.lower():
+        raise ValueError("budget stop action group is not wired to the expected workflow")
+    callback = client.request("POST", workflow_id + "/triggers/budget/listCallbackUrl", "2016-06-01")["value"]
+    if receivers[0]["callbackUrl"] != callback:
+        raise ValueError("budget stopper callback mismatch")
     return {"owner_rule_count": 1, "budget_currency": "CAD", "monthly_cap": 10,
             "actual_spend": float(budget["currentSpend"]["amount"]),
             "thresholds": {"actual_alert": 5, "actual_stop": 8, "forecast_stop": 10}}
@@ -144,12 +182,14 @@ def test_stopper(client):
             raise ValueError("stopper trigger not accepted")
     runs = []
     for _ in range(36):
-        state = client.request("GET", client.app, APP_API)["properties"].get("runningStatus")
+        app_state = client.request("GET", client.app, APP_API)["properties"]
+        state = app_state.get("runningStatus")
         runs = [run for run in client.request("GET", workflow + "/runs", LOGIC_API)["value"]
                 if run["name"] not in previous]
         if runs and runs[0]["properties"]["status"] in {"Failed", "Cancelled", "TimedOut"}:
             raise ValueError("stopper workflow failed; app has not been restarted")
-        if state == "Stopped" and runs and runs[0]["properties"]["status"] == "Succeeded":
+        if (state == "Stopped" and app_state.get("provisioningState") == "Succeeded" and
+                runs and runs[0]["properties"]["status"] == "Succeeded"):
             break
         time.sleep(5)
     else:
@@ -164,10 +204,47 @@ def test_stopper(client):
     raise ValueError("app restart was not observed")
 
 
+def cooldown(client, image):
+    verify_controls(client)
+    if not re.fullmatch(r"ghcr\.io/canadasun/llm-serve@sha256:[0-9a-f]{64}", image or ""):
+        raise ValueError("the existing preview image must be resolved to an immutable digest")
+    app = client.request("GET", client.app, APP_API)
+    template = app["properties"]["template"]
+    template["scale"].update({"minReplicas": 0, "maxReplicas": 1, "cooldownPeriod": 30})
+    template["revisionSuffix"] = "phase0-cooldown"
+    template["containers"][0]["image"] = image
+    client.request("POST", client.app + "/stop", APP_API)
+    for _ in range(36):
+        stopped = client.request("GET", client.app, APP_API)["properties"]
+        if stopped.get("runningStatus") == "Stopped" and stopped.get("provisioningState") == "Succeeded":
+            break
+        time.sleep(5)
+    else:
+        raise ValueError("app stop was not observed; cooldown has not been changed")
+    client.request("PATCH", client.app, APP_API, {"location": app["location"], "properties": {
+        "configuration": {"activeRevisionsMode": "Single"}, "template": template}})
+    for _ in range(60):
+        actual = client.request("GET", client.app, APP_API)
+        if actual["properties"].get("provisioningState") == "Failed":
+            raise ValueError("cooldown revision failed; inspect state before restarting")
+        if actual["properties"].get("provisioningState") == "Succeeded":
+            break
+        time.sleep(5)
+    else:
+        raise ValueError("cooldown update did not finish; app remains stopped")
+    if actual["properties"]["template"]["scale"].get("cooldownPeriod") != 30:
+        raise ValueError("cooldown readback failed; app remains stopped")
+    client.request("POST", client.app + "/start", APP_API)
+    return {"cooldown_seconds": 30, "image": image,
+            "revision": actual["properties"].get("latestRevisionName"),
+            "research_preview": True, "start_requested": True}
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["allow-ip", "setup-stopper", "verify", "test-stopper"])
+    parser.add_argument("action", choices=["allow-ip", "setup-stopper", "verify", "test-stopper", "cooldown"])
     parser.add_argument("--ip")
+    parser.add_argument("--image")
     args = parser.parse_args()
     client = Azure()
     if args.action == "allow-ip":
@@ -176,6 +253,8 @@ def main():
         result = setup_stopper(client)
     elif args.action == "test-stopper":
         result = test_stopper(client)
+    elif args.action == "cooldown":
+        result = cooldown(client, args.image)
     else:
         result = verify_controls(client)
     print(json.dumps(result, indent=2))
@@ -184,5 +263,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except (ValueError, RuntimeError) as error:
+        raise SystemExit(str(error))
     except Exception:
         raise SystemExit("Lockdown operation failed; inspect scoped Azure state. No secret details printed.")

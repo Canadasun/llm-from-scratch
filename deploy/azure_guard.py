@@ -27,7 +27,8 @@ def az(*args):
     result = subprocess.run(["az", *args, "--only-show-errors", "-o", "json"],
                             capture_output=True, text=True)
     if result.returncode:
-        raise RuntimeError("Azure operation failed; inspect Azure operation status without exposing secrets")
+        codes = re.findall(r"ERROR: \(([A-Za-z0-9_]+)\)", result.stderr)
+        raise RuntimeError("Azure operation failed: " + (codes[0] if codes else "inspect scoped operation status"))
     return json.loads(result.stdout) if result.stdout.strip() else None
 
 
@@ -51,7 +52,10 @@ class Azure:
             path = Path(directory) / "request.json"
             path.write_text(json.dumps(body))
             path.chmod(0o600)
-            return az(*args, "--body", "@" + str(path))
+            try:
+                return az(*args, "--body", "@" + str(path))
+            except RuntimeError as error:
+                raise RuntimeError(method + " " + resource[len(self.scope):] + ": " + str(error)) from None
 
 
 def check_rollout():
