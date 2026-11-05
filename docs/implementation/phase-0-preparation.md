@@ -1,11 +1,11 @@
 # Phase 0 preparation — 2026-11-05
 
-Status: incomplete; owner confirmation pending. No Phase 0 exit is claimed.
+Status: implementation underway; not all Phase 0 exits have passed.
 
 The owner-supplied `~/Desktop/llm-from-scratch-ROADMAP.md` requires confirmation
 of the C$10 monthly cap and owner-only access before Phase 0 Azure changes.
-Confirmation was requested; no Azure resource was read or modified during this
-preparation. No paid resource was provisioned, and no model was deployed.
+The owner confirmed both on November 5. Subsequent Azure changes are scoped to
+this project's resource group. No model was promoted.
 
 ## Repository and artifacts
 
@@ -18,7 +18,11 @@ preparation. No paid resource was provisioned, and no model was deployed.
   M3, instruction candidate, and instruction training-resume weights.
 - Release checksum-manifest SHA-256 reported by GitHub:
   `39250aceaabf214bc548bdb5e29f1a052a63a487d83ba7da53edffdf55d74548`.
-- Docker reports a Linux engine. A new Docker test run has not been performed.
+- Docker reports a Linux engine. The fresh Docker baseline returned 383 passed,
+  4 failed, 14 errors, 2 skipped, 5 warnings in 20.99 seconds. Its image lacked
+  `/usr/bin/python3`, which the independent sandbox requires. This is a failed
+  baseline attempt, not a passing test result. Use the established Ubuntu CI
+  runner for the next full sandbox test rather than weakening isolation.
 
 ## Prior baseline evidence
 
@@ -32,16 +36,39 @@ not a fresh test run by this executor. A fresh full Linux baseline remains due.
 finished successfully on 2026-11-05 but explicitly skipped checkpoint evaluation
 because repository checkpoint variables were unset. It is not a model gate pass.
 
+## Applied controls
+
+- Azure ingress readback: exactly one Allow rule for the detected owner's IPv4
+  address, with a /32 prefix. The address is not committed.
+- Log Analytics daily quota readback: 0.1 GB, status `RespectQuota`.
+- Monthly budget `llm-monthly-10cad`: C$10, current actual spend C$0.00 at setup.
+  Notifications read back as C$5 actual alert, C$8 actual stop and C$10 forecast
+  stop. Both stop thresholds reference the new action group.
+- Consumption workflow `llm-budget-stopper` uses a system-assigned managed
+  identity. A custom role grants only app read and stop; assignment is scoped to
+  `llm-serve`, not its resource group or subscription.
+- Stopper run `08584077235460169782292598068CU21` reached `Succeeded`;
+  app `runningStatus` was observed as `Stopped`, then `Running` after restart.
+  The initial test command failed because its workflow-success read raced Azure's
+  run completion. Both states and successful run were verified separately, and
+  polling now waits for the same new run to finish before restarting.
+- Callback credentials are kept in memory/private temporary request files and
+  are not printed or committed. Existing budget recipients are reused privately.
+- The existing failed candidate stays an owner-only research preview. This is
+  cheaper than a new model deployment, and is not a production promotion or
+  running-digest attestation. Full artifact qualification remains due in Phase 6.
+
 ## Remaining Phase 0 work
 
-After owner confirmation, inspect only `llm-from-scratch-rg`, implement and
-verify owner-IP ingress, cooldown, log cap, and the scoped budget stopper.
+Complete and measure cooldown and non-owner ingress refusal, then obtain a
+fresh full Linux CI test result.
 The roadmap's request to copy a stopper pattern does not authorize access to
 `scribe11`; do not read or modify that resource group.
 
-Replace stale deployment blocks with a checked budget policy, remove account
-identifiers, correct README status, and record the candidate as a failed research
-preview or perform a qualified rollback. A budget alert is not a guaranteed
+Deployment entry points now check the C$10 budget policy and retain the separate
+Phase 7 go-live gate. The legacy provisioning path that created storage was
+removed. README and status identify the candidate as a failed research preview.
+A budget alert is not a guaranteed
 billing cap because cost reporting and stop actions can lag.
 
 Run a fresh full Linux test suite, verify refusal from an external non-allowed
@@ -49,5 +76,4 @@ IP, test stop/restart, and record budget threshold readbacks before declaring
 Phase 0 complete. Keep one PR for this phase; merge only with green CI.
 Do not advance to Phase 1 until all Phase 0 exit conditions are measured.
 
-No training data, evaluation data, production baseline, or deployment scripts
-were changed during preparation.
+No training data, evaluation data, or production baseline was changed.

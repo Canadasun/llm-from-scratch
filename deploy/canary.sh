@@ -1,17 +1,9 @@
 #!/usr/bin/env bash
-# Local build / release qualification entry point. Azure budget: $0.
-# canary/promote are intentionally blocked before any cloud command. The rollout
-# implementation below is retained for the Azure owner's future review; it is
-# NOT operationally qualified and must not be enabled under the current budget.
-#
-# CKPT=checkpoints/ckpt.pt IMAGE=llm-local:candidate ./deploy/canary.sh build
-# IMAGE=repo@sha256:... RELEASE_RECORD=release.json ./deploy/canary.sh qualify
-# IMAGE=repo@sha256:... RELEASE_RECORD=release.json ./deploy/canary.sh verify
 set -euo pipefail
 
 PHASE="${1:-canary}"
 
-SUBSCRIPTION="${SUBSCRIPTION:-202808c8-8440-4d93-b646-3ed956877a85}"
+SUBSCRIPTION="${SUBSCRIPTION:-}"
 RG="${RG:-llm-from-scratch-rg}"
 APP="${APP:-llm-serve}"
 GH_USER="${GH_USER:-canadasun}"
@@ -30,14 +22,12 @@ PROBE_KEY="${PROBE_KEY:-}"   # mandatory for any future promotion
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
-# This repository is operated under a $0 Azure budget. Offline work remains
-# available; cloud rollouts cannot guarantee zero incremental cost and are blocked.
 case "$PHASE" in
   build|qualify|verify) ;;
   canary|promote)
-    echo 'BLOCKED: Azure budget is $0; no cloud rollout or overlapping revisions permitted.'
-    echo "Use local build/qualify/verify. Azure owner must resolve storage, cost and operations separately."
-    exit 1 ;;
+    python3 -m deploy.azure_guard
+    SUBSCRIPTION="${SUBSCRIPTION:-$(az account show --query id -o tsv)}"
+    ;;
   *) echo "usage: $0 {build|qualify|verify|canary|promote}"; exit 2 ;;
 esac
 if [ "$PHASE" = qualify ] || [ "$PHASE" = verify ]; then

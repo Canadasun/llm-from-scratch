@@ -22,7 +22,10 @@ you how LLMs actually work needs only a laptop. This repo is built to grow:
 | **3 — Scale** | More layers/params/data, proper eval and checkpointing | Rented cloud GPU |
 | **4 — Serve** | An inference endpoint for your own model | Cloud, when needed |
 
-You are at **Milestone 1**.
+Milestones 1–2 are implemented; evaluation and serving infrastructure are in
+progress. The current model remains a **research preview** and scores **0/18**
+on the repository coding tasks. It is not a reliable coding assistant. See
+[measured status](docs/STATUS.md) and [Phase 0 controls](docs/implementation/phase-0-preparation.md).
 
 ## Quickstart (CPU)
 
@@ -47,7 +50,8 @@ python sample.py --prompt "Security " --tokens 400
 For response-only instruction training of this project's existing weights, see
 [instruction training](docs/INSTRUCTION_TRAINING.md). The first measured CPU trial
 improved the seed benchmark from 30.0% to 33.5%, but failed a reasoning regression
-check and still scored 0/18 on code. It remains a separate local candidate.
+check and still scored 0/18 on code. It failed its regression gate. The existing Azure revision serves this candidate
+as an owner-only research preview; it is not a qualified production release.
 
 No local GPU needed — use a free Colab/Kaggle GPU. See [`docs/GPU.md`](docs/GPU.md)
 and [`notebooks/train_colab.ipynb`](notebooks/train_colab.ipynb).

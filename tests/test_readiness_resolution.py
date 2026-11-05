@@ -140,14 +140,14 @@ def test_readiness_collector_uses_allowlisted_management_reads(monkeypatch):
     assert all('secret' not in c[:3] for c in calls)
 
 
-def test_existing_provisioning_script_obeys_zero_budget(tmp_path):
+def test_existing_deployment_requires_go_live(tmp_path):
     fake = tmp_path / 'az'
     fake.write_text('#!/bin/sh\necho CLOUD_CALLED\nexit 90\n')
     fake.chmod(0o755)
     import os
     result = subprocess.run(['bash', 'deploy/containerapp.sh'],
         env={**os.environ, 'PATH': str(tmp_path) + ':' + os.environ['PATH']}, capture_output=True, text=True)
-    assert result.returncode == 1 and '$0' in result.stderr
+    assert result.returncode == 1 and 'go-live approval' in result.stderr
     assert 'CLOUD_CALLED' not in result.stdout
 
 

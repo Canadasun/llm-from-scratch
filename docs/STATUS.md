@@ -34,8 +34,8 @@ changes cannot substitute for:
   require refusal or clarification. (Public / self-authored only — never customer
   or PII data.)
 - **Context**: 512 tokens is inadequate for repository-level work.
-- **A real GPU training run** (has a cost beyond the $5/mo cap — a deliberate,
-  user-approved one-off, not hosted training).
+- **A real GPU training run** on free Kaggle quota, after validated resume and
+  throughput smoke tests. Paid GPU resources require separate owner approval.
 - **Evaluation split by repository and problem family** so memorization cannot
   masquerade as progress, with hidden tests and frozen sets.
 
@@ -78,7 +78,9 @@ finding (which are fixed in code, and which are capability/ops work).
 
 [Detailed status and limitations](AUDIT_REMEDIATION_2026-11-01.md) supersede older
 claims that the lease, keyword scorer or optional promotion checks completely
-resolved those findings. Cloud rollout is blocked under a $0 Azure budget.
+resolved those findings. The owner approved a C$10 monthly hosting plan on November 5. New model
+rollouts still require qualification and the separate Phase 7 go-live approval.
+See [Phase 0 evidence](implementation/phase-0-preparation.md).
 The default untrusted review workflow now requires a narrowly supported independent
 behavioral witness; unsupported rules require manual review. Model qualification,
 real-repository validation and live enterprise evidence remain outstanding.

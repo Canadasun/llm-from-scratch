@@ -82,7 +82,7 @@ def test_probe_requires_key_and_checks_answers(monkeypatch):
     assert probe.probe("https://example.invalid", "test-key")["success_rate"] == 1
 
 
-def test_zero_budget_prevents_cloud_commands(tmp_path):
+def test_pending_go_live_prevents_cloud_commands(tmp_path):
     fake = tmp_path / "az"
     fake.write_text('#!/bin/sh\necho CLOUD_CALLED\nexit 90\n')
     fake.chmod(0o755)
@@ -90,7 +90,7 @@ def test_zero_budget_prevents_cloud_commands(tmp_path):
         result = subprocess.run(["bash", "deploy/canary.sh", action],
             env={**os.environ, "PATH": str(tmp_path) + ":" + os.environ["PATH"]},
             capture_output=True, text=True)
-        assert result.returncode != 0 and "$0" in result.stdout
+        assert result.returncode != 0 and "go-live approval" in result.stderr
         assert "CLOUD_CALLED" not in result.stdout
 
 
