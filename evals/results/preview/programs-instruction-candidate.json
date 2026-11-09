@@ -337,7 +337,7 @@
  },
  "meta": {
   "behaviour_sha256": "0e2ff73769e8574b36b5d102fbaca1539e91164ec17baaadbff276abbddccb87",
-  "bench_manifest_sha256": "08f0c100196d4aa404d605a83ac2ff9c6772d223fef337ebd2b18ea91207599c",
+  "bench_manifest_sha256": "185a2c8266153eb5385b68ae4704d3f02c9336913276d2b995e7e723e21bedd3",
   "block_size": 512,
   "checkpoint_sha256": "50664e4e548b9f3d1b4e80be008ad36488aa8c5f136663dd31f1e3171198ac70",
   "ckpt": "checkpoints/release-2026-11-04/instruction-candidate-ckpt.pt",
@@ -355,14 +355,14 @@
    ]
   },
   "device": "cpu",
-  "generated_at": "2026-11-09T21:45:26.518015+00:00",
+  "generated_at": "2026-11-09T22:24:44.323237+00:00",
   "limit": null,
   "n_layer": 10,
   "suite_sha256": {
    "humaneval": "25bcd4c110602cdaf124176aa992ecb93630227d9ef443cbbe47d4b0ea083423",
    "humaneval_plus": "4d2af0e66d5cd970e36cf8c8c05a162c7938d1ad8ffde759079046bd1d76d357",
-   "mbpp": "8d3f74393cab69db272ec6bc7fd05dfb3b515807ec56fbfe293819b75ffee64c",
-   "mbpp_plus": "1efb024484489256d0008f8ecf6ad757f1ce6ecb6535ea1a651f8fc8ab65203e"
+   "mbpp": "c804ac31fdb2dfb3b59e487e25debb92f04935af8e48abec0eeae2b27cdd6cf3",
+   "mbpp_plus": "3e815e129969890374014b8b1b5d7e6986f75e167b08e3fff21a4e81a4b3b95b"
   },
   "suites": [
    "humaneval",

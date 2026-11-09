@@ -28,7 +28,8 @@ def encode_value(value, depth=0):
         return {"$tuple": [encode_value(v, depth + 1) for v in value]}
     if isinstance(value, (set, frozenset)):
         tag = "$set" if isinstance(value, set) else "$frozenset"
-        return {tag: [encode_value(v, depth + 1) for v in value]}
+        items = [encode_value(v, depth + 1) for v in value]
+        return {tag: sorted(items, key=lambda v: json.dumps(v, sort_keys=True))}
     if isinstance(value, dict):
         if all(isinstance(k, str) for k in value) and not (len(value) == 1 and next(iter(value)) in TAGS):
             return {k: encode_value(v, depth + 1) for k, v in value.items()}

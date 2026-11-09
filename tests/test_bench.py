@@ -17,6 +17,7 @@ def test_codec_round_trips_python_types():
     json.dumps(encoded, allow_nan=False)
     back = decode_value(json.loads(json.dumps(encoded)))
     assert back[:12] == value[:12] and back[12] == {"$tuple": [1]}
+    assert encode_value({"b", "a", "c"}) == {"$set": ["a", "b", "c"]}
     assert math.isnan(decode_value(encode_value(float("nan"))))
     with pytest.raises(TypeError):
         encode_value(object())
@@ -161,9 +162,10 @@ def test_real_sandbox_batch_handles_types_errors_and_forgery(sandbox):
              {"args": [{"$tuple": []}], "expected": {"$set": []}}]
     assert evaluate_cases("def f(t):\n    assert isinstance(t, tuple)\n    return set(t)\n", "f", cases,
                           runner=sandbox).passed
-    forged = ("import os\nos.write(1, b'{\"values\": [{\"ok\": {\"$set\": [1, 2]}}, {\"ok\": {\"$set\": []}}]}')\n"
-              "os._exit(0)\ndef f(t):\n    return None\n")
-    assert not evaluate_cases(forged, "f", cases, runner=sandbox).passed
+    for payload in (b'{"passed": true}', b'{"values": [{"ok": 1}]}',
+                    b'{"values": [{"ok": {"$set": [9]}}, {"ok": {"$set": [9]}}]}'):
+        forged = f"import os\nos.write(1, {payload!r})\nos._exit(0)\ndef f(t):\n    return None\n"
+        assert not evaluate_cases(forged, "f", cases, runner=sandbox).passed
     verdict = evaluate_cases("def f(t):\n    return t[5]\n", "f", cases, runner=sandbox)
     assert not verdict.passed and "IndexError" in verdict.detail
     slow = evaluate_cases("def f(t):\n    while True:\n        pass\n", "f", cases, runner=sandbox, timeout=2)

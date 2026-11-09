@@ -117,7 +117,7 @@
     "mbpp": {
       "tasks": 377,
       "cases": 1169,
-      "sha256": "8d3f74393cab69db272ec6bc7fd05dfb3b515807ec56fbfe293819b75ffee64c",
+      "sha256": "c804ac31fdb2dfb3b59e487e25debb92f04935af8e48abec0eeae2b27cdd6cf3",
       "excluded": {
         "Mbpp/596": "non-literal value"
       }
@@ -125,7 +125,7 @@
     "mbpp_plus": {
       "tasks": 372,
       "cases": 39972,
-      "sha256": "1efb024484489256d0008f8ecf6ad757f1ce6ecb6535ea1a651f8fc8ab65203e",
+      "sha256": "3e815e129969890374014b8b1b5d7e6986f75e167b08e3fff21a4e81a4b3b95b",
       "excluded": {
         "Mbpp/255": "expected values are computed by a reference function",
         "Mbpp/630": "expected values are computed by a reference function",
