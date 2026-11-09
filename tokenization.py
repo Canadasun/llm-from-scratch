@@ -6,10 +6,17 @@ char vs BPE is a single flag, and a trained checkpoint carries its tokenizer wit
 it (as a dict) so sampling needs nothing else.
 """
 
+from special_tokens import SPECIAL_TOKENS
 from tokenizer import CharTokenizer
 from tokenizer_bpe import BPETokenizer
 
 _REGISTRY = {"char": CharTokenizer, "bpe": BPETokenizer}
+
+
+def build_with_specials(kind, text, vocab_size=1024, bpe_train_chars=500_000, verbose=False):
+    tok = build(kind, text, vocab_size=max(256, vocab_size - len(SPECIAL_TOKENS)) if kind == "bpe" else vocab_size,
+                bpe_train_chars=bpe_train_chars, verbose=verbose)
+    return tok.add_special_tokens(SPECIAL_TOKENS)
 
 
 def build(kind, text, vocab_size=1024, bpe_train_chars=500_000, verbose=False):

@@ -23,6 +23,8 @@ decoding are all implemented by hand so the mechanism is fully visible.
 import json
 import re
 
+from special_tokens import SpecialTokensMixin
+
 # Cap the per-tokenizer encode memo so a long-lived serving process fed many
 # distinct inputs cannot accumulate retained strings/token-lists without bound.
 _CACHE_MAX = 100_000
@@ -54,19 +56,19 @@ def _merge(ids, pair, new_id):
     return out
 
 
-class BPETokenizer:
+class BPETokenizer(SpecialTokensMixin):
     kind = "bpe"
 
-    def __init__(self, merges=None, vocab=None):
+    def __init__(self, merges=None, vocab=None, special=None):
         # merges: dict mapping (int, int) pair -> new int id, in learned order.
         self.merges = merges or {}
         # vocab: dict mapping id -> bytes. Built from merges on top of 0..255.
         self.vocab = vocab or {i: bytes([i]) for i in range(256)}
         self._rank = None       # pair -> merge order, built lazily for encode
         self._cache = {}        # chunk str -> encoded ids, memoized
+        self.special = dict(special) if special else {}
 
-    @property
-    def vocab_size(self):
+    def _base_vocab_size(self):
         return len(self.vocab)
 
     @staticmethod
@@ -82,6 +84,8 @@ class BPETokenizer:
         seqs = [list(c.encode("utf-8")) for c in self._chunks(text)]
         self.merges = {}
         self.vocab = {i: bytes([i]) for i in range(256)}
+        self.special = {}
+        self._special_inverse = None
 
         for m in range(num_merges):
             counts = {}
@@ -127,24 +131,24 @@ class BPETokenizer:
         self._cache[chunk] = ids
         return ids
 
-    def encode(self, text):
+    def _encode_ordinary(self, text):
         """Text -> list of token ids (per-chunk, with memoization)."""
         out = []
         for chunk in self._chunks(text):
             out.extend(self._encode_chunk(chunk))
         return out
 
-    def decode(self, ids):
+    def _decode_ordinary(self, ids):
         """List of token ids -> text."""
         data = b"".join(self.vocab[int(i)] for i in ids)
         return data.decode("utf-8", errors="replace")
 
     def to_dict(self):
         # JSON keys must be strings, so pairs are stored as "a,b".
-        return {
+        return self._with_special({
             "kind": self.kind,
             "merges": {f"{a},{b}": nid for (a, b), nid in self.merges.items()},
-        }
+        })
 
     @classmethod
     def from_dict(cls, obj):
@@ -155,7 +159,7 @@ class BPETokenizer:
             a, b = (int(x) for x in key.split(","))
             merges[(a, b)] = nid
             vocab[nid] = vocab[a] + vocab[b]
-        return cls(merges=merges, vocab=vocab)
+        return cls(merges=merges, vocab=vocab)._restore_special(obj)
 
     def save(self, path):
         with open(path, "w", encoding="utf-8") as f:
