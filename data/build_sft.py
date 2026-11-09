@@ -215,8 +215,9 @@ def _rule_pickle(call, fn):
 
 def _rule_sql(call, fn):
     if isinstance(call.func, ast.Attribute) and call.func.attr in {"execute", "executemany"} and call.args:
-        if _dynamic_str(call.args[0]) and re.match(r"\s*(?:select|insert|update|delete)\b",
-                                                   _string_prefix(call.args[0]), re.IGNORECASE):
+        prefix = _string_prefix(call.args[0])
+        if (_dynamic_str(call.args[0]) and re.match(r"\s*(?:select|insert|update|delete)\b", prefix, re.IGNORECASE)
+                and not re.search(r"\b(?:from|into|update|table|join)\s*[`\"']?$", prefix.rstrip(), re.IGNORECASE)):
             return "sql-injection"
     return None
 
@@ -247,7 +248,8 @@ def _rule_tls(call, fn):
 def _rule_weak_hash(call, fn):
     if _call_name(call) in {"hashlib.md5", "hashlib.sha1", "hashlib.sha256"} and call.args:
         arg = ast.unparse(call.args[0])
-        if _PASSWORD_NAME.search(arg):
+        if _PASSWORD_NAME.search(arg) and not re.search(r"pwnedpasswords|range/|k-?anonymity", ast.unparse(fn),
+                                                         re.IGNORECASE):
             return "fast-hash-for-password"
     return None
 

@@ -74,6 +74,10 @@ def test_review_rules_hit_real_patterns_and_skip_safe_ones():
     assert rules("import random\n\ndef shuffle_deck():\n    x = 1\n    return random.choice('abc')\n") == set()
     assert rules("import tarfile\n\ndef unpack(p, d):\n    with tarfile.open(p) as t:\n        t.extractall(d)\n") == {"tar-path-traversal"}
     assert rules("import tarfile\n\ndef unpack(p, d):\n    with tarfile.open(p) as t:\n        t.extractall(d, filter='data')\n") == set()
+    assert rules("def drop(cur, table):\n    x = 1\n    cur.execute(\"DELETE FROM \" + table)\n") == set()
+    assert rules("import hashlib\n\ndef pwned(password):\n    h = hashlib.sha1(password.encode()).hexdigest()\n"
+                 "    return 'https://api.pwnedpasswords.com/range/' + h[:5]\n") == set()
+    assert rules("import hashlib\n\ndef store(password):\n    x = 1\n    return hashlib.md5(password.encode())\n") == {"fast-hash-for-password"}
     assert rules("def ev(s):\n    x = 1\n    return eval(s)\n") == {"eval-of-dynamic-input"}
 
 
