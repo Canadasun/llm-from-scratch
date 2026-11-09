@@ -139,12 +139,12 @@ def build(args):
     out.mkdir(parents=True, exist_ok=True)
     cache = Path(args.cache)
     sources = []
+    if "prose" in args.sources:
+        sources.append(prose_rows(args.prose))
     if "cpython" in args.sources:
         sources.append(cpython_rows(cache))
     if "stack" in args.sources:
         sources.append(stack_rows(cache, args.stack_files, args.seed))
-    if "prose" in args.sources:
-        sources.append(prose_rows(args.prose))
     stats, dedup, exact = {}, P.NearDuplicateIndex(), set()
     contamination = contamination_index(args.eval_dir)
     docs = {"train": out / "train.jsonl", "val": out / "val.jsonl", "test": out / "holdout_test.jsonl"}
