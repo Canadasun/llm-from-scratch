@@ -117,6 +117,42 @@ def write_shards(documents, tokenizer, out_dir, shard_tokens=1 << 26, val_fracti
     return manifest, manifest_sha256(out)
 
 
+def filter_shards(src_dir, out_dir, drop, source_note):
+    """Copy a verified shard set, removing documents by (split, index) without re-tokenizing."""
+    manifest, digest, tokenizer = load_manifest(src_dir, verify=True)
+    out = Path(out_dir)
+    if out.exists() and any(out.iterdir()):
+        raise ValueError(f"{out} is not empty; shard sets are immutable")
+    out.mkdir(parents=True, exist_ok=True)
+    root = Path(src_dir)
+    writers = {s: _ShardWriter(out, s, max(r["tokens"] for r in manifest["splits"][s]["shards"])) for s in SPLITS}
+    removed = {s: 0 for s in SPLITS}
+    for split in SPLITS:
+        index = 0
+        for rec in manifest["splits"][split]["shards"]:
+            tokens = np.fromfile(root / rec["file"], dtype=np.uint16)
+            starts = np.fromfile(root / rec["index"], dtype=np.uint64).astype(np.int64)
+            ends = np.append(starts[1:], tokens.size)
+            for a, b in zip(starts, ends):
+                if (split, index) in drop:
+                    removed[split] += 1
+                else:
+                    writers[split].add(tokens[a:b])
+                index += 1
+        writers[split].flush()
+    if len(drop) != sum(removed.values()):
+        raise ValueError("some documents to drop were not found")
+    tok_dict = tokenizer.to_dict()
+    (out / "tokenizer.json").write_text(json.dumps(tok_dict, separators=(",", ":"), ensure_ascii=False))
+    new = {**{k: v for k, v in manifest.items() if k != "splits"},
+           "source": {**manifest.get("source", {}), "derived_from_manifest_sha256": digest,
+                      "removed_documents": removed, **source_note},
+           "splits": {s: {"shards": w.records, "tokens": sum(r["tokens"] for r in w.records),
+                          "documents": sum(r["documents"] for r in w.records)} for s, w in writers.items()}}
+    (out / "manifest.json").write_text(json.dumps(new, indent=2, sort_keys=True) + "\n")
+    return new, manifest_sha256(out)
+
+
 def manifest_sha256(data_dir):
     manifest = json.loads((Path(data_dir) / "manifest.json").read_text())
     return sha256_bytes(canonical_json(manifest).encode("utf-8"))
