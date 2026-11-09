@@ -9,28 +9,30 @@ this for a byte-pair-encoding (BPE) tokenizer, which is what real LLMs use.
 
 import json
 
+from special_tokens import SpecialTokensMixin
 
-class CharTokenizer:
+
+class CharTokenizer(SpecialTokensMixin):
     kind = "char"
 
-    def __init__(self, chars):
+    def __init__(self, chars, special=None):
         # Sorted for determinism, so the same corpus always yields the same ids.
         self.chars = sorted(set(chars))
         self.stoi = {c: i for i, c in enumerate(self.chars)}
         self.itos = {i: c for i, c in enumerate(self.chars)}
+        self.special = dict(special) if special else {}
 
-    @property
-    def vocab_size(self):
+    def _base_vocab_size(self):
         return len(self.chars)
 
     @classmethod
     def from_text(cls, text):
         return cls(text)
 
-    def encode(self, text):
+    def _encode_ordinary(self, text):
         return [self.stoi[c] for c in text]
 
-    def decode(self, ids):
+    def _decode_ordinary(self, ids):
         return "".join(self.itos[int(i)] for i in ids)
 
     def save(self, path):
@@ -46,8 +48,8 @@ class CharTokenizer:
     # --- uniform (de)serialization so a checkpoint can embed the tokenizer ---
 
     def to_dict(self):
-        return {"kind": self.kind, "chars": self.chars}
+        return self._with_special({"kind": self.kind, "chars": self.chars})
 
     @classmethod
     def from_dict(cls, d):
-        return cls(d["chars"])
+        return cls(d["chars"])._restore_special(d)

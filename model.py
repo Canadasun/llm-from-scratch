@@ -55,12 +55,12 @@ class CausalSelfAttention(nn.Module):
         self.attn_dropout = nn.Dropout(cfg.dropout)
         self.resid_dropout = nn.Dropout(cfg.dropout)
 
-        # Lower-triangular matrix of ones: the causal mask. Registered as a
-        # buffer so it moves with the model (.to(device)) but is not a parameter.
-        mask = torch.tril(torch.ones(cfg.block_size, cfg.block_size))
-        self.register_buffer("mask", mask.view(1, 1, cfg.block_size, cfg.block_size))
+        self.dropout = cfg.dropout
+        mask = torch.tril(torch.ones(cfg.block_size, cfg.block_size, dtype=torch.bool))
+        self.register_buffer("mask", mask.view(1, 1, cfg.block_size, cfg.block_size),
+                             persistent=False)
 
-    def forward(self, x):
+    def forward(self, x, layer_cache=None):
         B, T, C = x.shape
 
         # Project to q, k, v, then split the last dim into three C-sized chunks.
@@ -71,18 +71,30 @@ class CausalSelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
 
-        # Attention scores: how much each query matches each key.
-        # (B, H, T, head_dim) @ (B, H, head_dim, T) -> (B, H, T, T)
-        att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        past = 0
+        if layer_cache is not None:
+            if layer_cache.get("k") is not None:
+                past = layer_cache["k"].size(2)
+                k = torch.cat([layer_cache["k"], k], dim=2)
+                v = torch.cat([layer_cache["v"], v], dim=2)
+            layer_cache["k"], layer_cache["v"] = k, v
+        total = past + T
+        mask = self.mask[:, :, past:total, :total]
 
-        # Causal mask: forbid attending to the future by setting those to -inf,
-        # so softmax gives them zero weight.
-        att = att.masked_fill(self.mask[:, :, :T, :T] == 0, float("-inf"))
-        att = F.softmax(att, dim=-1)
-        att = self.attn_dropout(att)
-
-        # Weighted sum of values -> (B, H, T, head_dim)
-        y = att @ v
+        if attention_backend() == "sdpa":
+            dropout_p = self.dropout if self.training else 0.0
+            if past == 0:
+                y = F.scaled_dot_product_attention(q, k, v, dropout_p=dropout_p, is_causal=True)
+            elif T == 1:
+                y = F.scaled_dot_product_attention(q, k, v, dropout_p=dropout_p)
+            else:
+                y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=dropout_p)
+        else:
+            att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+            att = att.masked_fill(~mask, float("-inf"))
+            att = F.softmax(att, dim=-1)
+            att = self.attn_dropout(att)
+            y = att @ v
 
         # Recombine heads back into (B, T, C).
         y = y.transpose(1, 2).contiguous().view(B, T, C)
@@ -116,8 +128,8 @@ class Block(nn.Module):
         self.ln2 = nn.LayerNorm(cfg.n_embd)
         self.mlp = MLP(cfg)
 
-    def forward(self, x):
-        x = x + self.attn(self.ln1(x))
+    def forward(self, x, layer_cache=None):
+        x = x + self.attn(self.ln1(x), layer_cache)
         x = x + self.mlp(self.ln2(x))
         return x
 
@@ -160,15 +172,21 @@ class GPT(nn.Module):
         # again, as this once did, UNDER-counted the model by vocab*n_embd.)
         return sum(p.numel() for p in self.parameters())
 
-    def forward(self, idx, targets=None):
-        B, T = idx.shape
-        assert T <= self.cfg.block_size, "sequence longer than block_size"
+    def load_state_dict(self, state_dict, strict=True, assign=False):
+        return super().load_state_dict(upgrade_state_dict(state_dict), strict=strict, assign=assign)
 
-        pos = torch.arange(T, device=idx.device)
+    def forward(self, idx, targets=None, cache=None):
+        B, T = idx.shape
+        past = cache.length if cache is not None else 0
+        assert past + T <= self.cfg.block_size, "sequence longer than block_size"
+
+        pos = torch.arange(past, past + T, device=idx.device)
         x = self.token_emb(idx) + self.pos_emb(pos)   # (B, T, C)
         x = self.drop(x)
-        for block in self.blocks:
-            x = block(x)
+        for i, block in enumerate(self.blocks):
+            x = block(x, cache.layers[i] if cache is not None else None)
+        if cache is not None:
+            cache.length = past + T
         x = self.ln_f(x)
         logits = self.head(x)                         # (B, T, vocab_size)
 
@@ -183,25 +201,70 @@ class GPT(nn.Module):
 
     @torch.no_grad()
     def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None,
-                 generator=None, check_cancelled=None):
+                 generator=None, check_cancelled=None, stop_ids=None, use_cache=True):
         """Autoregressive sampling: predict the next token, append it, repeat.
 
         `generator` is an optional torch.Generator; when given, sampling draws
         from it instead of the global RNG. That keeps a seeded request
         reproducible even when other requests sample concurrently (the global
         RNG is process-wide and would otherwise be a shared, racy resource)."""
+        if type(max_new_tokens) is not int or max_new_tokens < 0:
+            raise ValueError("max_new_tokens must be a non-negative integer")
         self.eval()
+        stops = None
+        if stop_ids:
+            stops = torch.tensor(sorted(set(int(i) for i in stop_ids)), device=idx.device)
+        finished = torch.zeros(idx.size(0), dtype=torch.bool, device=idx.device)
+        cache = None
         for _ in range(max_new_tokens):
             if check_cancelled is not None:
                 check_cancelled()
-            # Crop context to the last block_size tokens.
-            idx_cond = idx[:, -self.cfg.block_size:]
-            logits, _ = self(idx_cond)
-            logits = logits[:, -1, :] / temperature     # last position only
+            if use_cache and idx.size(1) <= self.cfg.block_size:
+                if cache is None:
+                    cache = KVCache(len(self.blocks))
+                    logits, _ = self(idx, cache=cache)
+                else:
+                    logits, _ = self(idx[:, -1:], cache=cache)
+            else:
+                cache = None
+                logits, _ = self(idx[:, -self.cfg.block_size:])
+            logits = logits[:, -1, :] / temperature
             if top_k is not None:
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = float("-inf")
             probs = F.softmax(logits, dim=-1)
             next_id = torch.multinomial(probs, num_samples=1, generator=generator)
             idx = torch.cat([idx, next_id], dim=1)
+            if stops is not None:
+                finished |= torch.isin(next_id[:, 0], stops)
+                if bool(finished.all()):
+                    break
         return idx
+
+
+class KVCache:
+    def __init__(self, n_layer):
+        self.layers = [{} for _ in range(n_layer)]
+        self.length = 0
+
+
+_BACKEND = ["sdpa" if hasattr(F, "scaled_dot_product_attention") else "manual"]
+
+
+def attention_backend():
+    return _BACKEND[0]
+
+
+def set_attention_backend(name):
+    if name not in ("sdpa", "manual"):
+        raise ValueError(f"unknown attention backend: {name!r}")
+    if name == "sdpa" and not hasattr(F, "scaled_dot_product_attention"):
+        raise ValueError("this torch build has no scaled_dot_product_attention")
+    previous = _BACKEND[0]
+    _BACKEND[0] = name
+    return previous
+
+
+def upgrade_state_dict(state_dict):
+    return {k: v for k, v in state_dict.items()
+            if not (k.endswith(".attn.mask") and k.startswith("blocks."))}

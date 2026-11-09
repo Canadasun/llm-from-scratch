@@ -11,6 +11,7 @@ import torch
 
 import tokenization
 from model import GPT, GPTConfig
+from special_tokens import ENDOFTEXT, USER
 from serve.validation import ValidationError
 from serve.lifecycle import check_generation
 
@@ -31,6 +32,15 @@ class InferenceEngine:
         self.model = model
         self.tokenizer = tokenizer
         self.device = device
+        special_id = getattr(tokenizer, "special_id", None)
+        self.stop_ids = frozenset(
+            i for i in (special_id(name) for name in (ENDOFTEXT, USER)) if i is not None
+        ) if special_id else frozenset()
+
+    def _decode(self, ids):
+        if getattr(self.tokenizer, "special_ids", None):
+            return self.tokenizer.decode(ids, skip_special=True)
+        return self.tokenizer.decode(ids)
 
     @staticmethod
     def _quantize(model):
@@ -97,11 +107,13 @@ class InferenceEngine:
         idx = torch.tensor([ids], dtype=torch.long, device=self.device)
         out = self.model.generate(
             idx, max_new_tokens, temperature=temperature, top_k=top_k,
-            generator=gen, check_cancelled=check_generation)
+            generator=gen, check_cancelled=check_generation, stop_ids=self.stop_ids)
         check_generation()
         out_ids = out[0].tolist()
-        full = self.tokenizer.decode(out_ids)
-        completion = self.tokenizer.decode(out_ids[len(ids):])
+        if self.stop_ids and len(out_ids) > len(ids) and out_ids[-1] in self.stop_ids:
+            out_ids = out_ids[:-1]
+        full = self._decode(out_ids)
+        completion = self._decode(out_ids[len(ids):])
         return {
             "text": full,
             "completion": completion,

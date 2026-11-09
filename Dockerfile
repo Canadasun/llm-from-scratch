@@ -2,7 +2,7 @@
 # endpoint. CPU-only: the model is small and serving needs just PyTorch plus the
 # repo's own hand-written modules. The trained checkpoint is baked in at
 # checkpoints/ckpt.pt (see .gcloudignore, which keeps that one file).
-FROM python:3.13-slim
+FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90
 
 WORKDIR /app
 # Needed for independent evaluation of this same immutable serving image.
@@ -11,11 +11,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap libs
 
 # CPU build of PyTorch only (no CUDA, no pymupdf — that is a corpus-build dep,
 # not a serving dep). Pinned to the CPU wheel index.
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+ARG TORCH_VERSION=2.15.0
+RUN pip install --no-cache-dir "torch==${TORCH_VERSION}" --index-url https://download.pytorch.org/whl/cpu
+
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid app --home-dir /app --shell /usr/sbin/nologin app
 
 # App code + the baked-in checkpoint (filtered by .gcloudignore / .dockerignore).
-COPY . /app
+COPY requirements-identity.txt /app/requirements-identity.txt
 RUN pip install --no-cache-dir -r requirements-identity.txt
+COPY --chown=root:root . /app
+USER 10001:10001
 
 # Cloud Run injects $PORT (defaults to 8080). Bind all interfaces INSIDE the
 # container — the only network path in is Cloud Run's managed proxy.

@@ -28,6 +28,12 @@ class TrainConfig:
     weight_decay: float = 0.1
     grad_clip: float = 1.0
     warmup_iters: int = 100    # linear LR warmup (helps the bigger GPU model)
+    lr_schedule: str = "cosine"
+    min_lr_ratio: float = 0.1
+    lr_decay_iters: int = 0
+    grad_accum_steps: int = 1
+    beta2: float = 0.95
+    doc_aligned: bool = True
 
     # --- tokenizer ---
     tokenizer: str = "char"    # "char" or "bpe"
@@ -114,5 +120,25 @@ def gpu_xl_preset():
     )
 
 
+def gpu_base_preset():
+    return TrainConfig(
+        block_size=1024,
+        n_layer=12,
+        n_head=10,
+        n_embd=640,
+        dropout=0.0,
+        batch_size=8,
+        grad_accum_steps=16,
+        learning_rate=6e-4,
+        max_iters=30000,
+        eval_interval=500,
+        eval_iters=40,
+        warmup_iters=1000,
+        tokenizer="bpe",
+        vocab_size=8192,
+        bpe_train_chars=1_200_000,
+    )
+
+
 PRESETS = {"cpu": cpu_preset, "gpu": gpu_preset, "gpu_large": gpu_large_preset,
-           "gpu_xl": gpu_xl_preset}
+           "gpu_xl": gpu_xl_preset, "gpu_base": gpu_base_preset}
