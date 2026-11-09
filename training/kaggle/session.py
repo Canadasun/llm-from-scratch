@@ -95,6 +95,8 @@ def main():
             if digest != CONFIG["state_ckpt_sha256"]:
                 raise SystemExit(f"resume checkpoint sha256 {digest} does not match the pinned value")
             summary["state_ckpt_sha256"] = digest
+    for name, (slug, marker) in CONFIG.get("extra_inputs", {}).items():
+        paths[name] = find_dir(marker, slug)
     summary["paths"] = paths
     failed = False
     for step in CONFIG["steps"]:

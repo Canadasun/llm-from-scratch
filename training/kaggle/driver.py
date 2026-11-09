@@ -111,6 +111,8 @@ def cmd_push(args):
     for key in ("data_slug", "state_slug"):
         if config.get(key):
             sources.append(f"{user}/{config[key]}")
+    for slug, _ in config.get("extra_inputs", {}).values():
+        sources.append(f"{user}/{slug}")
     stage = Path(tempfile.mkdtemp(prefix="llmfs-kernel-"))
     try:
         script = SESSION.read_text().replace("__LLMFS_CONFIG__", json.dumps(config))

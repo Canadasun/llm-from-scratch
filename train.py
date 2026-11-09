@@ -377,8 +377,11 @@ def main(argv=None):
 
     if args.data_dir:
         from data.shards import ShardSplit, load_manifest
-        manifest, corpus_hash, tokenizer = load_manifest(
-            args.data_dir, verify=not args.skip_shard_hash, expect_sha256=args.expect_data_sha256)
+        try:
+            manifest, corpus_hash, tokenizer = load_manifest(
+                args.data_dir, verify=not args.skip_shard_hash, expect_sha256=args.expect_data_sha256)
+        except (OSError, ValueError, KeyError) as exc:
+            ap.error(f"token shards rejected: {exc}")
         splits = {s: ShardSplit(args.data_dir, s, manifest) for s in ("train", "val")}
         data_kind = "shards"
         cfg.tokenizer = tokenizer.kind
