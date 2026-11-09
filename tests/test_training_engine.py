@@ -302,3 +302,28 @@ def test_benchmark_runs_on_cpu(tmp_path, monkeypatch):
                     "--batch-sizes", "2", "--out", str(out)])
     report = json.loads(out.read_text())
     assert report["results"][0]["best"]["tokens_per_second"] > 0
+
+
+def test_bpe_tokenizer_survives_key_sorted_json(tmp_path):
+    from data.shards import load_manifest, write_shards
+    text = "".join(documents()) * 3
+    tok = tokenization.build_with_specials("bpe", text, vocab_size=420)
+    shuffled = json.loads(json.dumps(tok.to_dict(), sort_keys=True))
+    back = tokenization.from_dict(shuffled)
+    sample = documents()[7] + ENDOFTEXT
+    assert back.encode(sample, allowed_special="all") == tok.encode(sample, allowed_special="all")
+    assert back.to_dict() == tok.to_dict()
+    _, digest = write_shards(documents(), tok, tmp_path / "bpe", shard_tokens=500, val_fraction=0.2)
+    _, loaded_digest, loaded = load_manifest(tmp_path / "bpe", expect_sha256=digest)
+    assert loaded_digest == digest and loaded.encode(sample, allowed_special="all") == tok.encode(sample, allowed_special="all")
+
+
+@pytest.mark.parametrize("capability,reported,expected", [((7, 5), True, False), ((8, 0), True, True),
+                                                          ((8, 6), False, False)])
+def test_bf16_only_on_native_hardware(monkeypatch, capability, reported, expected):
+    import train
+    monkeypatch.setattr(train.torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(train.torch.cuda, "get_device_capability", lambda index=0: capability)
+    monkeypatch.setattr(train.torch.cuda, "is_bf16_supported", lambda: reported)
+    assert train.native_bf16("cuda") is expected
+    assert train.native_bf16("cpu") is False

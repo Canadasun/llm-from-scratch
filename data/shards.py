@@ -100,7 +100,7 @@ def write_shards(documents, tokenizer, out_dir, shard_tokens=1 << 26, val_fracti
     if not writers["train"].records or not writers["val"].records:
         raise ValueError("both splits need at least one document; add data or adjust val_fraction")
     tok_dict = tokenizer.to_dict()
-    (out / "tokenizer.json").write_text(canonical_json(tok_dict))
+    (out / "tokenizer.json").write_text(json.dumps(tok_dict, separators=(",", ":"), ensure_ascii=False))
     manifest = {"format": FORMAT, "version": VERSION, "dtype": "uint16",
                 "vocab_size": tokenizer.vocab_size, "eot_id": eot,
                 "tokenizer_sha256": sha256_bytes(canonical_json(tok_dict).encode("utf-8")),
