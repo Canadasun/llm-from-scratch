@@ -78,7 +78,7 @@ def cmd_code(args):
                             check=True).stdout.strip()
     stage = Path(tempfile.mkdtemp(prefix="llmfs-code-"))
     try:
-        archive = stage / "code.tar"
+        archive = stage / "code.tar.pinned"
         subprocess.run(["git", "archive", "--format=tar", "-o", str(archive), commit], cwd=ROOT, check=True)
         digest = sha256_file(archive)
         ref = publish_dataset(args.slug, stage, args.slug, f"code {commit}")

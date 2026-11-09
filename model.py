@@ -194,8 +194,8 @@ class GPT(nn.Module):
         if targets is not None:
             # Cross-entropy over the flattened (B*T, vocab) logits vs targets.
             loss = F.cross_entropy(
-                logits.view(-1, logits.size(-1)),
-                targets.view(-1),
+                logits.reshape(-1, logits.size(-1)),
+                targets.reshape(-1),
             )
         return logits, loss
 

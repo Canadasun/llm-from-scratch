@@ -148,29 +148,37 @@ class ShardSplit:
             self.starts.append(np.fromfile(root / rec["index"], dtype=np.uint64).astype(np.int64))
             weights.append(rec["tokens"])
         self.tokens = int(sum(weights))
-        self.cumulative = np.cumsum(weights)
+        self.weights = weights
+        self._eligible = {}
 
     def __len__(self):
         return self.tokens
 
+    def _cumulative(self, span):
+        if span not in self._eligible:
+            usable = [w if w >= span else 0 for w in self.weights]
+            if not sum(usable):
+                raise ValueError("no shard has more than block_size tokens")
+            self._eligible[span] = (np.cumsum(usable), int(sum(usable)))
+        return self._eligible[span]
+
     def sample(self, batch_size, block_size, generator, doc_aligned=True):
         import torch
         span = block_size + 1
-        picks = torch.randint(self.tokens, (batch_size,), generator=generator).tolist()
+        cumulative, total = self._cumulative(span)
+        picks = torch.randint(total, (batch_size,), generator=generator).tolist()
         rows = []
         for p in picks:
-            s = int(np.searchsorted(self.cumulative, p, side="right"))
+            s = int(np.searchsorted(cumulative, p, side="right"))
             shard = self.shards[s]
-            if shard.size < span:
-                raise ValueError("every shard needs more than block_size tokens")
-            offset = p - (int(self.cumulative[s - 1]) if s else 0)
+            offset = p - (int(cumulative[s - 1]) if s else 0)
             if doc_aligned:
                 starts = self.starts[s]
                 offset = int(starts[np.searchsorted(starts, offset, side="right") - 1])
             offset = min(offset, shard.size - span)
             rows.append(np.asarray(shard[offset:offset + span], dtype=np.int64))
         block = torch.from_numpy(np.stack(rows))
-        return block[:, :-1], block[:, 1:]
+        return block[:, :-1].contiguous(), block[:, 1:].contiguous()
 
 
 def iter_text_files(paths):

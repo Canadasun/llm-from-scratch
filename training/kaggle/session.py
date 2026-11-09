@@ -40,7 +40,7 @@ def find_dir(marker, slug=None):
 
 
 def extract_code():
-    archive = os.path.join(find_dir("code.tar", CONFIG.get("code_slug")), "code.tar")
+    archive = os.path.join(find_dir("code.tar.pinned", CONFIG.get("code_slug")), "code.tar.pinned")
     digest = sha256_file(archive)
     if digest != CONFIG["code_tar_sha256"]:
         raise SystemExit(f"code archive sha256 {digest} does not match the pinned {CONFIG['code_tar_sha256']}")

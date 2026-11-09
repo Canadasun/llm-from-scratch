@@ -137,9 +137,9 @@ def test_special_tokens_are_explicit_and_round_trip(kind):
 
 
 def test_legacy_tokenizer_dicts_are_unchanged():
-    bpe = BPETokenizer().train("aaab aaab aaab", vocab_size=260)
+    bpe = BPETokenizer().train("aaab aaab aaab baab abab", vocab_size=260)
     assert set(bpe.to_dict()) == {"kind", "merges"}
-    assert tokenization.from_dict(bpe.to_dict()).vocab_size == bpe.vocab_size == 260
+    assert tokenization.from_dict(bpe.to_dict()).vocab_size == bpe.vocab_size == 256 + len(bpe.merges)
     char = CharTokenizer("abc")
     assert char.to_dict() == {"kind": "char", "chars": ["a", "b", "c"]}
     with pytest.raises(ValueError):
@@ -170,9 +170,13 @@ def test_shards_are_pinned_split_by_document_and_tamper_evident(tmp_path):
     split = ShardSplit(tmp_path / "set", "train", loaded)
     x, y = split.sample(16, 20, torch.Generator().manual_seed(0), doc_aligned=True)
     assert x.shape == y.shape == (16, 20) and torch.equal(x[:, 1:], y[:, :-1])
-    assert (x == eot).any()
     for row in x:
         assert tok.decode(row[:4].tolist()) == "def "
+    long_x, _ = split.sample(16, 200, torch.Generator().manual_seed(0), doc_aligned=True)
+    assert (long_x == eot).any()
+    assert split._cumulative(201)[1] <= len(split)
+    with pytest.raises(ValueError):
+        split.sample(1, 100_000, torch.Generator())
     with pytest.raises(ValueError):
         load_manifest(tmp_path / "set", expect_sha256="0" * 64)
     shard = tmp_path / "set" / manifest["splits"]["train"]["shards"][0]["file"]
