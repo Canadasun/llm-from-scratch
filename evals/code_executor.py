@@ -22,9 +22,14 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from evals.code_worker import decode_value, encode_value
+
 MAX_CODE_BYTES = 128 * 1024
 MAX_JSON_BYTES = 64 * 1024
 MAX_CASES = 100
+MAX_BATCH = 100
+MAX_SUITE_CASES = 1000
+MAX_BATCH_BYTES = 8 * 1024 * 1024
 WORKER = Path(__file__).with_name("code_worker.py")
 CASE_MANIFEST = Path(__file__).with_name("data") / "code_cases.json"
 
@@ -96,9 +101,9 @@ class Verdict:
     detail: str = ""
 
 
-def _json_bytes(value):
+def _json_bytes(value, limit=MAX_JSON_BYTES):
     data = json.dumps(value, allow_nan=False, ensure_ascii=True).encode()
-    if len(data) > MAX_JSON_BYTES:
+    if len(data) > limit:
         raise ValueError("JSON value exceeds size limit")
     return data
 
@@ -150,6 +155,111 @@ def _equal(actual, expected):
     return True
 
 
+def _decode_batch(data, count):
+    payload = json.loads(data, parse_constant=_reject_constant, object_pairs_hook=_unique_object)
+    if not isinstance(payload, dict) or set(payload) != {"values"} or not isinstance(payload["values"], list):
+        raise ValueError("worker must return exactly one values list")
+    if len(payload["values"]) != count:
+        raise ValueError("worker returned the wrong number of values")
+    out = []
+    for item in payload["values"]:
+        if not isinstance(item, dict) or len(item) != 1:
+            raise ValueError("invalid batch item")
+        if "ok" in item:
+            out.append(("ok", decode_value(item["ok"])))
+        elif "error" in item and isinstance(item["error"], str):
+            out.append(("error", item["error"][:64]))
+        else:
+            raise ValueError("invalid batch item")
+    return out
+
+
+def values_equal(actual, expected, atol=0.0):
+    if isinstance(actual, bool) or isinstance(expected, bool):
+        return type(actual) is type(expected) and actual == expected
+    if isinstance(expected, float):
+        if not isinstance(actual, (int, float)):
+            return False
+        if math.isnan(expected):
+            return isinstance(actual, float) and math.isnan(actual)
+        if math.isinf(expected):
+            return actual == expected
+        return actual == expected or abs(actual - expected) <= (atol or 1e-6) + 1e-7 * abs(expected)
+    if isinstance(expected, int):
+        if isinstance(actual, float) and not isinstance(expected, bool):
+            return actual == expected
+        return type(actual) is int and actual == expected
+    if isinstance(expected, complex):
+        return isinstance(actual, complex) and abs(actual - expected) <= (atol or 1e-6)
+    if type(actual) is not type(expected):
+        return False
+    if isinstance(expected, (list, tuple)):
+        return len(actual) == len(expected) and all(values_equal(a, e, atol) for a, e in zip(actual, expected))
+    if isinstance(expected, dict):
+        return actual.keys() == expected.keys() and all(values_equal(actual[k], v, atol) for k, v in expected.items())
+    return actual == expected
+
+
+COMPARE_MODES = ("exact", "set", "sequence")
+
+
+def _coerce(value, mode):
+    if mode == "set" and isinstance(value, (list, tuple, set, frozenset)):
+        try:
+            return set(value)
+        except TypeError:
+            return value
+    if mode == "sequence" and isinstance(value, (list, tuple)):
+        return list(value)
+    return value
+
+
+def evaluate_cases(code, function, cases, *, atol=0.0, timeout=60, runner=None, batch=MAX_BATCH):
+    """Run tagged-JSON cases in sandboxed batches; expected values never leave the controller."""
+    try:
+        if not isinstance(code, str) or len(code.encode("utf-8")) > MAX_CODE_BYTES:
+            raise ValueError("solution exceeds size limit")
+        if not isinstance(function, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", function):
+            raise ValueError("invalid function name")
+        if not isinstance(cases, list) or not 1 <= len(cases) <= MAX_SUITE_CASES:
+            raise ValueError("one to 1000 cases are required")
+        if not 1 <= batch <= MAX_BATCH:
+            raise ValueError("invalid batch size")
+        calls, expected, modes = [], [], []
+        for case in cases:
+            if (not isinstance(case, dict) or set(case) - {"args", "kwargs", "expected", "compare"}
+                    or "expected" not in case or case.get("compare", "exact") not in COMPARE_MODES):
+                raise ValueError("invalid case fields")
+            if not isinstance(case.get("args", []), list) or not isinstance(case.get("kwargs", {}), dict):
+                raise ValueError("case args/kwargs have invalid types")
+            modes.append(case.get("compare", "exact"))
+            calls.append({"args": case.get("args", []), "kwargs": case.get("kwargs", {})})
+            expected.append(decode_value(case["expected"]))
+    except (ValueError, TypeError, UnicodeError, RecursionError, OverflowError) as exc:
+        return Verdict("error", False, detail=str(exc))
+    runner = runner or BubblewrapRunner()
+    deadline = time.monotonic() + timeout
+    for start in range(0, len(calls), batch):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return Verdict("failed", False, start, len(cases), "suite timeout")
+        chunk = calls[start:start + batch]
+        try:
+            result = runner.run_batch(code, function, chunk, min(remaining, 30))
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return Verdict("error", False, start, len(cases), "execution infrastructure error")
+        if result.status != "ok":
+            status = "unavailable" if result.status == "unavailable" else "failed"
+            return Verdict(status, False, start, len(cases), result.detail)
+        for offset, (kind, value) in enumerate(result.value):
+            index = start + offset
+            if kind != "ok":
+                return Verdict("failed", False, index, len(cases), f"case {index + 1} raised {value}")
+            if not values_equal(_coerce(value, modes[index]), expected[index], atol):
+                return Verdict("failed", False, index, len(cases), f"case {index + 1} output mismatch")
+    return Verdict("passed", True, len(cases), len(cases), "all function cases passed")
+
+
 class BubblewrapRunner:
     """One fresh namespace per call. Runtime selection is deployment configuration.
 
@@ -177,14 +287,31 @@ class BubblewrapRunner:
                 "--", self.python, "-I", "-B", "/job/code_worker.py"]
 
     def run_case(self, code, function, args, kwargs, timeout):
+        result = self._run(code, {"function": function, "args": args, "kwargs": kwargs}, timeout, MAX_JSON_BYTES)
+        if result.status != "ok":
+            return result
+        try:
+            return Execution("ok", value=_decode_response(result.value))
+        except (ValueError, UnicodeError, RecursionError):
+            return Execution("failed", detail="invalid worker response")
+
+    def run_batch(self, code, function, calls, timeout):
+        result = self._run(code, {"function": function, "calls": calls}, timeout, MAX_BATCH_BYTES)
+        if result.status != "ok":
+            return result
+        try:
+            return Execution("ok", value=_decode_batch(result.value, len(calls)))
+        except (ValueError, TypeError, UnicodeError, RecursionError):
+            return Execution("failed", detail="invalid worker response")
+
+    def _run(self, code, request, timeout, max_output):
         if os.name != "posix" or not self.executable:
             return Execution("unavailable", detail="bubblewrap sandbox is required")
         with tempfile.TemporaryDirectory(prefix="llm_function_") as directory:
             root = Path(directory)
             (root / "solution.py").write_text(code, encoding="utf-8")
             shutil.copyfile(WORKER, root / "code_worker.py")
-            (root / "request.json").write_bytes(_json_bytes(
-                {"function": function, "args": args, "kwargs": kwargs}))
+            (root / "request.json").write_bytes(_json_bytes(request, max_output))
             with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr, tempfile.TemporaryFile() as seccomp:
                 try:
                     if not _seccomp_filter(seccomp):
@@ -213,7 +340,7 @@ class BubblewrapRunner:
                         pass
                     proc.wait()
                 stdout.seek(0)
-                data = stdout.read(MAX_JSON_BYTES + 1)
+                data = stdout.read(max_output + 1)
                 stderr.seek(0)
                 diagnostic = stderr.read(2048)
                 if proc.returncode:
@@ -221,12 +348,9 @@ class BubblewrapRunner:
                     if diagnostic.startswith(b"bwrap:"):
                         return Execution("unavailable", detail="required sandbox isolation could not start")
                     return Execution("failed", detail="worker exited unsuccessfully")
-                if len(data) > MAX_JSON_BYTES:
+                if len(data) > max_output:
                     return Execution("failed", detail="worker output exceeds limit")
-                try:
-                    return Execution("ok", value=_decode_response(data))
-                except (ValueError, UnicodeError, RecursionError):
-                    return Execution("failed", detail="invalid worker response")
+                return Execution("ok", value=data)
 
 
 def evaluate_function(code, function, cases, *, timeout=10, runner=None):
