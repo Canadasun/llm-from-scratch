@@ -91,10 +91,14 @@ def write_shards(documents, tokenizer, out_dir, shard_tokens=1 << 26, val_fracti
         raise ValueError(f"{out} is not empty; shard sets are immutable")
     out.mkdir(parents=True, exist_ok=True)
     writers = {s: _ShardWriter(out, s, shard_tokens) for s in SPLITS}
-    for text in documents:
+    for item in documents:
+        text, split = item if isinstance(item, tuple) else (item, None)
         if not text:
             continue
-        writers[document_split(text, val_fraction)].add(tokenizer.encode(text) + [eot])
+        split = split or document_split(text, val_fraction)
+        if split not in writers:
+            raise ValueError(f"unknown split {split!r}; test documents belong in a separate holdout file")
+        writers[split].add(tokenizer.encode(text) + [eot])
     for w in writers.values():
         w.flush()
     if not writers["train"].records or not writers["val"].records:
