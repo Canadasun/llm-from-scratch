@@ -21,7 +21,8 @@ sys.path.insert(0, str(ROOT))
 
 from config import PRESETS  # noqa: E402
 from model import GPT, GPTConfig, attention_backend  # noqa: E402
-from train import TensorSplit, configure_optimizer, make_autocast, pick_device, train_step  # noqa: E402
+from train import (TensorSplit, configure_optimizer, make_autocast, native_bf16,  # noqa: E402
+                   pick_device, train_step)
 
 
 def measure(preset, device, vocab_size, batch_sizes, steps, warmup, compile_model):
@@ -99,7 +100,9 @@ def main(argv=None):
         props = torch.cuda.get_device_properties(0)
         report.update({"gpu": props.name, "gpu_count": torch.cuda.device_count(),
                        "gpu_memory_gb": round(props.total_memory / 2**30, 1),
-                       "bf16": torch.cuda.is_bf16_supported()})
+                       "bf16_reported": torch.cuda.is_bf16_supported(),
+                       "bf16_native": native_bf16(device),
+                       "compute_capability": list(torch.cuda.get_device_capability(0))})
     for preset in args.presets:
         r = measure(preset, device, args.vocab_size, args.batch_sizes, args.steps, args.warmup, args.compile)
         report["results"].append(r)

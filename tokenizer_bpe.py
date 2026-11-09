@@ -154,8 +154,9 @@ class BPETokenizer(SpecialTokensMixin):
     def from_dict(cls, obj):
         merges = {}
         vocab = {i: bytes([i]) for i in range(256)}
-        # Rebuild in insertion order (Python dicts preserve it; JSON too).
-        for key, nid in obj["merges"].items():
+        # Merge ids are assigned in learned order, so sorting by id restores
+        # priority even if a serializer reordered the keys.
+        for key, nid in sorted(obj["merges"].items(), key=lambda kv: int(kv[1])):
             a, b = (int(x) for x in key.split(","))
             merges[(a, b)] = nid
             vocab[nid] = vocab[a] + vocab[b]

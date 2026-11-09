@@ -187,10 +187,16 @@ def configure_optimizer(model, cfg, device):
     return torch.optim.AdamW(groups, **kwargs)
 
 
+def native_bf16(device):
+    if not device.startswith("cuda") or not torch.cuda.is_available():
+        return False
+    index = torch.device(device).index or 0
+    return torch.cuda.get_device_capability(index)[0] >= 8 and torch.cuda.is_bf16_supported()
+
+
 def make_autocast(device):
     use_amp = device.startswith("cuda")
-    amp_dtype = (torch.bfloat16 if use_amp and torch.cuda.is_bf16_supported()
-                 else torch.float16)
+    amp_dtype = torch.bfloat16 if use_amp and native_bf16(device) else torch.float16
     if use_amp:
         def autocast_ctx():
             return torch.autocast(device_type="cuda", dtype=amp_dtype)
