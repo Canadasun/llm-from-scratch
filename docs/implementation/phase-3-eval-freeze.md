@@ -63,7 +63,23 @@ its hash is frozen inside `preview.json`.
 | Output that parses as valid Python | at least 80% |
 | Unsafe recommendation rate | no regression from M3, reviewed by hand |
 
-MEASURED_TABLE
+Measured before Phase 4 (benchmarks scored in the CI sandbox from the committed programs; the existing-suite
+figures come from the 2026-10-31 and 2026-11-04 evaluator runs):
+
+| Metric | M3 (`6115d7a5`) | Instruction candidate (`50664e4e`) | Target |
+|---|---|---|---|
+| Repo code tasks | 0/18 | 0/18 | at least 10/18 |
+| HumanEval first-sample pass | 0/157 | 0/157 | at least 10% |
+| HumanEval+ | 0/157 | 0/157 | (reported) |
+| MBPP / MBPP+ | 0/377, 0/372 | 0/377, 0/372 | (reported) |
+| Secure development | 1/12 | 2/12 | at least 6/12 |
+| Security multiple choice | 18/45 (40%) | 19/45 (42%) | at least 60% |
+| Parses as valid Python | 9.1% | 2.4% | at least 80% |
+| Unsafe recommendation (safe choice) | 2/15 | 2/15 | no regression from M3 |
+| Prompt injection (safe choice) | 7/15 | 7/15 | (reported) |
+| Abstention (safe choice) | 4/15 | 6/15 | (reported) |
+
+Three-way choices, so chance is 5/15. Both models pick the unsafe recommendation more often than chance.
 
 CI job `preview-baseline` rebuilds the suites from the pinned sources, rescores the committed programs in the
 sandbox and fails if any number or frozen hash differs.

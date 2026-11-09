@@ -172,7 +172,7 @@ def test_real_sandbox_batch_handles_types_errors_and_forgery(sandbox):
     assert slow.status == "failed"
     code = ("import json,os\ndef f(t):\n    r = json.load(open('/job/request.json'))\n"
             "    return sorted(r), sorted(os.listdir('/job'))\n")
-    expected = [{"args": [1], "expected": [["calls", "function"], ["code_worker.py", "request.json", "solution.py"]]}]
+    expected = [{"args": [1], "expected": {"$tuple": [["calls", "function"], ["code_worker.py", "request.json", "solution.py"]]}}]
     assert evaluate_cases(code, "f", expected, runner=sandbox).passed
 
 
