@@ -197,3 +197,15 @@ def test_bench_run_program_extraction():
     rows = [{"suite": "mbpp", "passed": True, "parses": True, "status": "passed"},
             {"suite": "mbpp", "passed": False, "parses": False, "status": "syntax-error"}]
     assert R.summarize(rows)["mbpp"] == {"tasks": 2, "passed": 1, "pass_at_1": 0.5, "parses": 0.5, "unavailable": 0}
+
+
+def test_preview_baseline_freezes_hashes_and_leaves_production_alone():
+    from evals import preview as V
+    preview = json.loads(V.PREVIEW.read_text())
+    assert preview["frozen"] == V.frozen_hashes()
+    assert preview["targets"]["humaneval_pass_at_1"]["min"] == 0.10
+    assert preview["targets"]["repo_code_tasks"] == {"min_correct": 10, "n": 18}
+    for name, entry in preview["measured"].items():
+        path = V.PROGRAMS / f"programs-{name}.json"
+        assert V.sha256(path) == entry["programs_sha256"]
+        assert json.loads(path.read_text())["meta"]["checkpoint_sha256"] == entry["checkpoint_sha256"]
