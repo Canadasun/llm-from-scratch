@@ -148,8 +148,8 @@ class NearDuplicateIndex:
                         dtype=np.uint64, count=len(shingles)) % np.uint64(_PRIME)
         return ((np.outer(x, self.a) + self.b) % np.uint64(_PRIME)).min(axis=0).astype(np.uint32)
 
-    def add_if_new(self, text):
-        sig = self.signature(text)
+    def add_if_new(self, text=None, signature=None):
+        sig = signature if signature is not None else self.signature(text)
         keys = [sig[i * self.rows:(i + 1) * self.rows].tobytes() for i in range(self.bands)]
         candidates = set()
         for band, key in enumerate(keys):
@@ -180,6 +180,40 @@ class SourceStats:
                 "bytes_out": self.bytes_out, "dropped": dict(sorted(self.dropped.items())),
                 "scrubbed": dict(sorted(self.scrubbed.items())), "splits": dict(sorted(self.splits.items())),
                 "licences": dict(sorted(self.licences.items()))}
+
+
+def prefilter(source, licences, require_python=True, near_dup=None):
+    kept, reason = licence_decision(licences)
+    if reason is None and require_python:
+        reason = python_parse_reason(source)
+    if reason is None:
+        reason = generated_reason(source) or payload_reason(source)
+    if reason is not None:
+        return {"reason": reason}
+    text, counts = scrub(source)
+    out = {"text": text, "licences": kept, "scrubbed": counts, "key": content_key(source)}
+    if near_dup is not None:
+        out["signature"] = near_dup.signature(source)
+    return out
+
+
+_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+")
+
+
+def ngrams(text, n=13):
+    words = [w.lower() for w in _WORD.findall(text)]
+    return {" ".join(words[i:i + n]) for i in range(len(words) - n + 1)}
+
+
+class ContaminationIndex:
+    def __init__(self, texts, n=13):
+        self.n = n
+        self.grams = set()
+        for text in texts:
+            self.grams |= ngrams(text, n)
+
+    def hits(self, text):
+        return len(ngrams(text, self.n) & self.grams) if self.grams else 0
 
 
 class CodeGate:

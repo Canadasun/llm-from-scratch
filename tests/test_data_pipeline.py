@@ -146,3 +146,36 @@ def test_near_duplicate_threshold_separates_similar_from_different():
     rewritten = "\n\n".join(f"class Model{i}:\n    def score(self, rows):\n        return sum(r[{i}] for r in rows) / {i + 1}"
                             for i in range(40))
     assert idx.add_if_new(rewritten)[0]
+
+
+def test_phase2_build_end_to_end_with_synthetic_sources(tmp_path, monkeypatch):
+    from data import build_phase2 as B
+    from data.shards import load_manifest
+    rows = []
+    for i in range(120):
+        body = "\n\n".join(f"def f{i}_{j}(x, y={j}):\n    total = x * {i} + y\n    return total - {j * i}" for j in range(12))
+        rows.append({"source": "synthetic-mit", "text": body, "licences": ["MIT"], "group": f"repo{i % 30}",
+                     "file": f"m{i}.py", "file_sha256": None})
+    rows.append({"source": "synthetic-mit", "text": rows[0]["text"], "licences": ["MIT"], "group": "repo0",
+                 "file": "dup.py", "file_sha256": None})
+    rows.append({"source": "synthetic-gpl", "text": "def g():\n    return 1\n", "licences": ["GPL-3.0"],
+                 "group": "gpl", "file": "g.py", "file_sha256": None})
+    monkeypatch.setattr(B, "cpython_rows", lambda cache: iter(rows))
+    out = tmp_path / "build"
+    B.main(["--out", str(out), "--sources", "cpython", "--target-bytes", "10000000", "--vocab-size", "400",
+            "--tokenizer-chars", "200000", "--val-fraction", "0.2", "--test-fraction", "0.2", "--workers", "2",
+            "--eval-dir", str(tmp_path / "no-evals")])
+    manifest = json.loads((out / "corpus-manifest.json").read_text())
+    mit, gpl = manifest["stats"]["synthetic-mit"], manifest["stats"]["synthetic-gpl"]
+    assert mit["rows_out"] == 120 and mit["dropped"] == {"exact-duplicate": 1}
+    assert gpl["rows_out"] == 0 and gpl["dropped"] == {"licence-not-allowlisted": 1}
+    groups = {}
+    for split in ("train", "val", "test"):
+        name = "holdout_test.jsonl" if split == "test" else f"{split}.jsonl"
+        for line in (out / name).read_text().splitlines():
+            groups.setdefault(json.loads(line)["group"], set()).add(split)
+    assert all(len(s) == 1 for s in groups.values())
+    report = json.loads((out / "tokenizer-report.json").read_text())
+    loaded, digest, tok = load_manifest(out / "shards", expect_sha256=report["shard_manifest_sha256"])
+    assert tok.kind == "bpe_code" and loaded["splits"]["train"]["documents"] == mit["splits"]["train"]
+    assert "CyberNative/Code_Vulnerability_Security_DPO" in manifest["excluded_sources"]
