@@ -36,3 +36,4 @@ data/code_corpus_manifest.json
 data/corpus_training.txt
 corpus_training.txt
 .venv-data/
+.venv-torch/

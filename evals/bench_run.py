@@ -1,7 +1,10 @@
 """Score a checkpoint on the frozen coding benchmarks (first greedy sample).
 
-    python -m evals.bench_run --ckpt checkpoints/ckpt.pt --bench-dir ~/llmfs-data/bench --json out.json
-    python -m evals.bench_run --ckpt sft.pt --bench-dir DIR --chat --suites humaneval mbpp
+    python -m evals.bench_run generate --ckpt ckpt.pt --bench-dir ~/llmfs-data/bench --out programs.json
+    python -m evals.bench_run score --programs programs.json --bench-dir ~/llmfs-data/bench --json results.json
+
+Generation needs the model but no sandbox; scoring needs the sandbox but no
+model, so programs can be generated on a GPU host and scored on a Linux runner.
 
 HumanEval prompts are completed as code and cut at the usual stop sequences.
 MBPP prompts ask for a function; the answer is read up to a closing code fence.
@@ -126,64 +129,113 @@ def summarize(results):
     return out
 
 
-def run(ckpt, bench_dir, suites=SUITES, limit=None, chat=False, max_new_tokens=384, device="auto",
-        progress=print):
-    from evals.code_executor import sandbox_preflight
+BEHAVIOUR = __import__("pathlib").Path(__file__).with_name("data") / "preview" / "behaviour_mc.jsonl"
+
+
+def behaviour(model, tokenizer, device):
+    from evals.tasks import load_tasks, run_task
+    results = [run_task(model, tokenizer, t, device) for t in load_tasks([str(BEHAVIOUR)])]
+    by = {}
+    for r in results:
+        c = by.setdefault(r["category"], {"n": 0, "correct": 0})
+        c["n"] += 1
+        c["correct"] += int(r["correct"])
+    for c in by.values():
+        c["acc"] = round(c["correct"] / c["n"], 4)
+    return {"by_category": by, "results": [{k: r[k] for k in ("id", "category", "correct", "chosen", "answer")}
+                                           for r in results]}
+
+
+def generate_all(ckpt, bench_dir, suites=SUITES, limit=None, chat=False, max_new_tokens=384, device="auto",
+                 progress=print):
     from evals.evidence import file_sha256
     from evals.loader import load_checkpoint, pick_device
     frozen = verify(bench_dir, FROZEN)
-    preflight = sandbox_preflight()
-    if not preflight["available"]:
-        raise SystemExit(f"sandbox unavailable, benchmarks not measured: {preflight['detail']}")
     device = pick_device(device)
     model, tokenizer, cfg = load_checkpoint(ckpt, device)
-    loaded = {s: load_suite(bench_dir, s)[:limit] if limit else load_suite(bench_dir, s) for s in suites}
-    programs, completions = {}, {}
+    programs = {}
     started = time.time()
-    for suite, tasks in loaded.items():
+    for suite in suites:
+        tasks = load_suite(bench_dir, suite)
         base = suite.replace("_plus", "")
-        for task in tasks:
-            key = (base, task["id"])
+        for task in tasks[:limit] if limit else tasks:
+            key = f"{base}:{task['id']}"
             if key in programs:
                 continue
             text, special = model_input(task, base, chat)
             completion = generate(model, tokenizer, text, special, max_new_tokens, device)
-            completions[key] = completion
-            programs[key] = program_for(task, base, completion, chat)
+            programs[key] = {"completion": completion, "program": program_for(task, base, completion, chat)}
             if len(programs) % 25 == 0:
                 progress(f"  generated {len(programs)} programs ({time.time() - started:.0f}s)")
-    results = score(programs, loaded)
-    summary = summarize(results)
-    parse_rate = round(sum(parses(p) for p in programs.values()) / max(1, len(programs)), 4)
-    return {"summary": summary, "parses_as_python": parse_rate, "results": results,
-            "programs": {f"{s}:{t}": p for (s, t), p in programs.items()},
+    return {"programs": programs, "behaviour": behaviour(model, tokenizer, device),
             "meta": {"ckpt": str(ckpt), "checkpoint_sha256": file_sha256(ckpt),
                      "bench_manifest_sha256": hashlib.sha256(FROZEN.read_bytes()).hexdigest(),
+                     "behaviour_sha256": hashlib.sha256(BEHAVIOUR.read_bytes()).hexdigest(),
                      "suite_sha256": {s: frozen["suites"][s]["sha256"] for s in suites},
+                     "suites": list(suites), "limit": limit,
                      "decoding": {"greedy": True, "max_new_tokens": max_new_tokens, "chat": chat,
                                   "stops": list(STOPS)},
-                     "limit": limit, "device": str(device), "sandbox": preflight,
-                     "evaluated_at": datetime.now(timezone.utc).isoformat(),
+                     "device": str(device), "generated_at": datetime.now(timezone.utc).isoformat(),
                      "n_layer": cfg["n_layer"], "block_size": cfg["block_size"],
                      "tokenizer": tokenizer.kind, "vocab_size": tokenizer.vocab_size}}
 
 
+def score_all(generated, bench_dir):
+    from evals.code_executor import sandbox_preflight
+    frozen = verify(bench_dir, FROZEN)
+    meta = generated["meta"]
+    if meta["bench_manifest_sha256"] != hashlib.sha256(FROZEN.read_bytes()).hexdigest():
+        raise SystemExit("programs were generated against a different benchmark manifest")
+    preflight = sandbox_preflight()
+    if not preflight["available"]:
+        raise SystemExit(f"sandbox unavailable, benchmarks not measured: {preflight['detail']}")
+    limit = meta["limit"]
+    loaded = {s: (load_suite(bench_dir, s)[:limit] if limit else load_suite(bench_dir, s)) for s in meta["suites"]}
+    programs = {tuple(k.split(":", 1)): v["program"] for k, v in generated["programs"].items()}
+    results = score(programs, loaded)
+    return {"summary": summarize(results),
+            "parses_as_python": round(sum(parses(p) for p in programs.values()) / max(1, len(programs)), 4),
+            "behaviour": generated["behaviour"]["by_category"], "results": results,
+            "meta": {**meta, "sandbox": preflight, "frozen_suites": {s: frozen["suites"][s]["sha256"]
+                                                                     for s in meta["suites"]},
+                     "scored_at": datetime.now(timezone.utc).isoformat()}}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--ckpt", required=True)
-    ap.add_argument("--bench-dir", required=True)
-    ap.add_argument("--suites", nargs="+", choices=SUITES, default=list(SUITES))
-    ap.add_argument("--limit", type=int)
-    ap.add_argument("--chat", action="store_true")
-    ap.add_argument("--max-new-tokens", type=int, default=384)
-    ap.add_argument("--device", default="auto")
-    ap.add_argument("--json")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    g = sub.add_parser("generate")
+    g.add_argument("--ckpt", required=True)
+    g.add_argument("--bench-dir", required=True)
+    g.add_argument("--suites", nargs="+", choices=SUITES, default=list(SUITES))
+    g.add_argument("--limit", type=int)
+    g.add_argument("--chat", action="store_true")
+    g.add_argument("--max-new-tokens", type=int, default=384)
+    g.add_argument("--device", default="auto")
+    g.add_argument("--threads", type=int, default=4)
+    g.add_argument("--out", required=True)
+    s = sub.add_parser("score")
+    s.add_argument("--programs", required=True)
+    s.add_argument("--bench-dir", required=True)
+    s.add_argument("--json")
     args = ap.parse_args(argv)
-    out = run(args.ckpt, args.bench_dir, args.suites, args.limit, args.chat, args.max_new_tokens, args.device)
-    print(json.dumps({"summary": out["summary"], "parses_as_python": out["parses_as_python"]}, indent=2))
+    if args.cmd == "generate":
+        import torch
+        torch.set_num_threads(args.threads)
+        out = generate_all(args.ckpt, args.bench_dir, args.suites, args.limit, args.chat, args.max_new_tokens,
+                           args.device)
+        with open(args.out, "w", encoding="utf-8") as fh:
+            json.dump(out, fh, indent=1, sort_keys=True, ensure_ascii=False)
+        print(json.dumps({"programs": len(out["programs"]), "behaviour": out["behaviour"]["by_category"]}, indent=2))
+        return 0
+    with open(args.programs, encoding="utf-8") as fh:
+        generated = json.load(fh)
+    out = score_all(generated, args.bench_dir)
+    print(json.dumps({"summary": out["summary"], "parses_as_python": out["parses_as_python"],
+                      "behaviour": out["behaviour"]}, indent=2))
     if args.json:
         with open(args.json, "w", encoding="utf-8") as fh:
-            json.dump(out, fh, indent=1)
+            json.dump(out, fh, indent=1, sort_keys=True)
     return 0
 
 

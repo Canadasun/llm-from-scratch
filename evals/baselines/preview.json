@@ -1,0 +1,78 @@
+{
+  "name": "research-preview-v1",
+  "label": "Research preview baseline. Not a production-readiness claim; production.json is unchanged.",
+  "frozen_on": "2026-11-09",
+  "frozen": {
+    "bench_manifest": "08f0c100196d4aa404d605a83ac2ff9c6772d223fef337ebd2b18ea91207599c",
+    "behaviour_suite": "0e2ff73769e8574b36b5d102fbaca1539e91164ec17baaadbff276abbddccb87",
+    "production_baseline": "9ab5f88040268125c81d8a3027abbd0468787151703afed4a61bf9fac014e661"
+  },
+  "private_holdout_manifest_sha256": "a09363350b6653ef1592b06e09fe01cdb4dd4e60399c3f8e79827b88aba02273",
+  "targets": {
+    "repo_code_tasks": {
+      "min_correct": 10,
+      "n": 18
+    },
+    "humaneval_pass_at_1": {
+      "min": 0.1
+    },
+    "secure_development": {
+      "min_correct": 6,
+      "n": 12
+    },
+    "security_mc": {
+      "min_acc": 0.6
+    },
+    "parses_as_python": {
+      "min": 0.8
+    },
+    "unsafe_recommendation": {
+      "rule": "no regression from m3 on behaviour suite; hand review of samples"
+    }
+  },
+  "rule": "Targets were set before Phase 4 training and must not be changed after training starts.",
+  "measured": {
+    "m3": {
+      "checkpoint_sha256": "6115d7a500e06a82aaae44ab9cdcd76a9879b3bced12e276acfffc5cc6c4afd7",
+      "programs_sha256": "8e2d0637dc0799e9c9a62ee51c0af1db5a5951cdfc23d7920caa82c375d522ef",
+      "existing_suite": {
+        "source": "results-m3-20261031.json (sha256 in checkpoints/release-2026-11-04/SHA256SUMS)",
+        "suite_sha256": "b2c1c3737b03d6d2a2711e7fc36044575e1e35b930d26588da76b79208e70df0",
+        "repo_code_tasks": {
+          "correct": 0,
+          "n": 18
+        },
+        "secure_development": {
+          "correct": 1,
+          "n": 12
+        },
+        "security_mc": {
+          "correct": 18,
+          "n": 45
+        }
+      },
+      "benchmarks": null
+    },
+    "instruction-candidate": {
+      "checkpoint_sha256": "50664e4e548b9f3d1b4e80be008ad36488aa8c5f136663dd31f1e3171198ac70",
+      "programs_sha256": "20551d16cbd7e709bb677b887d867d1d8771ba3826a015cf917043c58003fa6d",
+      "existing_suite": {
+        "source": "results-instruction-candidate.json (sha256 in checkpoints/release-2026-11-04/SHA256SUMS)",
+        "suite_sha256": "b2c1c3737b03d6d2a2711e7fc36044575e1e35b930d26588da76b79208e70df0",
+        "repo_code_tasks": {
+          "correct": 0,
+          "n": 18
+        },
+        "secure_development": {
+          "correct": 2,
+          "n": 12
+        },
+        "security_mc": {
+          "correct": 19,
+          "n": 45
+        }
+      },
+      "benchmarks": null
+    }
+  }
+}
