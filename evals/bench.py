@@ -170,7 +170,7 @@ def assert_case(test, name):
         left, op, right = test.left, test.ops[0], test.comparators[0]
         if isinstance(op, ast.Is) and isinstance(right, ast.Constant) and isinstance(right.value, bool):
             args, kwargs = _call_case(left, name)
-            return _case(args, kwargs, right.value), 0.0
+            return _case(args, kwargs, right.value, "is"), 0.0
         if isinstance(op, ast.Eq):
             kind, inner = _wrapped(left, name)
             if kind:
@@ -200,10 +200,10 @@ def assert_case(test, name):
         return _case(args, kwargs, expected), atol
     if isinstance(test, ast.Call) and getattr(test.func, "id", None) == name:
         args, kwargs = _call_case(test, name)
-        return _case(args, kwargs, True), 0.0
+        return _case(args, kwargs, True, "truth"), 0.0
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
         args, kwargs = _call_case(test.operand, name)
-        return _case(args, kwargs, False), 0.0
+        return _case(args, kwargs, False, "truth"), 0.0
     raise Unsupported("unsupported assertion")
 
 
@@ -344,7 +344,7 @@ def build(raw_dir, out_dir):
             excluded["mbpp_plus"][tid] = str(exc)
     files = {}
     for name, tasks in suites.items():
-        data = "".join(json.dumps(t, sort_keys=True, ensure_ascii=False) + "\n" for t in tasks)
+        data = "".join(json.dumps(t, ensure_ascii=False) + "\n" for t in tasks)
         (out / f"{name}.jsonl").write_text(data, encoding="utf-8")
         files[name] = {"tasks": len(tasks), "cases": sum(len(t["cases"]) for t in tasks),
                        "sha256": sha256_bytes(data.encode("utf-8")), "excluded": dict(sorted(excluded[name].items()))}
@@ -393,25 +393,49 @@ def canonical(raw_dir, out_dir, workers=4):
         raise SystemExit(f"sandbox unavailable: {preflight['detail']}")
     raw = fetch(raw_dir)
     solutions = {}
-    for row in _rows(raw, "humaneval"):
-        solutions[row["task_id"]] = row["prompt"] + row["canonical_solution"]
+    for suite, source in (("humaneval", "humaneval"), ("humaneval_plus", "humaneval_plus")):
+        for row in _rows(raw, source):
+            solutions[suite, row["task_id"]] = row["prompt"] + row["canonical_solution"]
     for row in _rows(raw, "mbpp_plus"):
-        solutions[f"Mbpp/{row['task_id']}"] = row["code"]
+        for suite in ("mbpp", "mbpp_plus"):
+            solutions[suite, f"Mbpp/{row['task_id']}"] = row["code"]
     jobs = [(name, task) for name in SUITES for task in load_suite(out_dir, name)]
 
     def run(job):
         name, task = job
-        verdict = evaluate_cases(solutions[task["id"]], task["entry_point"], task["cases"],
+        verdict = evaluate_cases(solutions[name, task["id"]], task["entry_point"], task["cases"],
                                  atol=task["atol"], timeout=300)
         return name, task["id"], verdict
 
-    failures, counts = [], {s: 0 for s in SUITES}
+    failures = []
+    tally = {s: dict.fromkeys(OUTCOMES, 0) for s in SUITES}
     with ThreadPoolExecutor(workers) as pool:
         for name, tid, verdict in pool.map(run, jobs):
-            counts[name] += 1
-            if not verdict.passed:
-                failures.append({"suite": name, "id": tid, "status": verdict.status, "detail": verdict.detail})
-    return {"checked": counts, "failures": failures}
+            outcome = classify(verdict)
+            tally[name][outcome] += 1
+            if outcome != "passed":
+                failures.append({"suite": name, "id": tid, "outcome": outcome, "status": verdict.status,
+                                 "cases_passed": verdict.cases_passed, "cases": verdict.cases_total,
+                                 "detail": verdict.detail})
+    return {"suites": tally, "failures": failures}
+
+
+OUTCOMES = ("passed", "output_mismatch", "exception", "timeout", "worker_failure", "sandbox_error")
+
+
+def classify(verdict):
+    detail = verdict.detail or ""
+    if verdict.passed:
+        return "passed"
+    if verdict.status != "failed":
+        return "sandbox_error"
+    if "timeout" in detail:
+        return "timeout"
+    if "output mismatch" in detail:
+        return "output_mismatch"
+    if " raised " in detail:
+        return "exception"
+    return "worker_failure"
 
 
 FROZEN = HERE / "data" / "bench-manifest.json"
@@ -430,11 +454,15 @@ def main(argv=None):
     c.add_argument("--raw", required=True)
     c.add_argument("--out", required=True)
     c.add_argument("--workers", type=int, default=4)
+    c.add_argument("--report")
     args = ap.parse_args(argv)
     if args.cmd == "canonical":
         verify(args.out, FROZEN)
         report = canonical(args.raw, args.out, args.workers)
-        print(json.dumps(report, indent=2))
+        text = json.dumps(report, indent=2)
+        if args.report:
+            Path(args.report).write_text(text + "\n")
+        print(text)
         return 1 if report["failures"] else 0
     if args.cmd == "build":
         manifest = build(args.raw, args.out)

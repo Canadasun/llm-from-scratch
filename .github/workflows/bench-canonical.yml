@@ -9,8 +9,11 @@ permissions:
 jobs:
   canonical:
     runs-on: ubuntu-22.04
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -30,4 +33,14 @@ jobs:
           python -m evals.bench verify --out "$RUNNER_TEMP/bench"
 
       - name: Reference solutions must pass their converted suites inside the sandbox
-        run: python -m evals.bench canonical --raw "$RUNNER_TEMP/bench-raw" --out "$RUNNER_TEMP/bench"
+        run: |
+          python -m evals.bench canonical --raw "$RUNNER_TEMP/bench-raw" --out "$RUNNER_TEMP/bench" \
+            --report "$RUNNER_TEMP/canonical-report.json"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: canonical-report
+          path: ${{ runner.temp }}/canonical-report.json
+          if-no-files-found: warn
