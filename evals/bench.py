@@ -405,13 +405,35 @@ def canonical(raw_dir, out_dir, workers=4):
                                  atol=task["atol"], timeout=300)
         return name, task["id"], verdict
 
-    failures, counts = [], {s: 0 for s in SUITES}
+    failures = []
+    tally = {s: dict.fromkeys(OUTCOMES, 0) for s in SUITES}
     with ThreadPoolExecutor(workers) as pool:
         for name, tid, verdict in pool.map(run, jobs):
-            counts[name] += 1
-            if not verdict.passed:
-                failures.append({"suite": name, "id": tid, "status": verdict.status, "detail": verdict.detail})
-    return {"checked": counts, "failures": failures}
+            outcome = classify(verdict)
+            tally[name][outcome] += 1
+            if outcome != "passed":
+                failures.append({"suite": name, "id": tid, "outcome": outcome, "status": verdict.status,
+                                 "cases_passed": verdict.cases_passed, "cases": verdict.cases_total,
+                                 "detail": verdict.detail})
+    return {"suites": tally, "failures": failures}
+
+
+OUTCOMES = ("passed", "output_mismatch", "exception", "timeout", "worker_failure", "sandbox_error")
+
+
+def classify(verdict):
+    detail = verdict.detail or ""
+    if verdict.passed:
+        return "passed"
+    if verdict.status != "failed":
+        return "sandbox_error"
+    if "timeout" in detail:
+        return "timeout"
+    if "output mismatch" in detail:
+        return "output_mismatch"
+    if " raised " in detail:
+        return "exception"
+    return "worker_failure"
 
 
 FROZEN = HERE / "data" / "bench-manifest.json"
@@ -430,11 +452,15 @@ def main(argv=None):
     c.add_argument("--raw", required=True)
     c.add_argument("--out", required=True)
     c.add_argument("--workers", type=int, default=4)
+    c.add_argument("--report")
     args = ap.parse_args(argv)
     if args.cmd == "canonical":
         verify(args.out, FROZEN)
         report = canonical(args.raw, args.out, args.workers)
-        print(json.dumps(report, indent=2))
+        text = json.dumps(report, indent=2)
+        if args.report:
+            Path(args.report).write_text(text + "\n")
+        print(text)
         return 1 if report["failures"] else 0
     if args.cmd == "build":
         manifest = build(args.raw, args.out)

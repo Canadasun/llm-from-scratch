@@ -211,3 +211,14 @@ def test_preview_baseline_freezes_hashes_and_leaves_production_alone():
         path = V.PROGRAMS / f"programs-{name}.json"
         assert V.sha256(path) == entry["programs_sha256"]
         assert json.loads(path.read_text())["meta"]["checkpoint_sha256"] == entry["checkpoint_sha256"]
+
+
+def test_canonical_outcomes_are_classified():
+    from evals.bench import classify
+    from evals.code_executor import Verdict
+    assert classify(Verdict("passed", True, 3, 3)) == "passed"
+    assert classify(Verdict("failed", False, 1, 3, "case 2 output mismatch")) == "output_mismatch"
+    assert classify(Verdict("failed", False, 0, 3, "case 1 raised ValueError")) == "exception"
+    assert classify(Verdict("failed", False, 0, 3, "suite timeout")) == "timeout"
+    assert classify(Verdict("failed", False, 0, 3, "worker exited unsuccessfully")) == "worker_failure"
+    assert classify(Verdict("error", False, 0, 3, "execution infrastructure error")) == "sandbox_error"
