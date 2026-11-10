@@ -90,6 +90,8 @@ def _batch(request):
         for call in request["calls"]:
             try:
                 value = function(*decode_value(call["args"]), **decode_value(call["kwargs"]))
+                if call.get("truth"):
+                    value = bool(value)
                 results.append({"ok": encode_value(value)})
             except Exception as exc:
                 results.append({"error": type(exc).__name__})

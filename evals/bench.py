@@ -170,7 +170,7 @@ def assert_case(test, name):
         left, op, right = test.left, test.ops[0], test.comparators[0]
         if isinstance(op, ast.Is) and isinstance(right, ast.Constant) and isinstance(right.value, bool):
             args, kwargs = _call_case(left, name)
-            return _case(args, kwargs, right.value), 0.0
+            return _case(args, kwargs, right.value, "is"), 0.0
         if isinstance(op, ast.Eq):
             kind, inner = _wrapped(left, name)
             if kind:
@@ -200,10 +200,10 @@ def assert_case(test, name):
         return _case(args, kwargs, expected), atol
     if isinstance(test, ast.Call) and getattr(test.func, "id", None) == name:
         args, kwargs = _call_case(test, name)
-        return _case(args, kwargs, True), 0.0
+        return _case(args, kwargs, True, "truth"), 0.0
     if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
         args, kwargs = _call_case(test.operand, name)
-        return _case(args, kwargs, False), 0.0
+        return _case(args, kwargs, False, "truth"), 0.0
     raise Unsupported("unsupported assertion")
 
 
@@ -344,7 +344,7 @@ def build(raw_dir, out_dir):
             excluded["mbpp_plus"][tid] = str(exc)
     files = {}
     for name, tasks in suites.items():
-        data = "".join(json.dumps(t, sort_keys=True, ensure_ascii=False) + "\n" for t in tasks)
+        data = "".join(json.dumps(t, ensure_ascii=False) + "\n" for t in tasks)
         (out / f"{name}.jsonl").write_text(data, encoding="utf-8")
         files[name] = {"tasks": len(tasks), "cases": sum(len(t["cases"]) for t in tasks),
                        "sha256": sha256_bytes(data.encode("utf-8")), "excluded": dict(sorted(excluded[name].items()))}
@@ -393,15 +393,17 @@ def canonical(raw_dir, out_dir, workers=4):
         raise SystemExit(f"sandbox unavailable: {preflight['detail']}")
     raw = fetch(raw_dir)
     solutions = {}
-    for row in _rows(raw, "humaneval"):
-        solutions[row["task_id"]] = row["prompt"] + row["canonical_solution"]
+    for suite, source in (("humaneval", "humaneval"), ("humaneval_plus", "humaneval_plus")):
+        for row in _rows(raw, source):
+            solutions[suite, row["task_id"]] = row["prompt"] + row["canonical_solution"]
     for row in _rows(raw, "mbpp_plus"):
-        solutions[f"Mbpp/{row['task_id']}"] = row["code"]
+        for suite in ("mbpp", "mbpp_plus"):
+            solutions[suite, f"Mbpp/{row['task_id']}"] = row["code"]
     jobs = [(name, task) for name in SUITES for task in load_suite(out_dir, name)]
 
     def run(job):
         name, task = job
-        verdict = evaluate_cases(solutions[task["id"]], task["entry_point"], task["cases"],
+        verdict = evaluate_cases(solutions[name, task["id"]], task["entry_point"], task["cases"],
                                  atol=task["atol"], timeout=300)
         return name, task["id"], verdict
 

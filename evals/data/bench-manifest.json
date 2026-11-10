@@ -89,7 +89,7 @@
     "humaneval": {
       "tasks": 157,
       "cases": 1103,
-      "sha256": "25bcd4c110602cdaf124176aa992ecb93630227d9ef443cbbe47d4b0ea083423",
+      "sha256": "5a99b52b296d516f9f356c85bbf29b1a3befbf75182919e6f9dc1209e3a39243",
       "excluded": {
         "HumanEval/151": "unsupported statement Assign",
         "HumanEval/32": "unsupported statement Import",
@@ -103,7 +103,7 @@
     "humaneval_plus": {
       "tasks": 157,
       "cases": 121003,
-      "sha256": "4d2af0e66d5cd970e36cf8c8c05a162c7938d1ad8ffde759079046bd1d76d357",
+      "sha256": "2e66c5d2d6f4df58516e9f1dc84b519b3857cb371821e7e0ab4a31a8d1697d3d",
       "excluded": {
         "HumanEval/100": "expected values are computed by a reference function",
         "HumanEval/130": "expected values are computed by a reference function",
@@ -117,7 +117,7 @@
     "mbpp": {
       "tasks": 377,
       "cases": 1169,
-      "sha256": "c804ac31fdb2dfb3b59e487e25debb92f04935af8e48abec0eeae2b27cdd6cf3",
+      "sha256": "28ba799cfd8879bdde20759f3e8275e1b00bd9c75d84e4dd4b6075b45cf1513c",
       "excluded": {
         "Mbpp/596": "non-literal value"
       }
@@ -125,7 +125,7 @@
     "mbpp_plus": {
       "tasks": 372,
       "cases": 39972,
-      "sha256": "3e815e129969890374014b8b1b5d7e6986f75e167b08e3fff21a4e81a4b3b95b",
+      "sha256": "42253b796bead43ba776793b4e432ba5b8524424379928272dd2839832f9334a",
       "excluded": {
         "Mbpp/255": "expected values are computed by a reference function",
         "Mbpp/630": "expected values are computed by a reference function",

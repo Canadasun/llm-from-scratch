@@ -3,7 +3,7 @@
   "label": "Research preview baseline. Not a production-readiness claim; production.json is unchanged.",
   "frozen_on": "2026-11-09",
   "frozen": {
-    "bench_manifest": "185a2c8266153eb5385b68ae4704d3f02c9336913276d2b995e7e723e21bedd3",
+    "bench_manifest": "0a97d6da0c8cf3c25ad81343a3f6f736cdc22cc769383bddfa57f4c8d1b28615",
     "behaviour_suite": "0e2ff73769e8574b36b5d102fbaca1539e91164ec17baaadbff276abbddccb87",
     "production_baseline": "9ab5f88040268125c81d8a3027abbd0468787151703afed4a61bf9fac014e661"
   },

@@ -28,7 +28,8 @@ def test_codec_round_trips_python_types():
 def test_values_equal_follows_benchmark_semantics():
     assert values_equal(0.1 + 0.2, 0.3) and not values_equal(0.31, 0.3)
     assert values_equal(3.0, 3) and values_equal(3, 3.0)
-    assert not values_equal(True, 1) and not values_equal(1, True)
+    assert values_equal(True, 1) and values_equal(0, False) and not values_equal(True, 2)
+    assert values_equal([1, 0], [True, False]) and not values_equal("1", True)
     assert not values_equal([1, 2], (1, 2)) and values_equal((1, [2.0000001]), (1, [2.0]))
     assert values_equal({1, 2}, {2, 1}) and not values_equal({"a": 1}, {"a": 1, "b": 2})
     assert values_equal(float("nan"), float("nan")) and not values_equal(1.0, float("nan"))
@@ -45,9 +46,9 @@ def test_assert_parsing_covers_benchmark_forms():
     assert _assert("assert f(3 * 19, -2 ** 3, 'ab' + 'c') == [3, 19]")[0]["args"] == [57, -8, "abc"]
     assert _assert("assert abs(f(1.0) - 2.0/3.0) < 1e-6") == ({"args": [1.0], "expected": 2 / 3}, 1e-6)
     assert _assert("assert math.isclose(f(2), 3.14, rel_tol=0.001)")[1] == pytest.approx(0.00314)
-    assert _assert("assert f(4) is False")[0]["expected"] is False
-    assert _assert("assert not f(4)")[0]["expected"] is False
-    assert _assert("assert f(4)")[0]["expected"] is True
+    assert _assert("assert f(4) is False")[0] == {"args": [4], "expected": False, "compare": "is"}
+    assert _assert("assert not f(4)")[0] == {"args": [4], "expected": False, "compare": "truth"}
+    assert _assert("assert f(4)")[0] == {"args": [4], "expected": True, "compare": "truth"}
     case, _ = _assert("assert set(f((3, 4), (4, 5))) == set((4,))")
     assert case["compare"] == "set" and case["expected"] == {"$set": [4]}
     assert _assert("assert tuple(f([1])) == tuple([1])")[0]["compare"] == "sequence"
@@ -176,6 +177,19 @@ def test_real_sandbox_batch_handles_types_errors_and_forgery(sandbox):
     assert evaluate_cases(code, "f", expected, runner=sandbox).passed
 
 
+def test_real_sandbox_truth_identity_and_per_call_cpu(sandbox):
+    regex = "import re\ndef f(s):\n    return re.search('^a', s)\n"
+    truthy = [{"args": ["abc"], "expected": True, "compare": "truth"},
+              {"args": ["xyz"], "expected": False, "compare": "truth"}]
+    assert evaluate_cases(regex, "f", truthy, runner=sandbox).passed
+    one = "def f(x):\n    return 1\n"
+    assert evaluate_cases(one, "f", [{"args": [0], "expected": True}], runner=sandbox).passed
+    assert not evaluate_cases(one, "f", [{"args": [0], "expected": True, "compare": "is"}], runner=sandbox).passed
+    burn = "import time\ndef f(x):\n    end = time.process_time() + 4\n    while time.process_time() < end:\n        pass\n    return x\n"
+    cases = [{"args": [i], "expected": i} for i in range(3)]
+    assert evaluate_cases(burn, "f", cases, runner=sandbox, timeout=120).passed
+
+
 def test_frozen_manifest_pins_sources_and_counts():
     manifest = json.loads(B.FROZEN.read_text())
     assert set(manifest["suites"]) == set(B.SUITES)
@@ -222,3 +236,9 @@ def test_canonical_outcomes_are_classified():
     assert classify(Verdict("failed", False, 0, 3, "suite timeout")) == "timeout"
     assert classify(Verdict("failed", False, 0, 3, "worker exited unsuccessfully")) == "worker_failure"
     assert classify(Verdict("error", False, 0, 3, "execution infrastructure error")) == "sandbox_error"
+
+
+def test_suite_lines_keep_dict_insertion_order():
+    case, _ = _assert("assert f({'p': 1, 'A': 2, 'B': 3}) == False")
+    line = json.dumps(case, ensure_ascii=False)
+    assert list(json.loads(line)["args"][0]) == ["p", "A", "B"]

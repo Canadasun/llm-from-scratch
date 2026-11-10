@@ -175,8 +175,10 @@ def _decode_batch(data, count):
 
 
 def values_equal(actual, expected, atol=0.0):
+    """Python == semantics as the official checks use (True == 1), plus EvalPlus float tolerance."""
     if isinstance(actual, bool) or isinstance(expected, bool):
-        return type(actual) is type(expected) and actual == expected
+        return isinstance(actual, (bool, int, float)) and isinstance(expected, (bool, int, float)) \
+            and actual == expected
     if isinstance(expected, float):
         if not isinstance(actual, (int, float)):
             return False
@@ -188,7 +190,7 @@ def values_equal(actual, expected, atol=0.0):
     if isinstance(expected, int):
         if isinstance(actual, float) and not isinstance(expected, bool):
             return actual == expected
-        return type(actual) is int and actual == expected
+        return isinstance(actual, int) and actual == expected
     if isinstance(expected, complex):
         return isinstance(actual, complex) and abs(actual - expected) <= (atol or 1e-6)
     if type(actual) is not type(expected):
@@ -200,7 +202,9 @@ def values_equal(actual, expected, atol=0.0):
     return actual == expected
 
 
-COMPARE_MODES = ("exact", "set", "sequence")
+WORKER_FAILED = "worker exited unsuccessfully"
+CPU_TIMEOUT = "worker cpu timeout"
+COMPARE_MODES = ("exact", "set", "sequence", "truth", "is")
 
 
 def _coerce(value, mode):
@@ -233,21 +237,41 @@ def evaluate_cases(code, function, cases, *, atol=0.0, timeout=60, runner=None, 
             if not isinstance(case.get("args", []), list) or not isinstance(case.get("kwargs", {}), dict):
                 raise ValueError("case args/kwargs have invalid types")
             modes.append(case.get("compare", "exact"))
-            calls.append({"args": case.get("args", []), "kwargs": case.get("kwargs", {})})
+            call = {"args": case.get("args", []), "kwargs": case.get("kwargs", {})}
+            if case.get("compare") == "truth":
+                call["truth"] = True
+            calls.append(call)
             expected.append(decode_value(case["expected"]))
     except (ValueError, TypeError, UnicodeError, RecursionError, OverflowError) as exc:
         return Verdict("error", False, detail=str(exc))
     runner = runner or BubblewrapRunner()
     deadline = time.monotonic() + timeout
-    for start in range(0, len(calls), batch):
+
+    def run(start, chunk):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return Verdict("failed", False, start, len(cases), "suite timeout")
-        chunk = calls[start:start + batch]
         try:
-            result = runner.run_batch(code, function, chunk, min(remaining, 30))
+            return runner.run_batch(code, function, chunk, min(remaining, 30))
         except (OSError, ValueError, subprocess.SubprocessError):
             return Verdict("error", False, start, len(cases), "execution infrastructure error")
+
+    for start in range(0, len(calls), batch):
+        chunk = calls[start:start + batch]
+        result = run(start, chunk)
+        if isinstance(result, Verdict):
+            return result
+        if result.status == "failed" and result.detail in (WORKER_FAILED, CPU_TIMEOUT) and len(chunk) > 1:
+            values = []
+            for offset, call in enumerate(chunk):
+                single = run(start + offset, [call])
+                if isinstance(single, Verdict):
+                    return single
+                if single.status != "ok":
+                    status = "unavailable" if single.status == "unavailable" else "failed"
+                    return Verdict(status, False, start + offset, len(cases), single.detail)
+                values.extend(single.value)
+            result = Execution("ok", value=values)
         if result.status != "ok":
             status = "unavailable" if result.status == "unavailable" else "failed"
             return Verdict(status, False, start, len(cases), result.detail)
@@ -255,7 +279,11 @@ def evaluate_cases(code, function, cases, *, atol=0.0, timeout=60, runner=None, 
             index = start + offset
             if kind != "ok":
                 return Verdict("failed", False, index, len(cases), f"case {index + 1} raised {value}")
-            if not values_equal(_coerce(value, modes[index]), expected[index], atol):
+            if modes[index] == "is":
+                same = type(value) is type(expected[index]) and value == expected[index]
+            else:
+                same = values_equal(_coerce(value, modes[index]), expected[index], atol)
+            if not same:
                 return Verdict("failed", False, index, len(cases), f"case {index + 1} output mismatch")
     return Verdict("passed", True, len(cases), len(cases), "all function cases passed")
 
@@ -347,7 +375,9 @@ class BubblewrapRunner:
                     # No generated exception text is reflected into the verdict.
                     if diagnostic.startswith(b"bwrap:"):
                         return Execution("unavailable", detail="required sandbox isolation could not start")
-                    return Execution("failed", detail="worker exited unsuccessfully")
+                    if proc.returncode in (-signal.SIGXCPU, -signal.SIGKILL):
+                        return Execution("failed", detail=CPU_TIMEOUT)
+                    return Execution("failed", detail=WORKER_FAILED)
                 if len(data) > max_output:
                     return Execution("failed", detail="worker output exceeds limit")
                 return Execution("ok", value=data)
