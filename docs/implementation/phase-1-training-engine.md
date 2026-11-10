@@ -6,7 +6,7 @@ the 65M and 117M configurations was measured on the hardware Phase 4 will use.
 ## How the Kaggle runs work
 
 - `training/kaggle/driver.py` publishes a pinned code archive (`llmfs-code`, commit `5059aa26`, archive sha256
-  `ed77d3c4…`) and pushes a private script kernel with internet disabled. No GitHub or cloud credential is sent to
+  `ed77d3c4…`; its content reached master in #13 as `bada284`) and pushes a private script kernel with internet disabled. No GitHub or cloud credential is sent to
   Kaggle.
 - `training/kaggle/session.py` checks the archive hash, the data manifest hash and, when resuming, the pinned
   checkpoint hash before running anything.
