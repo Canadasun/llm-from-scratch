@@ -34,7 +34,7 @@
   "measured": {
     "m3": {
       "checkpoint_sha256": "6115d7a500e06a82aaae44ab9cdcd76a9879b3bced12e276acfffc5cc6c4afd7",
-      "programs_sha256": "7291fc995bc500d6f74535fa7a22af32fedb352c5f48a24136fea91a00368da4",
+      "programs_sha256": "4659d9f5aedcbcefc968a00d4ac20569fc1af857303e655060138055e88decfd",
       "existing_suite": {
         "source": "results-m3-20261031.json (sha256 in checkpoints/release-2026-11-04/SHA256SUMS)",
         "suite_sha256": "b2c1c3737b03d6d2a2711e7fc36044575e1e35b930d26588da76b79208e70df0",
@@ -87,7 +87,7 @@
     },
     "instruction-candidate": {
       "checkpoint_sha256": "50664e4e548b9f3d1b4e80be008ad36488aa8c5f136663dd31f1e3171198ac70",
-      "programs_sha256": "36a192623b85b7600d569a031074acb27adcf7c82839510871b8df66c7c0cc03",
+      "programs_sha256": "6ee556862c04376635e9b70952f8d7b27169fdd176605ef299e0fc426827fb65",
       "existing_suite": {
         "source": "results-instruction-candidate.json (sha256 in checkpoints/release-2026-11-04/SHA256SUMS)",
         "suite_sha256": "b2c1c3737b03d6d2a2711e7fc36044575e1e35b930d26588da76b79208e70df0",
