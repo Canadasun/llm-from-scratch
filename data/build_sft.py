@@ -93,6 +93,12 @@ def _signature(fn):
     return f"{prefix}{fn.name}({ast.unparse(fn.args)}){returns}"
 
 
+def _example_call(fn):
+    names = [a.arg for a in fn.args.posonlyargs + fn.args.args if a.arg not in {"self", "cls"}]
+    names += [f"{a.arg}={a.arg}" for a in fn.args.kwonlyargs]
+    return f"{fn.name}({', '.join(names)})"
+
+
 def _doc_summary(doc):
     first = re.split(r"\n\s*\n", doc.strip(), maxsplit=1)[0]
     first = " ".join(first.split())
@@ -145,7 +151,7 @@ def function_candidates(text):
         needed = sorted(imports[n] for n in free)
         header = "".join(fn_lines[:start]).rstrip()
         out.append({"name": fn.name, "signature": _signature(fn), "summary": summary, "imports": needed,
-                    "source": source, "bare": bare, "header": header})
+                    "source": source, "bare": bare, "header": header, "call": _example_call(fn)})
     return out
 
 
@@ -330,11 +336,13 @@ def review_candidates(text):
     return out
 
 
+SUMMARY_EVERY = 8
 IMPLEMENT_PROMPTS = (
     "Write a Python function with the signature `{signature}`.\n\nSpecification: {summary}",
     "Implement `{signature}` in Python. {summary}",
     "{summary}\n\nWrite this as a Python function named `{name}`.",
     "Complete this Python function.\n\n```python\n{header}\n    \"\"\"{summary}\"\"\"\n```",
+    "{summary}\n\nExample call:\n```python\n{call}\n```\nWrite this function in Python.",
 )
 SUMMARY_PROMPTS = (
     "What does this Python function do? Answer in one or two sentences.\n\n```python\n{bare}```",
@@ -400,7 +408,7 @@ def _pick(options, key):
 def implement_row(cand, key):
     imports = "\n".join(cand["imports"])
     response = (imports + "\n\n\n" if imports else "") + cand["source"]
-    if int(key[8:10], 16) % 4 == 0:
+    if int(key[8:10], 16) % SUMMARY_EVERY == 0:
         prompt = _pick(SUMMARY_PROMPTS, key).format(**cand)
         response = cand["summary"] + "\n"
         return "summarise", prompt, response

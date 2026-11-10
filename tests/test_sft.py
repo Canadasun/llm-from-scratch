@@ -1,3 +1,4 @@
+import hashlib
 import json
 
 from data import build_sft as S
@@ -50,6 +51,16 @@ def test_function_candidates_keep_only_self_contained_documented_functions():
     assert c["summary"].startswith("Return the parsed JSON settings")
     assert '"""' not in c["bare"] and "def read_settings" in c["bare"] and "j.load" in c["bare"]
     compile(c["bare"], "<bare>", "exec")
+    assert c["call"] == "read_settings(path, default)"
+
+
+def test_implement_rows_mostly_ask_for_code_and_all_templates_render():
+    c = S.function_candidates(MODULE)[0]
+    keys = [hashlib.sha256(str(i).encode()).hexdigest() for i in range(512)]
+    kinds = [S.implement_row(c, key)[0] for key in keys]
+    assert 0.08 < kinds.count("summarise") / len(kinds) < 0.18
+    for template in S.IMPLEMENT_PROMPTS:
+        assert "{" not in template.format(**c).replace(c["summary"], "")
 
 
 def test_free_names_handles_scopes():
