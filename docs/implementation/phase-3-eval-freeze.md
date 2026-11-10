@@ -90,7 +90,17 @@ Claude Code wrote a private holdout of 20 original coding tasks (97 cases) and 1
 outside the repository and is never committed or shared with Codex. Only its manifest hash is recorded here:
 `a09363350b6653ef1592b06e09fe01cdb4dd4e60399c3f8e79827b88aba02273`.
 
-## Open
+## Reference-solution check
 
-- Reference-solution check (`.github/workflows/bench-canonical.yml`, manual only): it runs benchmark reference
-  solutions inside the sandbox on a GitHub runner. That is downloaded code, so it waits for owner approval.
+`.github/workflows/bench-canonical.yml` (manual, owner-approved) runs every official reference solution against its
+converted suite inside the sandbox on an ephemeral GitHub-hosted runner, with read-only permissions, no persisted
+credentials and a 120-minute job limit. It uploads a per-suite report of passes, wrong outputs, exceptions, timeouts,
+worker failures and sandbox errors.
+
+- First run (2026-11-10): 1,031 of 1,063 passed. All 32 failures were converter or checker bugs: dict key order
+  lost when writing suites, HumanEval+ checked against the original HumanEval solutions instead of its corrected
+  ones, `assert f(x)` treated as `== True` instead of truthiness, `True == 1` rejected although the official checks
+  use Python `==`, and 100-call batches sharing one CPU budget. No expected value or input was changed.
+- Second run after the fixes: 1,063 of 1,063 passed (157, 157, 377, 372), with no timeouts or sandbox errors.
+- Suite hashes were refrozen. Task and case counts did not change, and the preview programs regenerated
+  identically. `production.json` is untouched.
