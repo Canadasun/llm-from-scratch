@@ -101,6 +101,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Pull image by digest
+        id: pull
         env:
           TOKEN: ${{ github.token }}
         run: |
@@ -114,11 +115,13 @@ jobs:
           docker image inspect "$IMAGE" --format '{{.Size}}' > "$RUNNER_TEMP/image_bytes"
 
       - name: Measure serving on 1 vCPU and 2 GiB
-        run: python -m deploy.measure --image "$IMAGE" --expect-checkpoint "$CKPT_SHA256" \
-          --pull-seconds "$(cat "$RUNNER_TEMP/pull_seconds")" --image-bytes "$(cat "$RUNNER_TEMP/image_bytes")" \
-          --json "$RUNNER_TEMP/serving.json"
+        run: |
+          python -m deploy.measure --image "$IMAGE" --expect-checkpoint "$CKPT_SHA256" \
+            --pull-seconds "$(cat "$RUNNER_TEMP/pull_seconds")" --image-bytes "$(cat "$RUNNER_TEMP/image_bytes")" \
+            --json "$RUNNER_TEMP/serving.json"
 
       - name: Production gate (deploy.release qualify)
+        if: always() && steps.pull.outcome == 'success'
         run: |
           set +e
           python -m deploy.release qualify --image "$IMAGE" --record "$RUNNER_TEMP/release-record.json" \

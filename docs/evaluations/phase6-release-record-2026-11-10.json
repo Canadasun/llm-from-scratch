@@ -1,0 +1,2016 @@
+{
+  "schema": 1,
+  "image": "ghcr.io/canadasun/llm-from-scratch@sha256:98a40780c96d5b4608d071145a174c0e39ce315a14aae82412c0e13c3ae91b15",
+  "policy_sha256": "9ab5f88040268125c81d8a3027abbd0468787151703afed4a61bf9fac014e661",
+  "evaluation": {
+    "summary": {
+      "by_category": {
+        "ai_security": {
+          "n": 22,
+          "correct": 16,
+          "acc": 0.7272727272727273,
+          "wilson_95": [
+            0.5184826598759762,
+            0.8684923971201053
+          ]
+        },
+        "cloud": {
+          "n": 20,
+          "correct": 11,
+          "acc": 0.55,
+          "wilson_95": [
+            0.34208534245034233,
+            0.7418021417443759
+          ]
+        },
+        "generation": {
+          "n": 16,
+          "correct": 2,
+          "acc": 0.125,
+          "wilson_95": [
+            0.03497748774324047,
+            0.36022827265758695
+          ]
+        },
+        "reasoning": {
+          "n": 14,
+          "correct": 2,
+          "acc": 0.14285714285714285,
+          "wilson_95": [
+            0.040093921271464966,
+            0.39941379496970353
+          ]
+        },
+        "secure_development": {
+          "n": 12,
+          "correct": 4,
+          "acc": 0.3333333333333333,
+          "wilson_95": [
+            0.13812009109121315,
+            0.6093779111272004
+          ]
+        },
+        "security": {
+          "n": 45,
+          "correct": 18,
+          "acc": 0.4,
+          "wilson_95": [
+            0.27024886565009165,
+            0.5454814540964862
+          ]
+        },
+        "software": {
+          "n": 23,
+          "correct": 12,
+          "acc": 0.5217391304347826,
+          "wilson_95": [
+            0.32962737336427406,
+            0.7076284258335335
+          ]
+        }
+      },
+      "by_type": {
+        "generation": {
+          "n": 16,
+          "correct": 2,
+          "acc": 0.125,
+          "wilson_95": [
+            0.03497748774324047,
+            0.36022827265758695
+          ]
+        },
+        "multiple_choice": {
+          "n": 136,
+          "correct": 63,
+          "acc": 0.4632352941176471,
+          "wilson_95": [
+            0.38159284916611214,
+            0.5468975993437101
+          ]
+        }
+      },
+      "overall": {
+        "n": 152,
+        "correct": 65,
+        "acc": 0.4276315789473684,
+        "wilson_95": [
+          0.3517203137759761,
+          0.507110576498784
+        ]
+      },
+      "mc_random_baseline": 0.25,
+      "unmeasured": {
+        "total": 18,
+        "by_category": {
+          "code": 18
+        }
+      }
+    },
+    "intrinsic": {
+      "trained": {
+        "tokens": 672,
+        "bytes": 2636,
+        "perplexity": 110.18944554217734,
+        "bits_per_byte": 1.7294165326543953,
+        "top1_acc": 0.21577380952380953,
+        "top5_acc": 0.4211309523809524
+      },
+      "baseline": {
+        "tokens": 672,
+        "bytes": 2636,
+        "perplexity": 18515.86698280594,
+        "bits_per_byte": 3.6140329486429934,
+        "top1_acc": 0.0,
+        "top5_acc": 0.0
+      }
+    },
+    "results": [
+      {
+        "id": "sec-sqli",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "sec-xss",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sec-pwstore",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 3,
+        "detail": "chose 0, answer 3"
+      },
+      {
+        "id": "sec-authnz",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-leak",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "sec-tls",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sec-leastpriv",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "sec-csrf",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "sec-cia",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-saltwhy",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "sec-defexploit",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "sec-mfa",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "sec-owasp-injection",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-logging",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "sec-depscan",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-encrest",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "sec-privesc",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-idor",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-patch",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-zerotrust",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "sec-ir",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "sec-rmf",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "sec-zta2",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "sec-ssdf",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-supplychain",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "sec-logmgmt",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "sec-abac",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "sec-vpn",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec-pentest",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "sec-recovery",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "sec2-tls",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sec2-hashpw",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sec2-sqli",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "sec2-xss",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "sec2-csrf",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "sec2-leastpriv",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "sec2-mfa",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sec2-zerotrust",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sec2-segmentation",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sec2-patch",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sec2-ir",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "sec2-ransom",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "sec2-secretsmgmt",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "sec2-defense",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "sec2-constanttime",
+        "category": "security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sw-bigo",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "sw-idempotent",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "sw-get",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sw-dry",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sw-git",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "sw-unit",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sw-stack",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "sw-immutable",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "sw-exception",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sw-index",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "sw-hashmap",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "sw-compile",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "sw-ci",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sw-recursion",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sw-null",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sw2-vcs",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "sw2-review",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sw2-idempotent",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sw2-pure",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "sw2-bigo",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "sw2-pin",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "sw2-immutable",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "sw2-test",
+        "category": "software",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "cld-iac",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "cld-container",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "cld-k8s",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "cld-secrets",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "cld-leastpriv",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "cld-misconfig",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "cld-cicd",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "cld-immutable",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "cld-sast",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "cld-dast",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "cld-obs",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "cld-rollback",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "cloud2-iam",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "cloud2-atrest",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "cloud2-sg",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "cloud2-private",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "cloud2-kms",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "cloud2-shared",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "cloud2-logging",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "cloud2-scale0",
+        "category": "cloud",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "ai-injection",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "ai-indirect",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "ai-authz",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "ai-untrusted",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "ai-exfil",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "ai-agency",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "ai-sandbox",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "ai-humanloop",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "aisec2-direct",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "aisec2-exfil",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "aisec2-untrusted",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "aisec2-leastpriv",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "aisec2-tenant",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "aisec2-rag",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "aisec2-secrets",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "aisec2-humanloop",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "aisec2-jailbreak",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "aisec2-authz",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "aisec2-output",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "aisec2-sandbox",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 1,
+        "detail": "chose 0, answer 1"
+      },
+      {
+        "id": "aisec2-promptleak",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "aisec2-dos",
+        "category": "ai_security",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 1,
+        "detail": "chose 1, answer 1"
+      },
+      {
+        "id": "rsn-uncertain",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "rsn-highrisk",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "rsn-citation",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "rsn-injection",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "rsn-regress",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "rsn-evidence",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "rsn-scope",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "rsn-authz-text",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "rz2-transitive",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 0,
+        "detail": "chose 2, answer 0"
+      },
+      {
+        "id": "rz2-contrapos",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "rz2-counting",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "rz2-necessary",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "rz2-setdiff",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "rz2-dedup",
+        "category": "reasoning",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 1,
+        "answer": 0,
+        "detail": "chose 1, answer 0"
+      },
+      {
+        "id": "gen-private",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n                                            '",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-https",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n\\n#\\n# Copyright 2015-2018 The'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-encrypt",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n\\n#\\n# Copyright 2015-2018 The'",
+        "scorer": "contains_any",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-firewall",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\nnetwork device that filters the results into a single buffer.'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-password",
+        "category": "generation",
+        "type": "generation",
+        "correct": true,
+        "detail": "'lot of times\\nbetween the specified password and the password'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-digit",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n                            '",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-sql",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n\\n#\\n# Generates a database that can be'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-token",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'_token\\nfrom functools import reduce\\nfrom typing import Dict\\n'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-tls13",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n\\n# Copyright 2013-201'",
+        "scorer": "regex",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen-cve",
+        "category": "generation",
+        "type": "generation",
+        "correct": true,
+        "detail": "'\\nuse the software provided in the top-level directory of'",
+        "scorer": "contains_any",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen2-tls",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n                                            '",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen2-sqli",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n\\n#\\n# Copyright 2015-2018 The'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen2-least",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\nprovided by the author of the Jeffrey'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen2-encrypt",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n\\n# \\n# This script is used to verify'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen2-firewall",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\nnetwork device that filters the rules into a network.\\n'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "gen2-auth",
+        "category": "generation",
+        "type": "generation",
+        "correct": false,
+        "detail": "'\\n\\n#\\n# Copyright 2015-2016 The'",
+        "scorer": "contains",
+        "verification": "heuristic"
+      },
+      {
+        "id": "code-add",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code-max",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 3
+      },
+      {
+        "id": "code-rev",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code-even",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code-count",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code-fib",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code-palin",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code-sum",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 3
+      },
+      {
+        "id": "code2-even",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code2-reverse",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 3
+      },
+      {
+        "id": "code2-vowels",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code2-factorial",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code2-palindrome",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 3
+      },
+      {
+        "id": "code2-gcd",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "code2-sumlist",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 3
+      },
+      {
+        "id": "code2-c2f",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 3
+      },
+      {
+        "id": "code2-unique",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 3
+      },
+      {
+        "id": "code2-fizz",
+        "category": "code",
+        "type": "code",
+        "correct": false,
+        "detail": "sandbox Python runtime is unavailable",
+        "execution_status": "unavailable",
+        "cases_passed": 0,
+        "cases_total": 4
+      },
+      {
+        "id": "secure-dev-sqli",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "secure-dev-shell",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "secure-dev-tenant",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 2,
+        "detail": "chose 3, answer 2"
+      },
+      {
+        "id": "secure-dev-injection",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 3,
+        "detail": "chose 0, answer 3"
+      },
+      {
+        "id": "secure-dev-tls",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 0,
+        "detail": "chose 0, answer 0"
+      },
+      {
+        "id": "secure-dev-redirect",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 1,
+        "detail": "chose 3, answer 1"
+      },
+      {
+        "id": "secure-dev-revocation",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 2,
+        "detail": "chose 2, answer 2"
+      },
+      {
+        "id": "secure-dev-eval",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 0,
+        "answer": 3,
+        "detail": "chose 0, answer 3"
+      },
+      {
+        "id": "secure-dev-path",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 0,
+        "detail": "chose 3, answer 0"
+      },
+      {
+        "id": "secure-dev-cache",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 2,
+        "answer": 1,
+        "detail": "chose 2, answer 1"
+      },
+      {
+        "id": "secure-dev-artifact",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": false,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 2,
+        "detail": "chose 3, answer 2"
+      },
+      {
+        "id": "secure-dev-overload",
+        "category": "secure_development",
+        "type": "multiple_choice",
+        "correct": true,
+        "n_choices": 4,
+        "chosen": 3,
+        "answer": 3,
+        "detail": "chose 3, answer 3"
+      }
+    ],
+    "meta": {
+      "ckpt": "checkpoints/ckpt.pt",
+      "device": "cpu",
+      "checkpoint_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+      "quantized": true,
+      "image": "ghcr.io/canadasun/llm-from-scratch@sha256:98a40780c96d5b4608d071145a174c0e39ce315a14aae82412c0e13c3ae91b15",
+      "tokenizer_sha256": "a3fd86872faea8f3bc389fc1e28c914791b9d7ca007bab96e348381b9d6494a5",
+      "implementation_sha256": "b124bb1f7930f053fffee82727c34354b45936a339ba9b4a330da0dcee5db9f2",
+      "task_ids": [
+        "sec-sqli",
+        "sec-xss",
+        "sec-pwstore",
+        "sec-authnz",
+        "sec-leak",
+        "sec-tls",
+        "sec-leastpriv",
+        "sec-csrf",
+        "sec-cia",
+        "sec-saltwhy",
+        "sec-defexploit",
+        "sec-mfa",
+        "sec-owasp-injection",
+        "sec-logging",
+        "sec-depscan",
+        "sec-encrest",
+        "sec-privesc",
+        "sec-idor",
+        "sec-patch",
+        "sec-zerotrust",
+        "sec-ir",
+        "sec-rmf",
+        "sec-zta2",
+        "sec-ssdf",
+        "sec-supplychain",
+        "sec-logmgmt",
+        "sec-abac",
+        "sec-vpn",
+        "sec-pentest",
+        "sec-recovery",
+        "sec2-tls",
+        "sec2-hashpw",
+        "sec2-sqli",
+        "sec2-xss",
+        "sec2-csrf",
+        "sec2-leastpriv",
+        "sec2-mfa",
+        "sec2-zerotrust",
+        "sec2-segmentation",
+        "sec2-patch",
+        "sec2-ir",
+        "sec2-ransom",
+        "sec2-secretsmgmt",
+        "sec2-defense",
+        "sec2-constanttime",
+        "sw-bigo",
+        "sw-idempotent",
+        "sw-get",
+        "sw-dry",
+        "sw-git",
+        "sw-unit",
+        "sw-stack",
+        "sw-immutable",
+        "sw-exception",
+        "sw-index",
+        "sw-hashmap",
+        "sw-compile",
+        "sw-ci",
+        "sw-recursion",
+        "sw-null",
+        "sw2-vcs",
+        "sw2-review",
+        "sw2-idempotent",
+        "sw2-pure",
+        "sw2-bigo",
+        "sw2-pin",
+        "sw2-immutable",
+        "sw2-test",
+        "cld-iac",
+        "cld-container",
+        "cld-k8s",
+        "cld-secrets",
+        "cld-leastpriv",
+        "cld-misconfig",
+        "cld-cicd",
+        "cld-immutable",
+        "cld-sast",
+        "cld-dast",
+        "cld-obs",
+        "cld-rollback",
+        "cloud2-iam",
+        "cloud2-atrest",
+        "cloud2-sg",
+        "cloud2-private",
+        "cloud2-kms",
+        "cloud2-shared",
+        "cloud2-logging",
+        "cloud2-scale0",
+        "ai-injection",
+        "ai-indirect",
+        "ai-authz",
+        "ai-untrusted",
+        "ai-exfil",
+        "ai-agency",
+        "ai-sandbox",
+        "ai-humanloop",
+        "aisec2-direct",
+        "aisec2-exfil",
+        "aisec2-untrusted",
+        "aisec2-leastpriv",
+        "aisec2-tenant",
+        "aisec2-rag",
+        "aisec2-secrets",
+        "aisec2-humanloop",
+        "aisec2-jailbreak",
+        "aisec2-authz",
+        "aisec2-output",
+        "aisec2-sandbox",
+        "aisec2-promptleak",
+        "aisec2-dos",
+        "rsn-uncertain",
+        "rsn-highrisk",
+        "rsn-citation",
+        "rsn-injection",
+        "rsn-regress",
+        "rsn-evidence",
+        "rsn-scope",
+        "rsn-authz-text",
+        "rz2-transitive",
+        "rz2-contrapos",
+        "rz2-counting",
+        "rz2-necessary",
+        "rz2-setdiff",
+        "rz2-dedup",
+        "gen-private",
+        "gen-https",
+        "gen-encrypt",
+        "gen-firewall",
+        "gen-password",
+        "gen-digit",
+        "gen-sql",
+        "gen-token",
+        "gen-tls13",
+        "gen-cve",
+        "gen2-tls",
+        "gen2-sqli",
+        "gen2-least",
+        "gen2-encrypt",
+        "gen2-firewall",
+        "gen2-auth",
+        "code-add",
+        "code-max",
+        "code-rev",
+        "code-even",
+        "code-count",
+        "code-fib",
+        "code-palin",
+        "code-sum",
+        "code2-even",
+        "code2-reverse",
+        "code2-vowels",
+        "code2-factorial",
+        "code2-palindrome",
+        "code2-gcd",
+        "code2-sumlist",
+        "code2-c2f",
+        "code2-unique",
+        "code2-fizz",
+        "secure-dev-sqli",
+        "secure-dev-shell",
+        "secure-dev-tenant",
+        "secure-dev-injection",
+        "secure-dev-tls",
+        "secure-dev-redirect",
+        "secure-dev-revocation",
+        "secure-dev-eval",
+        "secure-dev-path",
+        "secure-dev-cache",
+        "secure-dev-artifact",
+        "secure-dev-overload"
+      ],
+      "suite_sha256": "b2c1c3737b03d6d2a2711e7fc36044575e1e35b930d26588da76b79208e70df0",
+      "heldout_sha256": "43edd64f8f1f3d2b0a7356f5048a7d2a3c668d06c783bd72022a8f98d8dae5e0",
+      "scoring_version": "context-preserving-v3-conservative-text",
+      "code_evaluator": "function-json-v1",
+      "sandbox": {
+        "available": false,
+        "status": "unavailable",
+        "detail": "sandbox Python runtime is unavailable"
+      },
+      "evaluated_at": "2026-11-11T01:38:58.460856+00:00",
+      "torch_version": "2.15.0+cpu",
+      "seed": 1337,
+      "suite": "all",
+      "limit": null,
+      "tasks_total": 170,
+      "complete": true,
+      "num_params": 11173120,
+      "tokenizer": "bpe_code",
+      "vocab_size": 16384,
+      "block_size": 1024,
+      "n_layer": 12
+    }
+  }
+}
