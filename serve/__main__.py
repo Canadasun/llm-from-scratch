@@ -21,6 +21,7 @@ With --secured, a demo tenant + key are printed at startup; pass the key as:
 import argparse
 import logging
 import os
+import re
 
 from serve.engine import DEFAULT_CKPT, InferenceEngine
 from serve.http_server import serve
@@ -73,6 +74,14 @@ def _bootstrap_demo_tenant(store):
     return plaintext, True
 
 
+def _bootstrap_owner(store, key_sha256):
+    from enterprise.models import ApiKey, Principal, Tenant
+    import time
+    store.add_tenant(Tenant("owner", "Owner"))
+    store.add_principal(Principal("owner", "owner", ("member",)))
+    store.add_api_key(ApiKey("owner-key", key_sha256, "owner", "owner", (), created_at=time.time()))
+
+
 def main():
     ap = argparse.ArgumentParser(description="llm-from-scratch inference server")
     ap.add_argument("--ckpt", default=DEFAULT_CKPT)
@@ -104,7 +113,19 @@ def main():
     ap.add_argument("--quantize", action="store_true",
                     help="dynamic int8 quantization (CPU): ~2x faster generation, "
                          "negligible quality change")
+    ap.add_argument("--owner-key-sha256", default=os.environ.get("OWNER_KEY_SHA256"),
+                    help="single-owner mode: sha256 of the owner's API key (plaintext never seen)")
+    ap.add_argument("--research-preview", action="store_true",
+                    default=os.environ.get("RESEARCH_PREVIEW") == "1",
+                    help="mark every response research_preview: true")
     args = ap.parse_args()
+    if args.owner_key_sha256 is not None:
+        if not args.secured:
+            ap.error("--owner-key-sha256 requires --secured")
+        if args.key_db:
+            ap.error("single-owner mode keeps no key database; drop --key-db")
+        if not re.fullmatch(r"[0-9a-f]{64}", args.owner_key_sha256):
+            ap.error("--owner-key-sha256 must be 64 lowercase hex characters")
     if args.organization_policy and not args.secured:
         ap.error("organization identity requires --secured")
     if args.quota_redis_url and not args.secured:
@@ -124,7 +145,8 @@ def main():
         log.info("int8 dynamic quantization enabled (faster CPU generation)")
     limiter = RateLimiter(capacity=args.rate_capacity, refill_per_sec=args.rate_per_sec)
     service = InferenceService(engine, rate_limiter=limiter, safety=not args.no_safety,
-                               max_concurrent=args.max_concurrent)
+                               max_concurrent=args.max_concurrent,
+                               research_preview=args.research_preview)
 
     if args.secured:
         import json as _json
@@ -135,7 +157,11 @@ def main():
         # container/host log aggregator instead of living only in bounded memory.
         _audit_log = logging.getLogger("audit")
         audit = AuditLog(sink=lambda ev: _audit_log.info(_json.dumps(ev)))
-        demo_key, is_new = _bootstrap_demo_tenant(store)
+        if args.owner_key_sha256:
+            _bootstrap_owner(store, args.owner_key_sha256)
+            demo_key, is_new = None, False
+        else:
+            demo_key, is_new = _bootstrap_demo_tenant(store)
         quota = None
         if args.quota_redis_url:
             from enterprise.quota import from_url
@@ -147,7 +173,9 @@ def main():
         service = SecuredInferenceService(service, store, audit, quota=quota,
                                          organization_identity=identity)
         backing = f"persistent SQLite ({args.key_db})" if args.key_db else "in-memory (ephemeral)"
-        if is_new:
+        if args.owner_key_sha256:
+            print("\n  [--secured] single-owner mode: one key, stored as a hash.\n", flush=True)
+        elif is_new:
             # Printed to stdout (not the structured log) so it is easy to copy.
             print("\n  [--secured] demo API key (tenant 'demo', role 'member'):\n"
                   f"    {demo_key}\n"

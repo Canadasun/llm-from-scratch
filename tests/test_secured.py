@@ -160,3 +160,17 @@ def test_exactly_one_audit_event_per_request(secured):
     svc.handle_generate(GOOD, api_key=None)                 # 401
     svc.handle_generate(GOOD, api_key=keys["pScoped"])      # 403
     assert len(audit.events()) == 3
+
+
+def test_single_owner_mode_accepts_only_the_hashed_key(engine):
+    from serve.__main__ import _bootstrap_owner
+    plain, digest = generate_key()
+    store = Store()
+    _bootstrap_owner(store, digest)
+    audit = AuditLog()
+    svc = SecuredInferenceService(InferenceService(engine, research_preview=True), store, audit)
+    status, body = svc.handle_generate(GOOD, api_key=plain)
+    assert status == 200 and body["tenant_id"] == "owner" and body["research_preview"] is True
+    other, _ = generate_key()
+    assert svc.handle_generate(GOOD, api_key=other)[0] == 401
+    assert plain not in repr(store.__dict__)

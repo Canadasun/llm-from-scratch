@@ -211,3 +211,14 @@ def test_quantized_engine_generates():
     assert eng.block_size == 16 and eng.vocab_size == tok.vocab_size
     out = eng.generate("zero ", max_new_tokens=8, seed=1)
     assert out["completion_tokens"] == 8
+
+
+def test_research_preview_marks_health_and_responses(engine):
+    svc = InferenceService(engine, rate_limiter=None, safety=True, research_preview=True)
+    assert svc.health()["research_preview"] is True
+    status, body = svc.handle_generate({"prompt": "zero trust ", "max_new_tokens": 4, "seed": 1})
+    assert status == 200 and body["research_preview"] is True
+    status, body = svc.handle_generate({"prompt": 5})
+    assert status == 400 and body["research_preview"] is True
+    plain = InferenceService(engine, rate_limiter=None, safety=True)
+    assert "research_preview" not in plain.health()
