@@ -1,0 +1,56 @@
+{
+  "image": "ghcr.io/canadasun/llm-from-scratch@sha256:98a40780c96d5b4608d071145a174c0e39ce315a14aae82412c0e13c3ae91b15",
+  "limits": {
+    "cpus": 1,
+    "memory": "2g"
+  },
+  "health": {
+    "status": "ok",
+    "quantized": true,
+    "checkpoint_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+    "image": null,
+    "block_size": 1024,
+    "vocab_size": 16384,
+    "tokenizer": "bpe_code",
+    "safety": true
+  },
+  "cold_start_seconds": 3.48,
+  "requests": [
+    {
+      "completion_tokens": 128,
+      "latency_ms": 1439.3
+    },
+    {
+      "completion_tokens": 128,
+      "latency_ms": 1415.5
+    },
+    {
+      "completion_tokens": 25,
+      "latency_ms": 209.1
+    },
+    {
+      "completion_tokens": 128,
+      "latency_ms": 1385.0
+    },
+    {
+      "completion_tokens": 128,
+      "latency_ms": 1392.6
+    }
+  ],
+  "tokens_per_second": 91.93,
+  "peak_memory_bytes": 1152106496,
+  "peak_memory_source": "cgroup memory.peak",
+  "checks": {
+    "tokens_per_second": true,
+    "peak_memory_bytes": true,
+    "cold_start_seconds": true
+  },
+  "thresholds": {
+    "tokens_per_second": 5.0,
+    "peak_memory_bytes": 1932735283,
+    "cold_start_seconds": 90.0
+  },
+  "passed": true,
+  "pull_seconds": 22.3,
+  "image_bytes": 1346552546
+}
