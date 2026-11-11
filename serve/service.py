@@ -24,12 +24,13 @@ from serve.lifecycle import GenerationStopped, generation_scope
 
 class InferenceService:
     def __init__(self, engine, rate_limiter=None, safety=True, logger=None,
-                 max_concurrent=2, generation_timeout=60):
+                 max_concurrent=2, generation_timeout=60, research_preview=False):
         if isinstance(max_concurrent, bool) or not isinstance(max_concurrent, int) or max_concurrent < 1:
             raise ValueError("max_concurrent must be a positive integer")
         if not math.isfinite(generation_timeout) or generation_timeout <= 0:
             raise ValueError("generation_timeout must be finite and positive")
         self.generation_timeout = generation_timeout
+        self.research_preview = research_preview
         self.engine = engine
         self.rate_limiter = rate_limiter
         self.safety = safety
@@ -46,6 +47,7 @@ class InferenceService:
             "vocab_size": self.engine.vocab_size,
             "tokenizer": getattr(self.engine.tokenizer, "kind", "?"),
             "safety": self.safety,
+            **({"research_preview": True} if self.research_preview else {}),
         }
 
     def handle_generate(self, payload, client="-"):
@@ -54,6 +56,8 @@ class InferenceService:
 
         def done(status, body):
             body["request_id"] = rid
+            if self.research_preview:
+                body["research_preview"] = True
             dt_ms = round((time.monotonic() - t0) * 1000, 1)
             body.setdefault("latency_ms", dt_ms)
             self._log(rid, client, status, dt_ms, body)
