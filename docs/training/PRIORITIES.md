@@ -7,18 +7,20 @@ evidence and is not established by this project.
 
 ## Latest completed experiment
 
-The verified code-only seed pilot completed with exact GPU resume and sandboxed
-matched-mode scoring. It produced no functional coding gain and a small chat
-syntax regression. The candidate was rejected and the Phase 4 base retained.
-See [results](verified-seed-2026-11-14.md). Do not expand this failed seed run by
-simply adding more steps.
+The [broader curriculum trial](curriculum-v2-2026-11-14.md) expanded training from
+18 to 48 labelled families, with 78 total families and 401 passing reference cases.
+It passed the resume check and completed 100 GPU steps. Chat syntax improved, but
+functional coding did not, and completion syntax regressed. The candidate was
+rejected and the Phase 4 base retained. The preceding seed trial also failed.
+Stop this sequence of small-curriculum SFT trials; do not simply add more steps.
 
 ## Queued after the pilot
 
-1. Use actual failing outputs to choose the next dataset gaps: Python function
-   correctness, debugging and tested repairs; cybersecurity explanations and
-   secure implementations. Distinguish these response formats explicitly.
-2. Grow distinct first-party or licence-approved problem families with executable
+1. Investigate base pretraining coverage, generalization and completion-to-chat
+   transfer before another candidate. Use aggregate failures and independent data
+   evidence, not benchmark answers. Determine what materially different experiment
+   the evidence supports; a larger model is a hypothesis, not a proven remedy.
+2. If justified by that investigation, grow distinct first-party or licence-approved problem families with executable
    expected-behavior cases, targeted insecure/incorrect variants, edge cases and
    clean counterexamples. Prioritize input handling, access control, secret
    handling, safe database/subprocess usage, and reliable Python error handling.

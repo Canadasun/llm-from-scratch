@@ -1,0 +1,239 @@
+{
+  "decision": "reject_candidate_keep_phase4_base",
+  "passed": false,
+  "checkpoint_sha256": {
+    "base": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+    "candidate": "2426a80b1a59d84ab1d2e5303eed4ba7614d284d8148a81321b2976f9bff93ec"
+  },
+  "scope": "observed public 25-task-per-suite screen; not production qualification",
+  "modes": {
+    "completion": {
+      "base": {
+        "summary": {
+          "humaneval": {
+            "parses": 0.8,
+            "pass_at_1": 0.04,
+            "passed": 1,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "humaneval_plus": {
+            "parses": 0.76,
+            "pass_at_1": 0.04,
+            "passed": 1,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "mbpp": {
+            "parses": 0.6,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "mbpp_plus": {
+            "parses": 0.6,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          }
+        },
+        "parses_as_python": 0.6731,
+        "behaviour": {
+          "abstention": {
+            "acc": 0.3333,
+            "correct": 5,
+            "n": 15
+          },
+          "prompt_injection": {
+            "acc": 0.3333,
+            "correct": 5,
+            "n": 15
+          },
+          "unsafe_recommendation": {
+            "acc": 0.2667,
+            "correct": 4,
+            "n": 15
+          }
+        }
+      },
+      "candidate": {
+        "summary": {
+          "humaneval": {
+            "parses": 0.8,
+            "pass_at_1": 0.04,
+            "passed": 1,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "humaneval_plus": {
+            "parses": 0.72,
+            "pass_at_1": 0.04,
+            "passed": 1,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "mbpp": {
+            "parses": 0.44,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "mbpp_plus": {
+            "parses": 0.44,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          }
+        },
+        "parses_as_python": 0.5962,
+        "behaviour": {
+          "abstention": {
+            "acc": 0.3333,
+            "correct": 5,
+            "n": 15
+          },
+          "prompt_injection": {
+            "acc": 0.3333,
+            "correct": 5,
+            "n": 15
+          },
+          "unsafe_recommendation": {
+            "acc": 0.2667,
+            "correct": 4,
+            "n": 15
+          }
+        }
+      },
+      "functional_gains": [],
+      "functional_losses": [],
+      "checks": {
+        "code_retained": true,
+        "code_improved": false,
+        "syntax_retained": false,
+        "behavior_retained": true
+      },
+      "passed": false
+    },
+    "chat": {
+      "base": {
+        "summary": {
+          "humaneval": {
+            "parses": 0.08,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "humaneval_plus": {
+            "parses": 0.08,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "mbpp": {
+            "parses": 0.32,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "mbpp_plus": {
+            "parses": 0.32,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          }
+        },
+        "parses_as_python": 0.1923,
+        "behaviour": {
+          "abstention": {
+            "acc": 0.3333,
+            "correct": 5,
+            "n": 15
+          },
+          "prompt_injection": {
+            "acc": 0.3333,
+            "correct": 5,
+            "n": 15
+          },
+          "unsafe_recommendation": {
+            "acc": 0.2667,
+            "correct": 4,
+            "n": 15
+          }
+        }
+      },
+      "candidate": {
+        "summary": {
+          "humaneval": {
+            "parses": 0.08,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "humaneval_plus": {
+            "parses": 0.12,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "mbpp": {
+            "parses": 0.56,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          },
+          "mbpp_plus": {
+            "parses": 0.56,
+            "pass_at_1": 0.0,
+            "passed": 0,
+            "tasks": 25,
+            "unavailable": 0
+          }
+        },
+        "parses_as_python": 0.3269,
+        "behaviour": {
+          "abstention": {
+            "acc": 0.3333,
+            "correct": 5,
+            "n": 15
+          },
+          "prompt_injection": {
+            "acc": 0.3333,
+            "correct": 5,
+            "n": 15
+          },
+          "unsafe_recommendation": {
+            "acc": 0.2667,
+            "correct": 4,
+            "n": 15
+          }
+        }
+      },
+      "functional_gains": [],
+      "functional_losses": [],
+      "checks": {
+        "code_retained": true,
+        "code_improved": false,
+        "syntax_retained": true,
+        "behavior_retained": true
+      },
+      "passed": true
+    }
+  },
+  "inputs_sha256": {
+    "scores-base-completion.json": "52941d9d1a9490e2bc8243e3e55489de66486fa106f99c9a4392c7f58381a218",
+    "scores-base-chat.json": "9ca4e2a56d2808088dabdf1f835e75f1bb1fec824a12ba23721b8d21d6a2c7f3",
+    "scores-candidate-completion.json": "1c25fa6a0ae828e8545c42df0f0a08cbfc9f0921768198bd49a960df914957f7",
+    "scores-candidate-chat.json": "b1d1bd33394d5c6f448e4b7459502f39cce9609421e827b45513d16e75000e80"
+  }
+}

@@ -16,6 +16,12 @@ found no functional coding gain and a small chat syntax regression, so the candi
 was rejected. Linux CI passed 525 tests with one skipped. Python and cybersecurity
 research priorities are recorded in [the queue](training/PRIORITIES.md).
 
+The subsequent [broader curriculum trial](training/curriculum-v2-2026-11-14.md)
+trained on 48 labelled families with 401 reference cases across 78 total families.
+After 100 GPU steps, chat syntax improved but functional coding did not; completion
+syntax regressed. This candidate was also rejected. Further small-curriculum SFT
+steps are paused pending investigation of base pretraining and format transfer.
+
 **This is not a production cybersecurity/Python coding assistant.** It is a
 from-scratch research model with a hardened evaluation and serving harness. Neither software changes nor passing infrastructure tests establish enterprise
 readiness; the model's demonstrated coding ability remains inadequate.

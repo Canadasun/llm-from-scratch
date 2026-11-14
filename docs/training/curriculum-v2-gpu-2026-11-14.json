@@ -1,0 +1,212 @@
+{
+  "kernel": "idowuaye/llmfs-curriculum-pilot-20261114",
+  "kernel_version": 1,
+  "cuda_resume": {
+    "passed": true,
+    "device": "cuda",
+    "torch_version": "2.11.0+cu130",
+    "gpu": "Tesla T4",
+    "dropout": 0.1,
+    "steps": 6,
+    "interrupt_at": 3,
+    "replay_fraction": 0.3,
+    "model_tensors_identical": 29,
+    "rng_states_identical": true,
+    "precision": "float16"
+  },
+  "candidate": {
+    "state": "completed",
+    "completed_steps": 100,
+    "max_iters": 100,
+    "best_val_loss": 0.6334077791988102,
+    "meta": {
+      "method": "response-only instruction tuning with base-corpus replay",
+      "base_checkpoint_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+      "instruction_manifest_sha256": "40b44fc025295b5e58c1935ae6d94c273e7fb001a9bc12d9f1db07339eaef1b0",
+      "replay_manifest_sha256": "57af602d753c003ae446721d9ad25144c56a432e3b5daf52925a9b6ed9fafcfd",
+      "replay_fraction": 0.3,
+      "upsample": {},
+      "context": 768,
+      "batch_size": 4,
+      "grad_accum_steps": 2,
+      "learning_rate": 1e-05,
+      "warmup": 10,
+      "steps": 100,
+      "seed": 2026,
+      "amp_dtype": "float16",
+      "train_rows": 240,
+      "train_rows_dropped_for_context": 0,
+      "validation_rows": 75,
+      "validation_rows_dropped_for_context": 0,
+      "schedule_rows": 240,
+      "torch_version": "2.11.0+cu130",
+      "instruction_split_sha256": {
+        "train": "0d560c7977ce6899636790831964273a0d86684a89096d15f3e45eab2e543a03",
+        "val": "e7cab21410a1eef92de6488a47cfbe767e404eb0413e4de9477b8824024e2b28"
+      },
+      "weight_decay": 0.1,
+      "device_type": "cuda"
+    },
+    "elapsed_seconds": 28.1,
+    "ckpt_sha256": "46f61baa7bfcd5c3e89f4c5bb0095936f4819c5a6878718f60b70969391e826f",
+    "best_sha256": "2426a80b1a59d84ab1d2e5303eed4ba7614d284d8148a81321b2976f9bff93ec"
+  },
+  "history": [
+    {
+      "step": 0,
+      "validation_loss": 1.0877899552987709,
+      "replay_val_loss": 1.6570060402154922
+    },
+    {
+      "step": 20,
+      "train_loss": 1.270037591457367,
+      "validation_loss": 0.7448995039552824,
+      "lr": 9.779754323328192e-06,
+      "elapsed_seconds": 2.9,
+      "replay_val_loss": 1.6586636155843735
+    },
+    {
+      "step": 40,
+      "train_loss": 1.5701133608818054,
+      "validation_loss": 0.6630178986234146,
+      "lr": 7.884636689049423e-06,
+      "elapsed_seconds": 7.4,
+      "replay_val_loss": 1.6652427166700363
+    },
+    {
+      "step": 60,
+      "train_loss": 0.4304916709661484,
+      "validation_loss": 0.6444670494430733,
+      "lr": 4.873721045679707e-06,
+      "elapsed_seconds": 12.0,
+      "replay_val_loss": 1.6692734956741333
+    },
+    {
+      "step": 80,
+      "train_loss": 0.3069804683327675,
+      "validation_loss": 0.6358192552382976,
+      "lr": 2.1558482853517257e-06,
+      "elapsed_seconds": 16.4,
+      "replay_val_loss": 1.671829417347908
+    },
+    {
+      "step": 100,
+      "train_loss": 1.9150044322013855,
+      "validation_loss": 0.6334077791988102,
+      "lr": 1.002741278414069e-06,
+      "elapsed_seconds": 21.1,
+      "replay_val_loss": 1.6729260385036469
+    }
+  ],
+  "session": {
+    "config": {
+      "purpose": "one bounded broader curriculum trial; exact CUDA resume gate; no promotion from losses",
+      "code_slug": "llmfs-code-curriculum-20261114",
+      "code_commit": "bcab353ec784109ea947c011bd2729345868d87f",
+      "code_tar_sha256": "0f57ffc879c1ac89a5ada754abb8f517ffb9c2bc314f6caa820a591a3260e4ff",
+      "data_slug": "llmfs-curriculum-v2-20261114",
+      "state_slug": "llmfs-p4-base",
+      "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+      "extra_inputs": {
+        "replay": [
+          "llmfs-corpus-v3",
+          "manifest.json"
+        ],
+        "bench": [
+          "llmfs-bench-frozen-20261114",
+          "bench-manifest.json"
+        ]
+      }
+    },
+    "steps": [
+      {
+        "name": "cuda-resume-gate",
+        "returncode": 0,
+        "seconds": 12.7,
+        "log": "cuda-resume-gate.log"
+      },
+      {
+        "name": "curriculum-v2-train",
+        "returncode": 0,
+        "seconds": 49.9,
+        "log": "curriculum-v2-train.log"
+      },
+      {
+        "name": "base-completion",
+        "returncode": 0,
+        "seconds": 127.5,
+        "log": "base-completion.log"
+      },
+      {
+        "name": "base-chat",
+        "returncode": 0,
+        "seconds": 123.7,
+        "log": "base-chat.log"
+      },
+      {
+        "name": "candidate-completion",
+        "returncode": 0,
+        "seconds": 81.2,
+        "log": "candidate-completion.log"
+      },
+      {
+        "name": "candidate-chat",
+        "returncode": 0,
+        "seconds": 76.9,
+        "log": "candidate-chat.log"
+      }
+    ],
+    "environment": {
+      "python": "3.13.16",
+      "started_utc": "2026-11-14T19:40:52Z",
+      "torch": "2.11.0+cu130",
+      "cuda_available": true,
+      "gpus": [
+        "Tesla T4",
+        "Tesla T4"
+      ],
+      "nvidia_smi": "Tesla T4, 15360 MiB, 580.178.04\nTesla T4, 15360 MiB, 580.178.04"
+    },
+    "code_tar_sha256": "0f57ffc879c1ac89a5ada754abb8f517ffb9c2bc314f6caa820a591a3260e4ff",
+    "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+    "paths": {
+      "work": "/kaggle/working",
+      "src": "/tmp/llmfs-src",
+      "data": "/kaggle/input/datasets/idowuaye/llmfs-curriculum-v2-20261114",
+      "state": "/kaggle/input/datasets/idowuaye/llmfs-p4-base",
+      "replay": "/kaggle/input/datasets/idowuaye/llmfs-corpus-v3",
+      "bench": "/kaggle/input/datasets/idowuaye/llmfs-bench-frozen-20261114"
+    },
+    "finished_utc": "2026-11-14T19:48:57Z"
+  },
+  "base_score_reuse": {
+    "completion": {
+      "workflow_run": 43627464915,
+      "source_scores": "evals/results/verified_seed/scores-base-completion.json",
+      "source_scores_sha256": "52941d9d1a9490e2bc8243e3e55489de66486fa106f99c9a4392c7f58381a218",
+      "programs_identical": true,
+      "behaviour_identical": true,
+      "inference_config_identical": true,
+      "program_content_sha256": "96a68ed001efab56fc42e0657cd07e89060f4a1cdb5cb86c05da3434858e350d"
+    },
+    "chat": {
+      "workflow_run": 43627728605,
+      "source_scores": "evals/results/verified_seed/scores-base-chat.json",
+      "source_scores_sha256": "9ca4e2a56d2808088dabdf1f835e75f1bb1fec824a12ba23721b8d21d6a2c7f3",
+      "programs_identical": true,
+      "behaviour_identical": true,
+      "inference_config_identical": true,
+      "program_content_sha256": "ac5ca6e57680eb97aaee0afb81b6076348a8a9955d2aecefcb49c3c1232ed87e"
+    }
+  },
+  "linux_ci": {
+    "run": 43632855908,
+    "passed": 580,
+    "skipped": 1,
+    "conclusion": "success"
+  },
+  "limitations": [
+    "Aggregate validation includes repair/preservation rows containing code; it is not a measure of code generation from a novel specification.",
+    "The first-25 public screen has been observed before; it is not independent qualification."
+  ]
+}
