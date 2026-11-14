@@ -1,0 +1,106 @@
+{
+  "limitations": [
+    "Base/plus suite evaluations reuse programs and are not independent problems.",
+    "Worker exits do not establish whether a failure was logic, runtime or isolation.",
+    "No independent cybersecurity capability test is inferred from Python failures."
+  ],
+  "reports": {
+    "base-chat": {
+      "inputs_sha256": {
+        "programs-base-chat.json": "078d7b00fd3574e57c2d7a01261649fe6de460105cfd629fcaa939fb8300aada",
+        "scores-base-chat.json": "9ca4e2a56d2808088dabdf1f835e75f1bb1fec824a12ba23721b8d21d6a2c7f3"
+      },
+      "outcomes": {
+        "syntax_error": 80,
+        "worker_exit_cause_not_established": 20
+      },
+      "static_shape_counts": {
+        "empty_module": 7,
+        "no_top_level_function": 8,
+        "parseable": 10
+      },
+      "suite_evaluations": 100,
+      "syntax_counts": {
+        "syntax_or_parser_error": 42
+      },
+      "unique_generated_programs": 52
+    },
+    "base-completion": {
+      "inputs_sha256": {
+        "programs-base-completion.json": "712a8e63ee71bb0cfb6c603afb063f17563eb1e4b94f81dd701cdcd4f4869ed5",
+        "scores-base-completion.json": "52941d9d1a9490e2bc8243e3e55489de66486fa106f99c9a4392c7f58381a218"
+      },
+      "outcomes": {
+        "passed": 2,
+        "runtime_IndexError": 2,
+        "runtime_RecursionError": 8,
+        "runtime_TypeError": 1,
+        "runtime_ValueError": 2,
+        "syntax_error": 31,
+        "worker_exit_cause_not_established": 30,
+        "wrong_output": 24
+      },
+      "static_shape_counts": {
+        "empty_module": 9,
+        "no_top_level_function": 13,
+        "parseable": 35
+      },
+      "suite_evaluations": 100,
+      "syntax_counts": {
+        "indentation": 1,
+        "syntax_or_parser_error": 16
+      },
+      "unique_generated_programs": 52
+    },
+    "candidate-chat": {
+      "inputs_sha256": {
+        "programs-candidate-chat.json": "efea5bfb905ab0cd3178bbe38164995d2f81c7f90d9015be458d824c1f2f718d",
+        "scores-candidate-chat.json": "b1d1bd33394d5c6f448e4b7459502f39cce9609421e827b45513d16e75000e80"
+      },
+      "outcomes": {
+        "runtime_RecursionError": 6,
+        "runtime_TypeError": 14,
+        "syntax_error": 67,
+        "worker_exit_cause_not_established": 7,
+        "wrong_output": 6
+      },
+      "static_shape_counts": {
+        "empty_module": 2,
+        "no_top_level_function": 2,
+        "parseable": 17
+      },
+      "suite_evaluations": 100,
+      "syntax_counts": {
+        "syntax_or_parser_error": 35
+      },
+      "unique_generated_programs": 52
+    },
+    "candidate-completion": {
+      "inputs_sha256": {
+        "programs-candidate-completion.json": "19ac1e0ef5f7db7579bfc9fa0b28d83e0f732f4a7a9909f2e0c9c36b9b1573b6",
+        "scores-candidate-completion.json": "1c25fa6a0ae828e8545c42df0f0a08cbfc9f0921768198bd49a960df914957f7"
+      },
+      "outcomes": {
+        "passed": 2,
+        "runtime_AttributeError": 2,
+        "runtime_RecursionError": 4,
+        "runtime_TypeError": 9,
+        "runtime_ValueError": 4,
+        "syntax_error": 40,
+        "worker_exit_cause_not_established": 14,
+        "wrong_output": 25
+      },
+      "static_shape_counts": {
+        "empty_module": 2,
+        "no_top_level_function": 7,
+        "parseable": 31
+      },
+      "suite_evaluations": 100,
+      "syntax_counts": {
+        "syntax_or_parser_error": 21
+      },
+      "unique_generated_programs": 52
+    }
+  },
+  "scope": "aggregate diagnostics only; no benchmark prompts or answers emitted"
+}

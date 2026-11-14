@@ -14,6 +14,8 @@ def compare(scores, base_sha256, candidate_sha256):
                 raise ValueError(f"{label}-{mode}: checkpoint or decoding mode mismatch")
             if not meta["sandbox"]["available"] or any(row["unavailable"] for row in score["summary"].values()):
                 raise ValueError("sandbox measurement unavailable")
+            if any(row.get("status") in {"error", "unavailable"} for row in score["results"]):
+                raise ValueError("functional measurement contains infrastructure errors")
             if meta["limit"] != 25 or not meta["decoding"]["greedy"] or meta["decoding"].get("max_new_tokens") != 384:
                 raise ValueError("expected the declared 25-task greedy pilot")
             if set(score["summary"]) != {row["suite"] for row in score["results"]}:

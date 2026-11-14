@@ -85,3 +85,10 @@ def test_changed_token_budget_is_rejected():
     data["candidate-completion"]["meta"]["decoding"]["max_new_tokens"] = 128
     with pytest.raises(ValueError, match="declared"):
         compare(data, "base", "candidate")
+
+
+def test_infrastructure_error_blocks_even_with_correct_summary_totals():
+    data = scores()
+    data["candidate-completion"]["results"][-1]["status"] = "error"
+    with pytest.raises(ValueError, match="infrastructure errors"):
+        compare(data, "base", "candidate")

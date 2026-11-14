@@ -88,3 +88,61 @@ executions are acceptable as evidence. Only a passing screen justifies full froz
 benchmark qualification; that is a separate measurement, not automatic promotion.
 A failed screen retains the accepted base and ends this bounded trial. No paid
 resources, hosting changes or relaxation of release gates are part of this work.
+
+## Measured outcome: rejected, base retained
+
+The [private free-GPU run](https://www.kaggle.com/code/idowuaye/llmfs-curriculum-pilot-20261114)
+completed the resume gate, 100 training steps and all four generation stages.
+No train or validation rows were dropped. The best aggregate instruction validation
+loss was at step 100: 1.087790 to 0.633408; replay validation loss rose from
+1.657006 to 1.672926. These mixed instruction losses include repair/preservation
+prompts containing code, so they must not be interpreted as novel-code-generation
+scores or compared directly with the seed's implementation-only validation loss.
+
+The exact newly generated base programs, complete behavior vectors and relevant
+inference/benchmark metadata matched the previously scored base outputs. Those
+base sandbox results were reused rather than re-executed. The evidence records
+their original run IDs and content hashes. The new candidate outputs were scored
+in fresh Linux sandbox runs with a passing canary and no unavailable cases.
+
+| Metric | Base completion | Candidate completion | Base chat | Candidate chat |
+|---|---|---|---|---|
+| Valid Python, distinct programs | 35/52 | 31/52 | 10/52 | 17/52 |
+| HumanEval | 1/25 | 1/25 | 0/25 | 0/25 |
+| HumanEval+ | 1/25 | 1/25 | 0/25 | 0/25 |
+| MBPP | 0/25 | 0/25 | 0/25 | 0/25 |
+| MBPP+ | 0/25 | 0/25 | 0/25 | 0/25 |
+| Abstention, safe choice | 5/15 | 5/15 | 5/15 | 5/15 |
+| Prompt injection, safe choice | 5/15 | 5/15 | 5/15 | 5/15 |
+| Unsafe recommendation, safe choice | 4/15 | 4/15 | 4/15 | 4/15 |
+
+The paired comparisons show no new or lost functional passes. The primary
+completion screen fails both improvement and syntax-retention requirements;
+chat retention passes, but increased syntax validity does not establish useful
+coding. No full qualification, further curriculum steps or rollout follows.
+The accepted Phase 4 base remains unchanged. This observed public subset does
+not establish a model ranking or broad cybersecurity competence.
+
+`training/pilot_decision.py` applies the predeclared checks and rejects incompatible
+checkpoint/suite/task/decoding identities, infrastructure errors and inconsistent
+score totals. Thirteen decision-controller tests pass, including applying the
+same controller to the previous failed seed artifacts. The data/training code
+passed [Linux CI](https://github.com/Canadasun/llm-from-scratch/actions/runs/43632855908)
+with 580 passed and one skipped; final branch checks are visible on the PR.
+
+Evidence:
+
+- [Pinned configuration](curriculum-v2-kaggle-2026-11-14.json)
+- [GPU status, history, identity and baseline-reuse evidence](curriculum-v2-gpu-2026-11-14.json)
+- [Matched-mode decision](curriculum-v2-decision-2026-11-14.json)
+- [Aggregate output diagnostics](curriculum-v2-failures-2026-11-14.json)
+- Raw outputs and scores: `evals/results/curriculum_v2/`
+- [Candidate completion sandbox run](https://github.com/Canadasun/llm-from-scratch/actions/runs/43634660362)
+- [Candidate chat sandbox run](https://github.com/Canadasun/llm-from-scratch/actions/runs/43634662106)
+
+The two controlled authored-data trials have not produced functional coding gains.
+Pause this sequence of small-curriculum SFT trials rather than launch another
+longer run. The next research step is to investigate base pretraining coverage,
+generalization and format transfer, then choose a materially different, measured
+experiment. This result alone does not prove whether capacity, pretraining data,
+instruction diversity or their interaction is the dominant limitation.
