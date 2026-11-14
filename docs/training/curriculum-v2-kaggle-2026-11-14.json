@@ -1,0 +1,163 @@
+{
+  "purpose": "one bounded broader curriculum trial; exact CUDA resume gate; no promotion from losses",
+  "code_slug": "llmfs-code-curriculum-20261114",
+  "code_commit": "bcab353ec784109ea947c011bd2729345868d87f",
+  "code_tar_sha256": "0f57ffc879c1ac89a5ada754abb8f517ffb9c2bc314f6caa820a591a3260e4ff",
+  "data_slug": "llmfs-curriculum-v2-20261114",
+  "state_slug": "llmfs-p4-base",
+  "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+  "extra_inputs": {
+    "replay": [
+      "llmfs-corpus-v3",
+      "manifest.json"
+    ],
+    "bench": [
+      "llmfs-bench-frozen-20261114",
+      "bench-manifest.json"
+    ]
+  },
+  "steps": [
+    {
+      "name": "cuda-resume-gate",
+      "args": [
+        "-m",
+        "training.verify_sft_resume",
+        "--device",
+        "cuda",
+        "--report",
+        "{work}/resume.json"
+      ],
+      "timeout": 300
+    },
+    {
+      "name": "curriculum-v2-train",
+      "args": [
+        "-m",
+        "training.sft",
+        "--base",
+        "{state}/ckpt.pt",
+        "--expect-base-sha256",
+        "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+        "--data",
+        "{data}",
+        "--expect-data-sha256",
+        "40b44fc025295b5e58c1935ae6d94c273e7fb001a9bc12d9f1db07339eaef1b0",
+        "--replay-dir",
+        "{replay}",
+        "--expect-replay-sha256",
+        "57af602d753c003ae446721d9ad25144c56a432e3b5daf52925a9b6ed9fafcfd",
+        "--replay-fraction",
+        "0.3",
+        "--output",
+        "{work}/candidate",
+        "--steps",
+        "100",
+        "--batch-size",
+        "4",
+        "--grad-accum-steps",
+        "2",
+        "--context",
+        "768",
+        "--learning-rate",
+        "1e-5",
+        "--warmup",
+        "10",
+        "--eval-interval",
+        "20",
+        "--deadline-seconds",
+        "600",
+        "--device",
+        "cuda",
+        "--upsample",
+        ""
+      ],
+      "timeout": 900
+    },
+    {
+      "name": "base-completion",
+      "args": [
+        "-m",
+        "evals.bench_run",
+        "generate",
+        "--ckpt",
+        "{state}/ckpt.pt",
+        "--bench-dir",
+        "{bench}",
+        "--limit",
+        "25",
+        "--max-new-tokens",
+        "384",
+        "--device",
+        "cuda",
+        "--out",
+        "{work}/programs-base-completion.json"
+      ],
+      "timeout": 1200
+    },
+    {
+      "name": "base-chat",
+      "args": [
+        "-m",
+        "evals.bench_run",
+        "generate",
+        "--ckpt",
+        "{state}/ckpt.pt",
+        "--bench-dir",
+        "{bench}",
+        "--limit",
+        "25",
+        "--max-new-tokens",
+        "384",
+        "--device",
+        "cuda",
+        "--out",
+        "{work}/programs-base-chat.json",
+        "--chat"
+      ],
+      "timeout": 1200
+    },
+    {
+      "name": "candidate-completion",
+      "args": [
+        "-m",
+        "evals.bench_run",
+        "generate",
+        "--ckpt",
+        "{work}/candidate/best.pt",
+        "--bench-dir",
+        "{bench}",
+        "--limit",
+        "25",
+        "--max-new-tokens",
+        "384",
+        "--device",
+        "cuda",
+        "--out",
+        "{work}/programs-candidate-completion.json"
+      ],
+      "timeout": 1200
+    },
+    {
+      "name": "candidate-chat",
+      "args": [
+        "-m",
+        "evals.bench_run",
+        "generate",
+        "--ckpt",
+        "{work}/candidate/best.pt",
+        "--bench-dir",
+        "{bench}",
+        "--limit",
+        "25",
+        "--max-new-tokens",
+        "384",
+        "--device",
+        "cuda",
+        "--out",
+        "{work}/programs-candidate-chat.json",
+        "--chat"
+      ],
+      "timeout": 1200
+    }
+  ]
+}
