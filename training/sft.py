@@ -7,7 +7,7 @@ from pathlib import Path
 
 import torch
 
-from data.shards import ShardSplit, load_manifest
+from data.shards import LEGACY_PREFIX, SAMPLING_MODES, UNIFORM_WINDOWS, ShardSplit, load_manifest
 from evals.loader import load_checkpoint
 from special_tokens import ASSISTANT, ENDOFTEXT, USER
 from train import StopRequest, atomic_save, atomic_write_text, file_sha256, make_autocast, pick_device
@@ -119,12 +119,13 @@ def response_loss(model, pairs, device, autocast_ctx, batch_size=8):
 
 
 @torch.no_grad()
-def replay_loss(model, split, context, device, autocast_ctx, batches=8, batch_size=8, seed=7919):
+def replay_loss(model, split, context, device, autocast_ctx, batches=8, batch_size=8, seed=7919,
+                sampling_mode=UNIFORM_WINDOWS):
     model.eval()
     generator = torch.Generator().manual_seed(seed)
     losses = []
     for _ in range(batches):
-        x, y = split.sample(batch_size, context, generator)
+        x, y = split.sample(batch_size, context, generator, sampling_mode=sampling_mode)
         with autocast_ctx():
             _, loss = model(x.to(device), y.to(device))
         losses.append(loss.item())
@@ -137,6 +138,9 @@ def tune(args):
         raise ValueError("replay fraction must be in [0, 1)")
     if min(args.steps, args.batch_size, args.grad_accum_steps, args.context, args.eval_interval) < 1:
         raise ValueError("steps, batch size, accumulation, context and evaluation interval must be positive")
+    resume_state = torch.load(args.resume, map_location="cpu", weights_only=True) if args.resume else None
+    replay_mode = args.replay_sampling_mode or (
+        resume_state["meta"].get("replay_sampling_mode", LEGACY_PREFIX) if resume_state is not None else UNIFORM_WINDOWS)
     out = Path(args.output)
     base = Path(args.base).resolve()
     if base.parent == out.resolve():
@@ -198,15 +202,15 @@ def tune(args):
             "validation_rows": len(val_rows), "validation_rows_dropped_for_context": dropped_val,
             "schedule_rows": len(order), "torch_version": str(torch.__version__)}
     meta.update({"instruction_split_sha256": split_hashes, "weight_decay": args.weight_decay,
-                 "device_type": device.split(":")[0]})
+                 "device_type": device.split(":")[0], "replay_sampling_mode": replay_mode})
     if args.resume:
-        state = torch.load(args.resume, map_location="cpu", weights_only=True)
+        state = resume_state
         if state["meta"]["base_checkpoint_sha256"] != base_sha or state["meta"]["instruction_manifest_sha256"] != data_sha:
             raise ValueError("resume state belongs to a different base or instruction set")
         for key in ("instruction_split_sha256", "replay_manifest_sha256", "replay_fraction", "upsample",
                     "context", "batch_size", "grad_accum_steps", "learning_rate", "warmup", "steps",
-                    "seed", "weight_decay", "device_type", "amp_dtype"):
-            if state["meta"].get(key) != meta[key]:
+                    "seed", "weight_decay", "device_type", "amp_dtype", "replay_sampling_mode"):
+            if state["meta"].get(key, LEGACY_PREFIX if key == "replay_sampling_mode" else None) != meta[key]:
                 raise ValueError(f"resume configuration mismatch: {key}")
         model.load_state_dict(state["model_state"])
         optimizer.load_state_dict(state["optimizer_state"])
@@ -225,7 +229,7 @@ def tune(args):
         base_val = response_loss(model, val_pairs, device, autocast_ctx)
         record = {"step": 0, "validation_loss": base_val}
         if replay_val is not None:
-            record["replay_val_loss"] = replay_loss(model, replay_val, context, device, autocast_ctx)
+            record["replay_val_loss"] = replay_loss(model, replay_val, context, device, autocast_ctx, sampling_mode=replay_mode)
         history.append(record)
         print(json.dumps(record), flush=True)
     stop = StopRequest().install()
@@ -267,7 +271,7 @@ def tune(args):
             total = 0.0
             for _ in range(args.grad_accum_steps):
                 if replay is not None and mix.random() < args.replay_fraction:
-                    x, y = replay.sample(args.batch_size, context, replay_gen)
+                    x, y = replay.sample(args.batch_size, context, replay_gen, sampling_mode=replay_mode)
                     x, y = x.to(device), y.to(device)
                 else:
                     x, y = pad([train_pairs[i] for i in sampler.take(args.batch_size)], device)
@@ -289,7 +293,7 @@ def tune(args):
                           "lr": optimizer.param_groups[0]["lr"],
                           "elapsed_seconds": round(time.monotonic() - started, 1)}
                 if replay_val is not None:
-                    record["replay_val_loss"] = replay_loss(model, replay_val, context, device, autocast_ctx)
+                    record["replay_val_loss"] = replay_loss(model, replay_val, context, device, autocast_ctx, sampling_mode=replay_mode)
                 history.append(record)
                 print(json.dumps(record), flush=True)
                 if best is None or record["validation_loss"] < best:
@@ -322,6 +326,8 @@ def build_parser():
     ap.add_argument("--expect-replay-sha256")
     ap.add_argument("--skip-replay-hash", action="store_true")
     ap.add_argument("--replay-fraction", type=float, default=0.2)
+    ap.add_argument("--replay-sampling-mode", choices=SAMPLING_MODES,
+                    help="uniform for new runs; historical distribution retained on resume")
     ap.add_argument("--upsample", default=",".join(f"{k}=8" for k in AUTHORED))
     ap.add_argument("--output", required=True)
     ap.add_argument("--resume")

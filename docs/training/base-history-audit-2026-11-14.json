@@ -1,0 +1,322 @@
+{
+  "accepted_checkpoint_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+  "training_state_sha256": "f3685f8386614cecbf137dc9bc5b82b873a1fe15b9869f2e7cbfcf5ecccb9df7",
+  "historical_shards_source_sha256": "5f28a4e5b86cb8558700bb96358cbafc7f572209a16dd7cc0eae749eb15df636",
+  "train_cfg": {
+    "block_size": 1024,
+    "n_layer": 12,
+    "n_head": 10,
+    "n_embd": 640,
+    "dropout": 0.0,
+    "batch_size": 16,
+    "learning_rate": 0.0006,
+    "max_iters": 38000,
+    "eval_interval": 500,
+    "eval_iters": 40,
+    "weight_decay": 0.1,
+    "grad_clip": 1.0,
+    "warmup_iters": 1000,
+    "lr_schedule": "cosine",
+    "min_lr_ratio": 0.1,
+    "lr_decay_iters": 38000,
+    "grad_accum_steps": 4,
+    "beta2": 0.95,
+    "doc_aligned": true,
+    "tokenizer": "bpe_code",
+    "vocab_size": 16384,
+    "bpe_train_chars": 1200000,
+    "val_split": 0.1,
+    "seed": 1337,
+    "out_dir": "/kaggle/working/p4-s2"
+  },
+  "completed_steps": 9176,
+  "best_val_loss": 1.5660953521728516,
+  "corpus_hash": "57af602d753c003ae446721d9ad25144c56a432e3b5daf52925a9b6ed9fafcfd",
+  "data_kind": "shards",
+  "historical_torch_version": "2.11.0+cu130",
+  "accepted_step": 8000,
+  "accepted_nominal_training_tokens": 524288000,
+  "history_sources": [
+    {
+      "session": "p4-s2",
+      "log_sha256": "3b77868f87c4e245f495c2a5cd2ffc49f228b27f123c35badc9f9af159122546",
+      "all_numeric_values_finite": true
+    },
+    {
+      "session": "p4-s3",
+      "log_sha256": "f96a19073b58f04c4332b28481a64389ecb8543f25ab4a4916344e28b836107d",
+      "all_numeric_values_finite": true
+    }
+  ],
+  "evaluation_history": [
+    {
+      "session": "p4-s2",
+      "step": 500,
+      "eval_train_loss": 4.169369697570801,
+      "val_loss": 4.156712532043457,
+      "elapsed_seconds": 35.53
+    },
+    {
+      "session": "p4-s2",
+      "step": 1000,
+      "eval_train_loss": 2.6964855194091797,
+      "val_loss": 2.6472439765930176,
+      "elapsed_seconds": 1487.92
+    },
+    {
+      "session": "p4-s2",
+      "step": 1500,
+      "eval_train_loss": 2.136448383331299,
+      "val_loss": 2.087947130203247,
+      "elapsed_seconds": 2932.39
+    },
+    {
+      "session": "p4-s2",
+      "step": 2000,
+      "eval_train_loss": 1.9424835443496704,
+      "val_loss": 1.9272931814193726,
+      "elapsed_seconds": 4381.1
+    },
+    {
+      "session": "p4-s2",
+      "step": 2500,
+      "eval_train_loss": 1.815155029296875,
+      "val_loss": 1.7867984771728516,
+      "elapsed_seconds": 5830.72
+    },
+    {
+      "session": "p4-s2",
+      "step": 3000,
+      "eval_train_loss": 1.737444281578064,
+      "val_loss": 1.7489280700683594,
+      "elapsed_seconds": 7284.52
+    },
+    {
+      "session": "p4-s2",
+      "step": 3500,
+      "eval_train_loss": 1.679298758506775,
+      "val_loss": 1.6820685863494873,
+      "elapsed_seconds": 8731.44
+    },
+    {
+      "session": "p4-s2",
+      "step": 4000,
+      "eval_train_loss": 1.6246598958969116,
+      "val_loss": 1.663195013999939,
+      "elapsed_seconds": 10184.3
+    },
+    {
+      "session": "p4-s2",
+      "step": 4500,
+      "eval_train_loss": 1.5836238861083984,
+      "val_loss": 1.6484806537628174,
+      "elapsed_seconds": 11635.23
+    },
+    {
+      "session": "p4-s2",
+      "step": 5000,
+      "eval_train_loss": 1.5482656955718994,
+      "val_loss": 1.6336761713027954,
+      "elapsed_seconds": 13084.16
+    },
+    {
+      "session": "p4-s2",
+      "step": 5500,
+      "eval_train_loss": 1.513810634613037,
+      "val_loss": 1.6158500909805298,
+      "elapsed_seconds": 14535.35
+    },
+    {
+      "session": "p4-s2",
+      "step": 6000,
+      "eval_train_loss": 1.4880778789520264,
+      "val_loss": 1.5995416641235352,
+      "elapsed_seconds": 15987.12
+    },
+    {
+      "session": "p4-s2",
+      "step": 6500,
+      "eval_train_loss": 1.4577738046646118,
+      "val_loss": 1.5944225788116455,
+      "elapsed_seconds": 17438.47
+    },
+    {
+      "session": "p4-s2",
+      "step": 7000,
+      "eval_train_loss": 1.4322421550750732,
+      "val_loss": 1.606318473815918,
+      "elapsed_seconds": 18894.82
+    },
+    {
+      "session": "p4-s2",
+      "step": 7500,
+      "eval_train_loss": 1.415175437927246,
+      "val_loss": 1.5947058200836182,
+      "elapsed_seconds": 20344.65
+    },
+    {
+      "session": "p4-s2",
+      "step": 8000,
+      "eval_train_loss": 1.3967550992965698,
+      "val_loss": 1.5660953521728516,
+      "elapsed_seconds": 21798.01
+    },
+    {
+      "session": "p4-s2",
+      "step": 8500,
+      "eval_train_loss": 1.372031331062317,
+      "val_loss": 1.5794957876205444,
+      "elapsed_seconds": 23248.19
+    },
+    {
+      "session": "p4-s2",
+      "step": 9000,
+      "eval_train_loss": 1.3524386882781982,
+      "val_loss": 1.5802085399627686,
+      "elapsed_seconds": 24701.4
+    },
+    {
+      "session": "p4-s3",
+      "step": 9500,
+      "eval_train_loss": 1.3390229940414429,
+      "val_loss": 1.5663790702819824,
+      "elapsed_seconds": 836.98
+    },
+    {
+      "session": "p4-s3",
+      "step": 10000,
+      "eval_train_loss": 1.31778883934021,
+      "val_loss": 1.5715749263763428,
+      "elapsed_seconds": 2109.65
+    },
+    {
+      "session": "p4-s3",
+      "step": 10500,
+      "eval_train_loss": 1.311853051185608,
+      "val_loss": 1.5705993175506592,
+      "elapsed_seconds": 3377.02
+    },
+    {
+      "session": "p4-s3",
+      "step": 11000,
+      "eval_train_loss": 1.3011319637298584,
+      "val_loss": 1.572736144065857,
+      "elapsed_seconds": 4650.74
+    },
+    {
+      "session": "p4-s3",
+      "step": 11500,
+      "eval_train_loss": 1.295088529586792,
+      "val_loss": 1.5855997800827026,
+      "elapsed_seconds": 5920.61
+    },
+    {
+      "session": "p4-s3",
+      "step": 12000,
+      "eval_train_loss": 1.2746613025665283,
+      "val_loss": 1.594220757484436,
+      "elapsed_seconds": 7191.91
+    },
+    {
+      "session": "p4-s3",
+      "step": 12500,
+      "eval_train_loss": 1.2608270645141602,
+      "val_loss": 1.589750051498413,
+      "elapsed_seconds": 8459.9
+    },
+    {
+      "session": "p4-s3",
+      "step": 13000,
+      "eval_train_loss": 1.256964921951294,
+      "val_loss": 1.5878856182098389,
+      "elapsed_seconds": 9731.75
+    },
+    {
+      "session": "p4-s3",
+      "step": 13500,
+      "eval_train_loss": 1.2444419860839844,
+      "val_loss": 1.5713144540786743,
+      "elapsed_seconds": 11001.55
+    },
+    {
+      "session": "p4-s3",
+      "step": 14000,
+      "eval_train_loss": 1.2343807220458984,
+      "val_loss": 1.5691713094711304,
+      "elapsed_seconds": 12273.93
+    },
+    {
+      "session": "p4-s3",
+      "step": 14500,
+      "eval_train_loss": 1.224749207496643,
+      "val_loss": 1.5825438499450684,
+      "elapsed_seconds": 13541.95
+    },
+    {
+      "session": "p4-s3",
+      "step": 15000,
+      "eval_train_loss": 1.2056846618652344,
+      "val_loss": 1.587888479232788,
+      "elapsed_seconds": 14813.33
+    },
+    {
+      "session": "p4-s3",
+      "step": 15500,
+      "eval_train_loss": 1.1958259344100952,
+      "val_loss": 1.5977113246917725,
+      "elapsed_seconds": 16080.43
+    },
+    {
+      "session": "p4-s3",
+      "step": 16000,
+      "eval_train_loss": 1.1844098567962646,
+      "val_loss": 1.5845338106155396,
+      "elapsed_seconds": 17350.66
+    },
+    {
+      "session": "p4-s3",
+      "step": 16500,
+      "eval_train_loss": 1.1805320978164673,
+      "val_loss": 1.5950076580047607,
+      "elapsed_seconds": 18614.39
+    },
+    {
+      "session": "p4-s3",
+      "step": 17000,
+      "eval_train_loss": 1.1729220151901245,
+      "val_loss": 1.5758180618286133,
+      "elapsed_seconds": 19882.16
+    },
+    {
+      "session": "p4-s3",
+      "step": 17500,
+      "eval_train_loss": 1.160462498664856,
+      "val_loss": 1.587620735168457,
+      "elapsed_seconds": 21148.26
+    },
+    {
+      "session": "p4-s3",
+      "step": 18000,
+      "eval_train_loss": 1.1521002054214478,
+      "val_loss": 1.6104564666748047,
+      "elapsed_seconds": 22421.49
+    },
+    {
+      "session": "p4-s3",
+      "step": 18500,
+      "eval_train_loss": 1.1424404382705688,
+      "val_loss": 1.606365442276001,
+      "elapsed_seconds": 23689.18
+    },
+    {
+      "session": "p4-s3",
+      "step": 19000,
+      "eval_train_loss": 1.131500244140625,
+      "val_loss": 1.5848525762557983,
+      "elapsed_seconds": 24959.96
+    }
+  ],
+  "interpretation": "Recorded losses used legacy document-prefix sampling. They do not measure whole-corpus generalization.",
+  "historical_code_commit": "783f3daa",
+  "historical_sampler": "legacy_doc_prefix_v1"
+}

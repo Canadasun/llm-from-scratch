@@ -27,6 +27,11 @@ progress. The current model remains a **research preview** and scores **0/18**
 on the repository coding tasks. It is not a reliable coding assistant. See
 [measured status](docs/STATUS.md) and [Phase 0 controls](docs/implementation/phase-0-preparation.md).
 
+The [November 14 base audit](docs/training/base-diagnosis-2026-11-14.md) found
+that historical shard sampling could not reach 58% of training tokens. New runs
+use uniform windows; old exact resumes preserve their recorded distribution.
+The accepted model is unchanged and has not yet been retrained with this repair.
+
 ## Quickstart (CPU)
 
 ```bash

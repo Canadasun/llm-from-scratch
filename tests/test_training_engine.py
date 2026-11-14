@@ -233,10 +233,12 @@ def test_interrupted_shard_run_resumes_exactly(tmp_path, monkeypatch):
     assert a["best_val_loss"] == b["best_val_loss"]
     best = torch.load(tmp_path / "continuous" / "best.pt", weights_only=True)
     assert "optimizer_state" not in best and best["training"]["val_loss"] == a["best_val_loss"]
+    assert best["training"]["sampling_mode"] == "uniform_windows_v1"
     log = [json.loads(line) for line in (tmp_path / "continuous" / "train_log.jsonl").read_text().splitlines()]
     assert any("tokens_per_second" in r for r in log) and any("val_loss" in r for r in log)
     status = json.loads((tmp_path / "s2" / "status.json").read_text())
     assert status["data_kind"] == "shards" and len(status["ckpt_sha256"]) == 64
+    assert status["sampling_mode"] == "uniform_windows_v1"
 
 
 def test_deadline_stops_with_resumable_checkpoint_and_pins_are_enforced(tmp_path, monkeypatch):
@@ -254,6 +256,44 @@ def test_deadline_stops_with_resumable_checkpoint_and_pins_are_enforced(tmp_path
     with pytest.raises(SystemExit):
         train.main(["--device", "cpu", "--data-dir", str(tmp_path / "other"), "--out-dir", str(tmp_path / "z"),
                     "--resume", str(tmp_path / "d" / "ckpt.pt")])
+
+
+def test_preversion_sampler_resume_is_exact_and_cannot_change(tmp_path, monkeypatch):
+    from data.shards import LEGACY_PREFIX, UNIFORM_WINDOWS
+    build_shards(tmp_path / "set")
+    shard_run(tmp_path, monkeypatch, "--out-dir", str(tmp_path / "full"), "--sampling-mode", LEGACY_PREFIX)
+    shard_run(tmp_path, monkeypatch, "--out-dir", str(tmp_path / "first"), "--sampling-mode", LEGACY_PREFIX,
+              "--stop-at-step", "5")
+    state = torch.load(tmp_path / "first" / "ckpt.pt", weights_only=True)
+    state["train_cfg"].pop("sampling_mode")
+    torch.save(state, tmp_path / "preversion.pt")
+    shard_run(tmp_path, monkeypatch, "--out-dir", str(tmp_path / "resumed"), "--resume", str(tmp_path / "preversion.pt"))
+    a = torch.load(tmp_path / "full" / "ckpt.pt", weights_only=True)
+    b = torch.load(tmp_path / "resumed" / "ckpt.pt", weights_only=True)
+    assert b["train_cfg"]["sampling_mode"] == LEGACY_PREFIX
+    assert all(torch.equal(value, b["model_state"][key]) for key, value in a["model_state"].items())
+    with pytest.raises(SystemExit):
+        shard_run(tmp_path, monkeypatch, "--out-dir", str(tmp_path / "changed"), "--resume", str(tmp_path / "preversion.pt"),
+                  "--sampling-mode", UNIFORM_WINDOWS)
+
+
+def test_training_and_validation_use_explicit_sampling_mode():
+    import train
+    from data.shards import UNIFORM_WINDOWS
+    modes = []
+
+    class Split:
+        def sample(self, batch_size, block_size, generator, doc_aligned, sampling_mode=None):
+            modes.append(sampling_mode)
+            return torch.zeros(batch_size, block_size, dtype=torch.long), torch.ones(batch_size, block_size, dtype=torch.long)
+
+    config = TrainConfig(batch_size=2, block_size=8, grad_accum_steps=1, eval_iters=1)
+    model = tiny_model()
+    optimizer = train.configure_optimizer(model, config, "cpu")
+    autocast, scaler, _ = train.make_autocast("cpu")
+    train.train_step(model, optimizer, scaler, Split(), config, "cpu", autocast, torch.Generator())
+    train.estimate_loss(model, {"val": Split()}, config, "cpu", autocast)
+    assert modes == [UNIFORM_WINDOWS, UNIFORM_WINDOWS]
 
 
 def test_signal_request_is_recorded():

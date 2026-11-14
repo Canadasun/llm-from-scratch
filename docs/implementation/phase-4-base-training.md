@@ -1,5 +1,9 @@
 # Phase 4: Base training on Kaggle
 
+November 14 audit: [base diagnosis](../training/base-diagnosis-2026-11-14.md)
+found that historical sampling could not reach 58% of training tokens or 65% of
+validation tokens. Losses below measure exposed prefixes, not full-corpus coverage.
+
 Status: stopped on 2026-11-10 by the roadmap stop rule (validation loss flat for 15% of the budget). The accepted
 base is the pilot `best.pt` at step 8,000.
 
@@ -39,8 +43,9 @@ Accepted base: pilot `best.pt`, step 8,000, sha256 `1164213e635d376946ec331d5ff2
 | 19,000 | 1.585 | 1.132 |
 
 The best validation loss came at step 8,000, about 0.85 epochs. Over the next 11,097 steps (29% of the budget)
-training loss fell from 1.40 to 1.13 while validation loss did not improve. The model is memorising the corpus
-rather than generalising. More passes over the same 2 GB will not help; more distinct data is the next lever.
+training loss fell from 1.40 to 1.13 while validation loss did not improve. This supports overfitting of the
+exposed prefix distribution. The later audit found that most document bodies had zero sampling probability;
+correct exposure must be tested before attributing the plateau only to corpus diversity or model size.
 
 ## Frozen benchmarks (pilot `best.pt`)
 
@@ -59,6 +64,7 @@ Programs: `evals/results/phase4/programs-pilot.json`, greedy decoding, 384 new t
 
 HumanEval prompts end in a signature and docstring, and 82% of completions parse. MBPP prompts are plain English
 with no signature, and only 55% parse: the base model drifts into repeated imports, `>>>` transcripts or filler.
-That is an instruction-following gap for Phase 5, not a pretraining data fault.
+This suggests an instruction-following gap but does not rule out pretraining faults; the later audit found
+the exposure defect described above.
 
 The base misses the preview targets. Per the roadmap it goes to Phase 5 as the base, and the result is recorded.

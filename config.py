@@ -34,6 +34,7 @@ class TrainConfig:
     grad_accum_steps: int = 1
     beta2: float = 0.95
     doc_aligned: bool = True
+    sampling_mode: str = "uniform_windows_v1"
 
     # --- tokenizer ---
     tokenizer: str = "char"    # "char" or "bpe"
@@ -142,3 +143,10 @@ def gpu_base_preset():
 
 PRESETS = {"cpu": cpu_preset, "gpu": gpu_preset, "gpu_large": gpu_large_preset,
            "gpu_xl": gpu_xl_preset, "gpu_base": gpu_base_preset}
+
+
+def restore_train_config(values):
+    mode = values.get("sampling_mode")
+    if mode is None:
+        mode = "legacy_doc_prefix_v1" if values.get("doc_aligned", True) else "legacy_random_v1"
+    return TrainConfig(**{**values, "sampling_mode": mode})

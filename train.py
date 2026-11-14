@@ -30,7 +30,7 @@ import tempfile
 import torch
 
 import tokenization
-from config import PRESETS, TrainConfig
+from config import PRESETS, TrainConfig, restore_train_config
 from model import GPT, GPTConfig
 
 CORPUS = os.path.join("data", "corpus.txt")
@@ -94,11 +94,12 @@ def save_training_checkpoint(path, model, model_cfg, tokenizer, optimizer,
     }, path)
 
 
-def save_inference_checkpoint(path, model, model_cfg, tokenizer, step, val_loss, corpus_hash):
+def save_inference_checkpoint(path, model, model_cfg, tokenizer, step, val_loss, corpus_hash, sampling_mode=None):
     raw_model = getattr(model, "_orig_mod", model)
     atomic_save({"format_version": CHECKPOINT_FORMAT, "model_state": raw_model.state_dict(),
                  "model_cfg": model_cfg.__dict__, "tokenizer": tokenizer.to_dict(),
-                 "training": {"step": step, "val_loss": val_loss, "corpus_hash": corpus_hash}}, path)
+                 "training": {"step": step, "val_loss": val_loss, "corpus_hash": corpus_hash,
+                              **({"sampling_mode": sampling_mode} if sampling_mode is not None else {})}}, path)
 
 
 def pick_device(requested):
@@ -118,7 +119,7 @@ class TensorSplit:
     def __len__(self):
         return len(self.data)
 
-    def sample(self, batch_size, block_size, generator, doc_aligned=True):
+    def sample(self, batch_size, block_size, generator, doc_aligned=True, sampling_mode=None):
         ix = torch.randint(len(self.data) - block_size, (batch_size,), generator=generator)
         x = torch.stack([self.data[i:i + block_size] for i in ix])
         y = torch.stack([self.data[i + 1:i + 1 + block_size] for i in ix])
@@ -150,7 +151,8 @@ def estimate_loss(model, splits, cfg, device, autocast_ctx):
         generator = torch.Generator().manual_seed(cfg.seed + 7919)
         losses = torch.zeros(cfg.eval_iters)
         for k in range(cfg.eval_iters):
-            x, y = to_device(*data.sample(cfg.batch_size, cfg.block_size, generator, cfg.doc_aligned), device)
+            x, y = to_device(*data.sample(cfg.batch_size, cfg.block_size, generator, cfg.doc_aligned,
+                                         sampling_mode=cfg.sampling_mode), device)
             with autocast_ctx():
                 _, loss = model(x, y)
             losses[k] = loss.item()
@@ -212,7 +214,8 @@ def train_step(model, optimizer, scaler, split, cfg, device, autocast_ctx, gener
     optimizer.zero_grad(set_to_none=True)
     total = None
     for _ in range(cfg.grad_accum_steps):
-        x, y = to_device(*split.sample(cfg.batch_size, cfg.block_size, generator, cfg.doc_aligned), device)
+        x, y = to_device(*split.sample(cfg.batch_size, cfg.block_size, generator, cfg.doc_aligned,
+                                      sampling_mode=cfg.sampling_mode), device)
         with autocast_ctx():
             _, loss = model(x, y)
             loss = loss / cfg.grad_accum_steps
@@ -318,6 +321,8 @@ def build_arg_parser():
     ap.add_argument("--skip-shard-hash", action="store_true",
                     help="check shard sizes but not full content hashes (faster resume on huge sets)")
     ap.add_argument("--log-interval", type=int, default=50)
+    ap.add_argument("--sampling-mode", choices=("uniform_windows_v1", "legacy_doc_prefix_v1", "legacy_random_v1"),
+                    help="window distribution; fixed when resuming, defaults to uniform for new runs")
     ap.add_argument("--compile", action="store_true",
                     help="torch.compile the model (PyTorch 2.x, CUDA)")
     return ap
@@ -337,11 +342,15 @@ def main(argv=None):
             ap.error("checkpoint lacks training state; inference-only checkpoints cannot resume")
         if resumed["batch_rng_state"] is None:
             ap.error("checkpoint lacks batch RNG state; it predates exact resume")
-        cfg = TrainConfig(**resumed["train_cfg"])
+        cfg = restore_train_config(resumed["train_cfg"])
     else:
         cfg = PRESETS[args.preset]()
         if not cfg.lr_decay_iters:
             cfg.lr_decay_iters = cfg.max_iters
+    if args.sampling_mode:
+        if resumed is not None and args.sampling_mode != cfg.sampling_mode:
+            ap.error("sampling-mode cannot change on exact resume; use a separate training experiment")
+        cfg.sampling_mode = args.sampling_mode
     fixed_on_resume = {"batch_size": args.batch_size, "grad_accum_steps": args.grad_accum_steps,
                        "lr_decay_iters": args.lr_decay_iters, "learning_rate": args.learning_rate,
                        "warmup_iters": args.warmup_iters}
@@ -471,6 +480,7 @@ def main(argv=None):
         status = {"state": state, "completed_steps": step, "max_iters": cfg.max_iters,
                   "best_val_loss": best_val, "data_sha256": corpus_hash, "data_kind": data_kind,
                   "device": device, "amp_dtype": amp_name, "tokens_per_step": tokens_per_step,
+                  "sampling_mode": cfg.sampling_mode,
                   "elapsed_seconds": round(time.monotonic() - started, 1),
                   "resumed_from_step": resumed["completed_steps"] if resumed is not None else None,
                   "ckpt_sha256": file_sha256(ckpt_path)}
@@ -492,7 +502,8 @@ def main(argv=None):
             raise SystemExit("non-finite validation loss; stopping without overwriting checkpoints")
         if step > 0 and (best_val is None or losses["val"] < best_val):
             best_val = losses["val"]
-            save_inference_checkpoint(best_path, model, model_cfg, tokenizer, step, best_val, corpus_hash)
+            save_inference_checkpoint(best_path, model, model_cfg, tokenizer, step, best_val, corpus_hash,
+                                      sampling_mode=cfg.sampling_mode)
 
     stopper = StopRequest().install()
     try:
