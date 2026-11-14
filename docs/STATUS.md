@@ -10,6 +10,12 @@ fixes SFT checkpoint/data integrity and resume defects. A small validation sampl
 improved during eight training steps; capability improvement is unproven and the
 accepted base remains unchanged. The report records remaining baseline test failures.
 
+The subsequent [verified-code GPU pilot](training/verified-seed-2026-11-14.md)
+completed exact CUDA resume and 30 training steps. Sandboxed matched-mode scoring
+found no functional coding gain and a small chat syntax regression, so the candidate
+was rejected. Linux CI passed 525 tests with one skipped. Python and cybersecurity
+research priorities are recorded in [the queue](training/PRIORITIES.md).
+
 **This is not a production cybersecurity/Python coding assistant.** It is a
 from-scratch research model with a hardened evaluation and serving harness. Neither software changes nor passing infrastructure tests establish enterprise
 readiness; the model's demonstrated coding ability remains inadequate.
