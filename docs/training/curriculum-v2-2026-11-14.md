@@ -125,8 +125,8 @@ not establish a model ranking or broad cybersecurity competence.
 
 `training/pilot_decision.py` applies the predeclared checks and rejects incompatible
 checkpoint/suite/task/decoding identities, infrastructure errors and inconsistent
-score totals. Thirteen decision-controller tests pass, including applying the
-same controller to the previous failed seed artifacts. The data/training code
+score totals. Thirteen decision-controller tests pass. A separate check of the
+same controller rejects the previous failed seed artifacts. The data/training code
 passed [Linux CI](https://github.com/Canadasun/llm-from-scratch/actions/runs/43632855908)
 with 580 passed and one skipped; final branch checks are visible on the PR.
 
