@@ -22,8 +22,9 @@ bugs without evidence. Python failures do not establish cybersecurity skill.
 
 Add 48 new first-party MIT problem families in `data/curriculum_tasks.py`: 30 train,
 nine validation and nine test. Preserve all 30 original seed families and their
-split assignments. Totals are 48/15/15 independent problem families, not 390
-independent tasks. There are 52 Python-focused and 26 security-focused labels;
+split assignments. Totals are 48/15/15 labelled problem families, not 390
+independent tasks. Related utilities may share algorithms, so a distinct family ID
+does not prove statistical or semantic independence. There are 52 Python-focused and 26 security-focused labels;
 security tasks are also Python programs.
 
 Every family has three implementation phrasings, one repair input containing a
@@ -66,7 +67,9 @@ not grounds to disable the sandbox.
 ## Predeclared bounded trial
 
 One free Kaggle T4 experiment, from pinned accepted base `1164213e…f593`, with
-pinned code/data/replay. Require exact CUDA resume verification first. Run at most
+pinned code/data/replay. Require exact CUDA resume verification first on the small
+dropout/replay test model with deterministic algorithms enabled; this tests the
+resume mechanism rather than every accelerator/model configuration. Run at most
 100 optimization steps, context 768, batch four, accumulation two, learning rate
 1e-5, ten warmup steps, 30% corpus replay, uniform row sampling, validation every
 20 steps, and a ten-minute training deadline. Keep candidate artifacts separate.
