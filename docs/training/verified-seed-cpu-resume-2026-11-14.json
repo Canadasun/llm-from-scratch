@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "device": "cpu",
+  "torch_version": "2.2.2",
+  "gpu": null,
+  "dropout": 0.1,
+  "steps": 6,
+  "interrupt_at": 3,
+  "replay_fraction": 0.3,
+  "model_tensors_identical": 29,
+  "rng_states_identical": true,
+  "precision": "float32"
+}

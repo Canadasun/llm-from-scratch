@@ -133,6 +133,10 @@ def replay_loss(model, split, context, device, autocast_ctx, batches=8, batch_si
 
 
 def tune(args):
+    if not 0 <= args.replay_fraction < 1:
+        raise ValueError("replay fraction must be in [0, 1)")
+    if min(args.steps, args.batch_size, args.grad_accum_steps, args.context, args.eval_interval) < 1:
+        raise ValueError("steps, batch size, accumulation, context and evaluation interval must be positive")
     out = Path(args.output)
     base = Path(args.base).resolve()
     if base.parent == out.resolve():
@@ -142,6 +146,13 @@ def tune(args):
         raise SystemExit(f"base checkpoint sha256 {base_sha} does not match the pinned value")
     data_dir = Path(args.data)
     data_sha = file_sha256(data_dir / "manifest.json")
+    manifest = json.loads((data_dir / "manifest.json").read_text())
+    split_hashes = {name: file_sha256(data_dir / filename) for name, filename in
+                    (("train", "train.jsonl"), ("val", "validation.jsonl"))}
+    for name, digest in split_hashes.items():
+        expected = manifest.get("sha256", {}).get(name)
+        if expected is not None and expected != digest:
+            raise ValueError(f"instruction {name} split does not match its manifest")
     if args.expect_data_sha256 and data_sha != args.expect_data_sha256:
         raise SystemExit(f"instruction manifest sha256 {data_sha} does not match the pinned value")
     torch.manual_seed(args.seed)
@@ -186,10 +197,17 @@ def tune(args):
             "train_rows": len(rows), "train_rows_dropped_for_context": dropped_train,
             "validation_rows": len(val_rows), "validation_rows_dropped_for_context": dropped_val,
             "schedule_rows": len(order), "torch_version": str(torch.__version__)}
+    meta.update({"instruction_split_sha256": split_hashes, "weight_decay": args.weight_decay,
+                 "device_type": device.split(":")[0]})
     if args.resume:
-        state = torch.load(args.resume, map_location="cpu", weights_only=False)
+        state = torch.load(args.resume, map_location="cpu", weights_only=True)
         if state["meta"]["base_checkpoint_sha256"] != base_sha or state["meta"]["instruction_manifest_sha256"] != data_sha:
             raise ValueError("resume state belongs to a different base or instruction set")
+        for key in ("instruction_split_sha256", "replay_manifest_sha256", "replay_fraction", "upsample",
+                    "context", "batch_size", "grad_accum_steps", "learning_rate", "warmup", "steps",
+                    "seed", "weight_decay", "device_type", "amp_dtype"):
+            if state["meta"].get(key) != meta[key]:
+                raise ValueError(f"resume configuration mismatch: {key}")
         model.load_state_dict(state["model_state"])
         optimizer.load_state_dict(state["optimizer_state"])
         scaler.load_state_dict(state["scaler_state"])
@@ -198,6 +216,8 @@ def tune(args):
         version, internal, gauss = state["mix_rng"]
         mix.setstate((version, tuple(internal), gauss))
         torch.set_rng_state(state["torch_rng"])
+        if device.startswith("cuda"):
+            torch.cuda.set_rng_state_all(state["cuda_rng"])
         step, history, best = state["step"], state["history"], state["best"]
         meta["resumed_from_step"] = step
     out.mkdir(parents=True, exist_ok=True)
@@ -218,6 +238,7 @@ def tune(args):
                      "scaler_state": scaler.state_dict(), "sampler": sampler.state(),
                      "replay_rng": replay_gen.get_state(), "mix_rng": list(mix.getstate()),
                      "torch_rng": torch.get_rng_state(), "step": step, "history": history, "best": best,
+                     "cuda_rng": torch.cuda.get_rng_state_all() if device.startswith("cuda") else [],
                      "meta": meta, "model_cfg": model_cfg, "tokenizer": tokenizer.to_dict()}, out / "ckpt.pt")
 
     def write_status(state):

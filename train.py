@@ -202,7 +202,9 @@ def make_autocast(device):
             return torch.autocast(device_type="cuda", dtype=amp_dtype)
     else:
         autocast_ctx = contextlib.nullcontext
-    scaler = torch.amp.GradScaler("cuda", enabled=(use_amp and amp_dtype == torch.float16))
+    enabled = use_amp and amp_dtype == torch.float16
+    scaler = (torch.amp.GradScaler("cuda", enabled=enabled) if hasattr(torch.amp, "GradScaler")
+              else torch.cuda.amp.GradScaler(enabled=enabled))
     return autocast_ctx, scaler, (str(amp_dtype).replace("torch.", "") if use_amp else "float32")
 
 

@@ -13,10 +13,10 @@ from training import sft
 TEXT = "".join(f"def f{i}(x):\n    return x + {i}\n\n" for i in range(60))
 
 
-def _setup(tmp_path):
+def _setup(tmp_path, dropout=0.0):
     tok = tokenization.build_with_specials("bpe_code", TEXT * 2, vocab_size=300, bpe_train_chars=10 ** 6)
     torch.manual_seed(0)
-    cfg = GPTConfig(vocab_size=tok.vocab_size, block_size=64, n_layer=2, n_head=2, n_embd=32, dropout=0.0)
+    cfg = GPTConfig(vocab_size=tok.vocab_size, block_size=64, n_layer=2, n_head=2, n_embd=32, dropout=dropout)
     base = tmp_path / "base" / "ckpt.pt"
     atomic_save({"model_state": GPT(cfg).state_dict(), "model_cfg": cfg.__dict__, "tokenizer": tok.to_dict()}, base)
     data = tmp_path / "sft"
@@ -79,8 +79,9 @@ def test_tuning_writes_candidate_and_never_touches_base(tmp_path):
         sft.tune(_args(base, data, shards, tmp_path / "pinned", expect_base_sha256="0" * 64))
 
 
-def test_resumed_tuning_matches_continuous(tmp_path):
-    _, base, data, shards = _setup(tmp_path)
+@pytest.mark.parametrize("dropout", [0.0, 0.1])
+def test_resumed_tuning_matches_continuous(tmp_path, dropout):
+    _, base, data, shards = _setup(tmp_path, dropout=dropout)
     sft.tune(_args(base, data, shards, tmp_path / "full"))
     first = sft.tune(_args(base, data, shards, tmp_path / "a", stop_at_step=3))
     assert first["state"] == "stopped" and first["step"] == 3
@@ -90,3 +91,26 @@ def test_resumed_tuning_matches_continuous(tmp_path):
     assert resumed["step"] == full["step"] == 6
     for key, value in full["model_state"].items():
         assert torch.equal(value, resumed["model_state"][key]), key
+
+
+def test_resume_rejects_changed_training_settings(tmp_path):
+    _, base, data, shards = _setup(tmp_path)
+    sft.tune(_args(base, data, shards, tmp_path / "first", stop_at_step=3))
+    with pytest.raises(ValueError, match="resume configuration mismatch: learning_rate"):
+        sft.tune(_args(base, data, shards, tmp_path / "resumed",
+                       resume=tmp_path / "first" / "ckpt.pt", learning_rate="2e-3"))
+
+
+def test_manifest_detects_modified_instruction_file(tmp_path):
+    _, base, data, shards = _setup(tmp_path)
+    (data / "manifest.json").write_text(json.dumps({"sha256": {"train": "0" * 64}}))
+    with pytest.raises(ValueError, match="train split does not match"):
+        sft.tune(_args(base, data, shards, tmp_path / "run"))
+
+
+@pytest.mark.parametrize("option,value", [("replay_fraction", 1), ("replay_fraction", -0.1),
+                                         ("grad_accum_steps", 0), ("eval_interval", 0)])
+def test_invalid_training_settings_fail_before_loading(option, value, tmp_path):
+    args = _args(tmp_path / "missing", tmp_path, tmp_path, tmp_path / "run", **{option: value})
+    with pytest.raises(ValueError):
+        sft.tune(args)
