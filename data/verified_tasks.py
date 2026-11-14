@@ -9,6 +9,8 @@ class Task:
     source: str
     cases: list
     mutation: tuple
+    domain: str = "python"
+    source_file: str = "data/verified_tasks.py"
 
 
 def case(args, expected=None, raises=None):
