@@ -1,0 +1,81 @@
+{
+  "purpose": "CPU training-integrity pilot, not capability qualification",
+  "status": {
+    "state": "completed",
+    "completed_steps": 8,
+    "max_iters": 8,
+    "best_val_loss": 1.4572167143153683,
+    "meta": {
+      "method": "response-only instruction tuning with base-corpus replay",
+      "base_checkpoint_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+      "instruction_manifest_sha256": "b8a5792306c17a9e38998f5998a2dd639c05fb8b08137a2b4626e7ef61563584",
+      "replay_manifest_sha256": "57af602d753c003ae446721d9ad25144c56a432e3b5daf52925a9b6ed9fafcfd",
+      "replay_fraction": 0.2,
+      "upsample": {},
+      "context": 256,
+      "batch_size": 1,
+      "grad_accum_steps": 2,
+      "learning_rate": 1e-05,
+      "warmup": 2,
+      "steps": 8,
+      "seed": 2026,
+      "amp_dtype": "float32",
+      "train_rows": 64,
+      "train_rows_dropped_for_context": 0,
+      "validation_rows": 8,
+      "validation_rows_dropped_for_context": 0,
+      "schedule_rows": 64,
+      "torch_version": "2.2.2",
+      "instruction_split_sha256": {
+        "train": "d4d1032e4444bc3f3e8bd22ec0f95c933d998d28ed6d6974d5538de0bcb12af5",
+        "val": "dda3f458bccfe120da41a232722589df1f8618336f61cf47fae0cf0b5d08c808"
+      },
+      "weight_decay": 0.1,
+      "device_type": "cpu"
+    },
+    "elapsed_seconds": 22.8,
+    "ckpt_sha256": "4c733c014986d5b40e6a372a6e580f8b96a4f9d1a43ab0cdc11b311842ce321d",
+    "best_sha256": "3d63184c01e6c3a8823c10bfdc4c3eba4d2f69e045d19eab15fcf8e72b98d818"
+  },
+  "history": [
+    {
+      "step": 0,
+      "validation_loss": 1.4901031641568538,
+      "replay_val_loss": 1.9083813577890396
+    },
+    {
+      "step": 4,
+      "train_loss": 0.9302571415901184,
+      "validation_loss": 1.4702187751610305,
+      "lr": 9.397114317029975e-06,
+      "elapsed_seconds": 4.8,
+      "replay_val_loss": 1.9080857038497925
+    },
+    {
+      "step": 8,
+      "train_loss": 1.9420117139816284,
+      "validation_loss": 1.4572167143153683,
+      "lr": 1.602885682970026e-06,
+      "elapsed_seconds": 15.3,
+      "replay_val_loss": 1.9081590920686722
+    }
+  ],
+  "candidate_path": "/Users/ayenifamily/llmfs-data/runs/integrity-pilot-2026-11-14/best.pt",
+  "baseline_commit": "a3c0cca",
+  "full_suite": {
+    "passed": 452,
+    "failed": 12,
+    "skipped": 22
+  },
+  "baseline_subset": {
+    "passed": 40,
+    "failed": 12,
+    "skipped": 3
+  },
+  "limitations": [
+    "Eight validation examples; not a capability benchmark.",
+    "No CUDA device available; CUDA RNG restoration not exercised.",
+    "Twelve unchanged-baseline failures remain in verification, HTTP admission and Redis quota checks.",
+    "Old SFT resume checkpoints without integrity metadata are deliberately rejected."
+  ]
+}
