@@ -1,0 +1,93 @@
+{
+  "purpose": "predeclared two-arm sampler exposure experiment; no automatic model promotion",
+  "code_slug": "llmfs-code-sampler-control-20261114",
+  "code_commit": "5be0f45bf81b7052c8ea213040583eb0dcb46198",
+  "code_tar_sha256": "61f4f69deb597b95d23f9b32ace188af77f2f187b5d526d60f87d071525fe448",
+  "data_slug": "llmfs-corpus-v3",
+  "state_slug": "llmfs-p4-base",
+  "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+  "extra_inputs": {
+    "plan": [
+      "llmfs-sampler-plan-20261114",
+      "validation-plan.json"
+    ],
+    "bench": [
+      "llmfs-bench-frozen-20261114",
+      "bench-manifest.json"
+    ]
+  },
+  "steps": [
+    {
+      "name": "uniform-resume-check",
+      "args": [
+        "-m",
+        "training.verify_sft_resume",
+        "--device",
+        "cuda",
+        "--report",
+        "{work}/uniform-resume.json"
+      ],
+      "timeout": 300
+    },
+    {
+      "name": "sampler-two-arm-control",
+      "args": [
+        "-m",
+        "training.sampler_control",
+        "run",
+        "--base",
+        "{state}/ckpt.pt",
+        "--expect-base-sha256",
+        "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+        "--data-dir",
+        "{data}",
+        "--expect-data-sha256",
+        "57af602d753c003ae446721d9ad25144c56a432e3b5daf52925a9b6ed9fafcfd",
+        "--validation-plan",
+        "{plan}/validation-plan.json",
+        "--expect-plan-sha256",
+        "3ee5f39fc87341ac1385792be86187fcadc3e1474e799aadeff540f774e67016",
+        "--output",
+        "{work}/sampler-control",
+        "--steps",
+        "200",
+        "--batch-size",
+        "8",
+        "--accumulation",
+        "4",
+        "--eval-batch-size",
+        "4",
+        "--learning-rate",
+        "1e-5",
+        "--warmup",
+        "20",
+        "--seed",
+        "1337",
+        "--max-seconds",
+        "3600",
+        "--device",
+        "cuda"
+      ],
+      "timeout": 4200
+    },
+    {
+      "name": "conditional-capability-generation",
+      "args": [
+        "-m",
+        "training.sampler_control",
+        "generate",
+        "--experiment",
+        "{work}/sampler-control/experiment.json",
+        "--base",
+        "{state}/ckpt.pt",
+        "--bench-dir",
+        "{bench}",
+        "--output",
+        "{work}",
+        "--device",
+        "cuda"
+      ],
+      "timeout": 2400
+    }
+  ]
+}
