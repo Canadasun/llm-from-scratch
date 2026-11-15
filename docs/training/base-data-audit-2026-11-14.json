@@ -1,0 +1,271 @@
+{
+  "shard_manifest_sha256": "57af602d753c003ae446721d9ad25144c56a432e3b5daf52925a9b6ed9fafcfd",
+  "block_size": 1024,
+  "coverage": {
+    "train": {
+      "tokens": 631218245,
+      "documents": 441439,
+      "long_documents": 153127,
+      "legacy_reachable_tokens": 265338648,
+      "legacy_unreachable_tokens": 365879597,
+      "uniform_reachable_tokens": 631218245,
+      "uniform_legal_windows": 631208005,
+      "legacy_unreachable_fraction": 0.5796404015539823,
+      "special_token_counts": {
+        "<|endoftext|>": 441439,
+        "<|user|>": 0,
+        "<|assistant|>": 0
+      },
+      "shards": [
+        {
+          "file": "train_0000.bin",
+          "tokens": 67124330,
+          "documents": 43472,
+          "long_documents": 15020,
+          "legacy_reachable_tokens": 26073490,
+          "legacy_unreachable_tokens": 41050840,
+          "uniform_reachable_tokens": 67124330,
+          "uniform_legal_windows": 67123306
+        },
+        {
+          "file": "train_0001.bin",
+          "tokens": 67121367,
+          "documents": 48930,
+          "long_documents": 16900,
+          "legacy_reachable_tokens": 29410928,
+          "legacy_unreachable_tokens": 37710439,
+          "uniform_reachable_tokens": 67121367,
+          "uniform_legal_windows": 67120343
+        },
+        {
+          "file": "train_0002.bin",
+          "tokens": 67120437,
+          "documents": 45935,
+          "long_documents": 16195,
+          "legacy_reachable_tokens": 27763870,
+          "legacy_unreachable_tokens": 39356567,
+          "uniform_reachable_tokens": 67120437,
+          "uniform_legal_windows": 67119413
+        },
+        {
+          "file": "train_0003.bin",
+          "tokens": 67121264,
+          "documents": 46371,
+          "long_documents": 16446,
+          "legacy_reachable_tokens": 28142408,
+          "legacy_unreachable_tokens": 38978856,
+          "uniform_reachable_tokens": 67121264,
+          "uniform_legal_windows": 67120240
+        },
+        {
+          "file": "train_0004.bin",
+          "tokens": 67121574,
+          "documents": 48572,
+          "long_documents": 16631,
+          "legacy_reachable_tokens": 28920290,
+          "legacy_unreachable_tokens": 38201284,
+          "uniform_reachable_tokens": 67121574,
+          "uniform_legal_windows": 67120550
+        },
+        {
+          "file": "train_0005.bin",
+          "tokens": 67120619,
+          "documents": 46621,
+          "long_documents": 16247,
+          "legacy_reachable_tokens": 28135844,
+          "legacy_unreachable_tokens": 38984775,
+          "uniform_reachable_tokens": 67120619,
+          "uniform_legal_windows": 67119595
+        },
+        {
+          "file": "train_0006.bin",
+          "tokens": 67123026,
+          "documents": 47995,
+          "long_documents": 16348,
+          "legacy_reachable_tokens": 28534219,
+          "legacy_unreachable_tokens": 38588807,
+          "uniform_reachable_tokens": 67123026,
+          "uniform_legal_windows": 67122002
+        },
+        {
+          "file": "train_0007.bin",
+          "tokens": 67125722,
+          "documents": 48706,
+          "long_documents": 16701,
+          "legacy_reachable_tokens": 29228597,
+          "legacy_unreachable_tokens": 37897125,
+          "uniform_reachable_tokens": 67125722,
+          "uniform_legal_windows": 67124698
+        },
+        {
+          "file": "train_0008.bin",
+          "tokens": 67126140,
+          "documents": 46092,
+          "long_documents": 16093,
+          "legacy_reachable_tokens": 27831640,
+          "legacy_unreachable_tokens": 39294500,
+          "uniform_reachable_tokens": 67126140,
+          "uniform_legal_windows": 67125116
+        },
+        {
+          "file": "train_0009.bin",
+          "tokens": 27113766,
+          "documents": 18745,
+          "long_documents": 6546,
+          "legacy_reachable_tokens": 11297362,
+          "legacy_unreachable_tokens": 15816404,
+          "uniform_reachable_tokens": 27113766,
+          "uniform_legal_windows": 27112742
+        }
+      ]
+    },
+    "val": {
+      "tokens": 8001206,
+      "documents": 4670,
+      "long_documents": 1606,
+      "legacy_reachable_tokens": 2780211,
+      "legacy_unreachable_tokens": 5220995,
+      "uniform_reachable_tokens": 8001206,
+      "uniform_legal_windows": 8000182,
+      "legacy_unreachable_fraction": 0.6525260067044893,
+      "special_token_counts": {
+        "<|endoftext|>": 4670,
+        "<|user|>": 0,
+        "<|assistant|>": 0
+      },
+      "shards": [
+        {
+          "file": "val_0000.bin",
+          "tokens": 8001206,
+          "documents": 4670,
+          "long_documents": 1606,
+          "legacy_reachable_tokens": 2780211,
+          "legacy_unreachable_tokens": 5220995,
+          "uniform_reachable_tokens": 8001206,
+          "uniform_legal_windows": 8000182
+        }
+      ]
+    }
+  },
+  "corpus": {
+    "splits": {
+      "train": {
+        "rows": 441440,
+        "empty_rows": 1,
+        "content_sha256": "f006af75202045530aa3f24399839d10ded4da0d6e9febd7c8efb05657ba34f3",
+        "source_rows": {
+          "rfc-nist-prose": 90,
+          "python/cpython": 508,
+          "bigcode/the-stack-dedup": 440842
+        },
+        "source_bytes": {
+          "rfc-nist-prose": 14169172,
+          "python/cpython": 9168678,
+          "bigcode/the-stack-dedup": 1931764471
+        },
+        "licence_metadata_rows": {
+          "IETF-RFC/NIST-public": 90,
+          "PSF-2.0": 966,
+          "Apache-2.0": 100373,
+          "MIT": 295401,
+          "BSD-3-Clause": 37305,
+          "BSD-2-Clause": 8947,
+          "ISC": 384
+        },
+        "metadata_groups": 282716,
+        "largest_group_row_fraction": 0.0006161652772743748,
+        "top10_groups_row_fraction": 0.003033254802464661,
+        "code_sample": {
+          "seed": 1729,
+          "eligible_files": 441349,
+          "sample_files": 512,
+          "python_version": "3.13.16",
+          "syntax": {
+            "parsed": 511,
+            "SyntaxError": 1
+          },
+          "ast_features": {
+            "functions": 3075,
+            "functions_starting_beyond_prefix": 1565,
+            "returns_and_raises": 1946,
+            "returns_and_raises_starting_beyond_prefix": 938
+          },
+          "imported_modules_file_counts": {
+            "hashlib": 5,
+            "hmac": 0,
+            "ssl": 0,
+            "secrets": 0,
+            "cryptography": 0,
+            "sqlite3": 2,
+            "subprocess": 5,
+            "pytest": 12,
+            "unittest": 17
+          }
+        }
+      },
+      "val": {
+        "rows": 4670,
+        "empty_rows": 0,
+        "content_sha256": "d7d35e9965ef0acfe6b04e69e268634225d232146931eb0890e367a451509e97",
+        "source_rows": {
+          "rfc-nist-prose": 50,
+          "python/cpython": 6,
+          "bigcode/the-stack-dedup": 4614
+        },
+        "source_bytes": {
+          "rfc-nist-prose": 5060508,
+          "python/cpython": 114183,
+          "bigcode/the-stack-dedup": 19824119
+        },
+        "licence_metadata_rows": {
+          "IETF-RFC/NIST-public": 50,
+          "PSF-2.0": 6,
+          "BSD-2-Clause": 92,
+          "Apache-2.0": 1136,
+          "MIT": 3038,
+          "BSD-3-Clause": 367,
+          "ISC": 3
+        },
+        "metadata_groups": 2943,
+        "largest_group_row_fraction": 0.010706638115631691,
+        "top10_groups_row_fraction": 0.05588865096359743,
+        "code_sample": {
+          "seed": 1729,
+          "eligible_files": 4620,
+          "sample_files": 512,
+          "python_version": "3.13.16",
+          "syntax": {
+            "parsed": 511,
+            "SyntaxError": 1
+          },
+          "ast_features": {
+            "functions": 2890,
+            "functions_starting_beyond_prefix": 1352,
+            "returns_and_raises": 2073,
+            "returns_and_raises_starting_beyond_prefix": 1125
+          },
+          "imported_modules_file_counts": {
+            "hashlib": 4,
+            "hmac": 1,
+            "ssl": 0,
+            "secrets": 0,
+            "cryptography": 2,
+            "sqlite3": 1,
+            "subprocess": 13,
+            "pytest": 15,
+            "unittest": 20
+          }
+        }
+      }
+    },
+    "train_validation_group_overlap": 0,
+    "private_holdout_read": false,
+    "test_split_read": false,
+    "limitations": [
+      "Downloaded code is parsed as data, never executed.",
+      "Stack groups are repositories; CPython groups are top-level modules and prose groups are chunk batches.",
+      "Static imports and parseable syntax do not establish functional or security quality.",
+      "AST feature estimates are from a file-uniform code sample, not token-weighted."
+    ]
+  }
+}

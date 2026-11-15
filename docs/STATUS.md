@@ -22,6 +22,13 @@ After 100 GPU steps, chat syntax improved but functional coding did not; complet
 syntax regressed. This candidate was also rejected. Further small-curriculum SFT
 steps are paused pending investigation of base pretraining and format transfer.
 
+The [base diagnosis](training/base-diagnosis-2026-11-14.md) found a concrete sampling
+defect: 57.96% of train tokens and 65.25% of validation tokens were unreachable
+because windows snapped to document starts. New runs use versioned uniform windows;
+old exact resumes retain their historical distribution. The base weights remain
+unchanged. A controlled exposure experiment, rather than another small SFT run,
+is the next step; capability improvement has not yet been demonstrated.
+
 **This is not a production cybersecurity/Python coding assistant.** It is a
 from-scratch research model with a hardened evaluation and serving harness. Neither software changes nor passing infrastructure tests establish enterprise
 readiness; the model's demonstrated coding ability remains inadequate.

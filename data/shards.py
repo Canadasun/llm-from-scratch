@@ -24,6 +24,10 @@ from special_tokens import ENDOFTEXT, SPECIAL_TOKENS  # noqa: E402
 FORMAT = "llmfs-token-shards"
 VERSION = 1
 SPLITS = ("train", "val")
+UNIFORM_WINDOWS = "uniform_windows_v1"
+LEGACY_PREFIX = "legacy_doc_prefix_v1"
+LEGACY_RANDOM = "legacy_random_v1"
+SAMPLING_MODES = (UNIFORM_WINDOWS, LEGACY_PREFIX, LEGACY_RANDOM)
 
 
 def canonical_json(obj):
@@ -194,25 +198,34 @@ class ShardSplit:
     def __len__(self):
         return self.tokens
 
-    def _cumulative(self, span):
-        if span not in self._eligible:
-            usable = [w if w >= span else 0 for w in self.weights]
+    def _cumulative(self, span, sampling_mode=UNIFORM_WINDOWS):
+        key = (span, sampling_mode)
+        if key not in self._eligible:
+            usable = [max(0, w - span + 1) if sampling_mode == UNIFORM_WINDOWS else (w if w >= span else 0)
+                      for w in self.weights]
             if not sum(usable):
                 raise ValueError("no shard has more than block_size tokens")
-            self._eligible[span] = (np.cumsum(usable), int(sum(usable)))
-        return self._eligible[span]
+            self._eligible[key] = (np.cumsum(usable), int(sum(usable)))
+        return self._eligible[key]
 
-    def sample(self, batch_size, block_size, generator, doc_aligned=True):
+    def sample(self, batch_size, block_size, generator, doc_aligned=None, sampling_mode=None):
         import torch
+        mode = sampling_mode
+        if mode is None:
+            mode = UNIFORM_WINDOWS if doc_aligned is None else (LEGACY_PREFIX if doc_aligned else LEGACY_RANDOM)
+        if mode not in SAMPLING_MODES:
+            raise ValueError(f"unsupported sampling mode: {mode}")
+        if batch_size < 1 or block_size < 1:
+            raise ValueError("batch size and block size must be positive")
         span = block_size + 1
-        cumulative, total = self._cumulative(span)
+        cumulative, total = self._cumulative(span, mode)
         picks = torch.randint(total, (batch_size,), generator=generator).tolist()
         rows = []
         for p in picks:
             s = int(np.searchsorted(cumulative, p, side="right"))
             shard = self.shards[s]
             offset = p - (int(cumulative[s - 1]) if s else 0)
-            if doc_aligned:
+            if mode == LEGACY_PREFIX:
                 starts = self.starts[s]
                 offset = int(starts[np.searchsorted(starts, offset, side="right") - 1])
             offset = min(offset, shard.size - span)

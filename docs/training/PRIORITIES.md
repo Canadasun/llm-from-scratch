@@ -16,10 +16,13 @@ Stop this sequence of small-curriculum SFT trials; do not simply add more steps.
 
 ## Queued after the pilot
 
-1. Investigate base pretraining coverage, generalization and completion-to-chat
-   transfer before another candidate. Use aggregate failures and independent data
-   evidence, not benchmark answers. Determine what materially different experiment
-   the evidence supports; a larger model is a hypothesis, not a proven remedy.
+1. The [base diagnosis](base-diagnosis-2026-11-14.md) found that document-prefix
+   sampling made 58% of train tokens unreachable. After review of the versioned
+   sampler repair, prepare the bounded prefix-versus-uniform base-pretraining
+   control described there. Use a separate weights-only warm start with fresh
+   optimizer/RNG; changing old exact resumes is forbidden. Stratify uniform code
+   and prose validation and retain the existing capability gates. No larger model
+   or new corpus is yet justified as the first intervention.
 2. If justified by that investigation, grow distinct first-party or licence-approved problem families with executable
    expected-behavior cases, targeted insecure/incorrect variants, edge cases and
    clean counterexamples. Prioritize input handling, access control, secret

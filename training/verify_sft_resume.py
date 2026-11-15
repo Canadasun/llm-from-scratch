@@ -73,6 +73,7 @@ def verify(device, report):
                   "gpu": torch.cuda.get_device_name(0) if device == "cuda" else None,
                   "dropout": 0.1, "steps": 6, "interrupt_at": 3, "replay_fraction": 0.3,
                   "model_tensors_identical": len(full["model_state"]), "rng_states_identical": True,
+                  "replay_sampling_mode": full["meta"]["replay_sampling_mode"],
                   "precision": full["meta"]["amp_dtype"]}
         Path(report).write_text(json.dumps(result, indent=2) + "\n")
         return result
