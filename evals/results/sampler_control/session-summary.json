@@ -1,0 +1,63 @@
+{
+  "config": {
+    "purpose": "predeclared two-arm sampler exposure experiment; no automatic model promotion",
+    "code_slug": "llmfs-code-sampler-control-20261114",
+    "code_commit": "5be0f45bf81b7052c8ea213040583eb0dcb46198",
+    "code_tar_sha256": "61f4f69deb597b95d23f9b32ace188af77f2f187b5d526d60f87d071525fe448",
+    "data_slug": "llmfs-corpus-v3",
+    "state_slug": "llmfs-p4-base",
+    "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+    "extra_inputs": {
+      "plan": [
+        "llmfs-sampler-plan-20261114",
+        "validation-plan.json"
+      ],
+      "bench": [
+        "llmfs-bench-frozen-20261114",
+        "bench-manifest.json"
+      ]
+    }
+  },
+  "steps": [
+    {
+      "name": "uniform-resume-check",
+      "returncode": 0,
+      "seconds": 19.7,
+      "log": "uniform-resume-check.log"
+    },
+    {
+      "name": "sampler-two-arm-control",
+      "returncode": 0,
+      "seconds": 1404.5,
+      "log": "sampler-two-arm-control.log"
+    },
+    {
+      "name": "conditional-capability-generation",
+      "returncode": 0,
+      "seconds": 2086.6,
+      "log": "conditional-capability-generation.log"
+    }
+  ],
+  "environment": {
+    "python": "3.13.16",
+    "started_utc": "2026-11-15T02:36:37Z",
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "gpus": [
+      "Tesla T4",
+      "Tesla T4"
+    ],
+    "nvidia_smi": "Tesla T4, 15360 MiB, 580.178.04\nTesla T4, 15360 MiB, 580.178.04"
+  },
+  "code_tar_sha256": "61f4f69deb597b95d23f9b32ace188af77f2f187b5d526d60f87d071525fe448",
+  "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+  "paths": {
+    "work": "/kaggle/working",
+    "src": "/tmp/llmfs-src",
+    "data": "/kaggle/input/datasets/idowuaye/llmfs-corpus-v3",
+    "state": "/kaggle/input/datasets/idowuaye/llmfs-p4-base",
+    "plan": "/kaggle/input/datasets/idowuaye/llmfs-sampler-plan-20261114",
+    "bench": "/kaggle/input/datasets/idowuaye/llmfs-bench-frozen-20261114"
+  },
+  "finished_utc": "2026-11-15T03:35:29Z"
+}
