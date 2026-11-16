@@ -7,6 +7,15 @@ evidence and is not established by this project.
 
 ## Latest completed experiment
 
+The [sampler control](sampler-control-results-2026-11-14.md) completed 200 updates
+per arm. Uniform sampling passed the predeclared code-body loss criterion versus
+both prefix control and unchanged base, with prose retention. It did not improve
+functional coding and regressed completion syntax and prompt-injection accuracy.
+Both candidates were rejected; the accepted base remains unchanged. Do not extend
+this pilot merely because loss improved.
+
+## Earlier curriculum result
+
 The [broader curriculum trial](curriculum-v2-2026-11-14.md) expanded training from
 18 to 48 labelled families, with 78 total families and 401 passing reference cases.
 It passed the resume check and completed 100 GPU steps. Chat syntax improved, but
@@ -16,13 +25,15 @@ Stop this sequence of small-curriculum SFT trials; do not simply add more steps.
 
 ## Queued after the pilot
 
-1. The [base diagnosis](base-diagnosis-2026-11-14.md) found that document-prefix
-   sampling made 58% of train tokens unreachable. After review of the versioned
-   sampler repair, prepare the bounded prefix-versus-uniform base-pretraining
-   control described there. Use a separate weights-only warm start with fresh
-   optimizer/RNG; changing old exact resumes is forbidden. Stratify uniform code
-   and prose validation and retain the existing capability gates. No larger model
-   or new corpus is yet justified as the first intervention.
+1. Diagnose syntax failures and instruction-format transfer offline. The
+   [base diagnosis](base-diagnosis-2026-11-14.md) and completed control establish
+   that repaired body exposure improves loss, but not useful coding in this budget.
+   Classify failure modes and inspect corpus format/provenance without training
+   on benchmark answers. Before more GPU training, predeclare a distinct
+   data/format hypothesis, independent family-level evaluation and bounded budget.
+   Retain uniform sampling for new experiments and preserve historical sampling
+   on exact resumes. No larger model or immediate run extension is justified by
+   this pilot alone.
 2. If justified by that investigation, grow distinct first-party or licence-approved problem families with executable
    expected-behavior cases, targeted insecure/incorrect variants, edge cases and
    clean counterexamples. Prioritize input handling, access control, secret
