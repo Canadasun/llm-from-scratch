@@ -1,0 +1,22 @@
+{
+  "control-completion": {
+    "run": 43900397028,
+    "scores_sha256": "c193ebf45f7434bb007aceeab59d532aa2fb04df3143f6967accae375f8140c4",
+    "programs_sha256": "e8f0caf1dd8f8c9de6eb6f9d45586bf65e72daf862e261917f08059ea6ff703d"
+  },
+  "control-chat": {
+    "run": 43900399684,
+    "scores_sha256": "8dbff31c6cf621ae8587ab7ca4f08ed57a4122d88c1625d4e595dadd3d84962d",
+    "programs_sha256": "0601e5c5ab840ba02b531795a3946a1ebff2a0b7dca8989d6b95b31c771e46c6"
+  },
+  "treatment-completion": {
+    "run": 43900402460,
+    "scores_sha256": "a9c8d996452ca7278c670384bb10f6336fc5eb92c48bea84966e0a164a07489e",
+    "programs_sha256": "b55cb9077fb4c3ad4aff6564de062439b23fca851a1282c5904cc5d96ad1f9c5"
+  },
+  "treatment-chat": {
+    "run": 43900406813,
+    "scores_sha256": "e3d8b4868a1efad7170eb4a68fa805e50891a4a8be300dc28b2c438e738a4ef1",
+    "programs_sha256": "3c6b174875f10caf556628dbc1e355acff1b785872acbfec818338f440a9c023"
+  }
+}

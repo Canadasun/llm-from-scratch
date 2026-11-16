@@ -1,0 +1,33 @@
+{
+  "method": "Exact programs and behaviour equality; all generation metadata equal except generated_at. Reuse raw prior sandbox scores without modification.",
+  "modes": {
+    "completion": {
+      "source_programs": "evals/results/verified_seed/programs-base-completion.json",
+      "source_programs_sha256": "304b5203405f30066434202b00c0ccc9cd3e14320943a962563f46d35dc90533",
+      "current_programs_sha256": "9ca536d7df226c5a35114d14a96d2491bca65ffdb9c354b8d39ef1beb803b775",
+      "source_scores": "evals/results/verified_seed/scores-base-completion.json",
+      "scores_sha256": "52941d9d1a9490e2bc8243e3e55489de66486fa106f99c9a4392c7f58381a218",
+      "sandbox_workflow_run": 43627464915,
+      "excluded_metadata": [
+        "generated_at"
+      ],
+      "programs_equal": true,
+      "behaviour_equal": true,
+      "other_metadata_equal": true
+    },
+    "chat": {
+      "source_programs": "evals/results/verified_seed/programs-base-chat.json",
+      "source_programs_sha256": "6df0d3797349b8d66ac6611abcc825d2e4ed51008fb12d0d3f277d71e06c7b2b",
+      "current_programs_sha256": "44123061cd050fb51ea4c7e722fea447f5c97ff6f51a831a3d57666b89a44030",
+      "source_scores": "evals/results/verified_seed/scores-base-chat.json",
+      "scores_sha256": "9ca4e2a56d2808088dabdf1f835e75f1bb1fec824a12ba23721b8d21d6a2c7f3",
+      "sandbox_workflow_run": 43627728605,
+      "excluded_metadata": [
+        "generated_at"
+      ],
+      "programs_equal": true,
+      "behaviour_equal": true,
+      "other_metadata_equal": true
+    }
+  }
+}

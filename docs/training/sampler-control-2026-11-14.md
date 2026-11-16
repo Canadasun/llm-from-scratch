@@ -1,6 +1,8 @@
 # Bounded base-sampler control
 
-Protocol declared before GPU training. This tests the document-body exposure
+Protocol declared before GPU training. [Measured results](sampler-control-results-2026-11-14.md)
+report a primary loss-criterion pass but no functional coding gain, with syntax
+and prompt-injection regressions; both candidates are rejected. This tests the document-body exposure
 repair from PR #31. It does not retrain or replace the served model automatically.
 
 ## Initialization and the only arm difference
@@ -86,4 +88,4 @@ poisoned old optimizer payload, identical initialization, the 200-attempt cap,
 meaningful effect size, prose retention, distinct repositories, mismatched RNG
 and recipes, overflow/incomplete comparisons, and rechecking the gate before
 generation. Seventeen new tests and 49 existing sampler/training checks pass
-locally. GPU execution and its measured results will be recorded separately.
+locally. GPU execution and its measured results are recorded in the linked report.

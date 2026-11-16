@@ -26,8 +26,14 @@ The [base diagnosis](training/base-diagnosis-2026-11-14.md) found a concrete sam
 defect: 57.96% of train tokens and 65.25% of validation tokens were unreachable
 because windows snapped to document starts. New runs use versioned uniform windows;
 old exact resumes retain their historical distribution. The base weights remain
-unchanged. A controlled exposure experiment, rather than another small SFT run,
-is the next step; capability improvement has not yet been demonstrated.
+unchanged. The subsequent [controlled exposure experiment](training/sampler-control-results-2026-11-14.md)
+completed 200 updates per arm. Corrected sampling improved code-body loss by
+0.0385 nats versus prefix control and 0.0585 versus unchanged base. Sandboxed
+coding scores did not improve; treatment completion syntax fell from 35/52 to
+27/52 and prompt-injection accuracy from 5/15 to 3/15. Both candidates were
+rejected. The next research phase is offline syntax/format-transfer diagnosis
+before another separately specified training trial. Capability improvement has
+not yet been demonstrated.
 
 **This is not a production cybersecurity/Python coding assistant.** It is a
 from-scratch research model with a hardened evaluation and serving harness. Neither software changes nor passing infrastructure tests establish enterprise

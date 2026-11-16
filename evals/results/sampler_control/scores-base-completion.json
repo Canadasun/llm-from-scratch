@@ -1,0 +1,902 @@
+{
+ "behaviour": {
+  "abstention": {
+   "acc": 0.3333,
+   "correct": 5,
+   "n": 15
+  },
+  "prompt_injection": {
+   "acc": 0.3333,
+   "correct": 5,
+   "n": 15
+  },
+  "unsafe_recommendation": {
+   "acc": 0.2667,
+   "correct": 4,
+   "n": 15
+  }
+ },
+ "meta": {
+  "behaviour_sha256": "0e2ff73769e8574b36b5d102fbaca1539e91164ec17baaadbff276abbddccb87",
+  "bench_manifest_sha256": "0a97d6da0c8cf3c25ad81343a3f6f736cdc22cc769383bddfa57f4c8d1b28615",
+  "block_size": 1024,
+  "checkpoint_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+  "ckpt": "/kaggle/input/datasets/idowuaye/llmfs-p4-base/ckpt.pt",
+  "decoding": {
+   "chat": false,
+   "greedy": true,
+   "max_new_tokens": 384,
+   "stops": [
+    "\ndef ",
+    "\nclass ",
+    "\nif __name__",
+    "\nprint(",
+    "\n#",
+    "\nassert "
+   ]
+  },
+  "device": "cuda",
+  "frozen_suites": {
+   "humaneval": "5a99b52b296d516f9f356c85bbf29b1a3befbf75182919e6f9dc1209e3a39243",
+   "humaneval_plus": "2e66c5d2d6f4df58516e9f1dc84b519b3857cb371821e7e0ab4a31a8d1697d3d",
+   "mbpp": "28ba799cfd8879bdde20759f3e8275e1b00bd9c75d84e4dd4b6075b45cf1513c",
+   "mbpp_plus": "42253b796bead43ba776793b4e432ba5b8524424379928272dd2839832f9334a"
+  },
+  "generated_at": "2026-11-14T18:21:14.018518+00:00",
+  "limit": 25,
+  "n_layer": 12,
+  "sandbox": {
+   "available": true,
+   "detail": "sandbox executed the canary function correctly",
+   "status": "passed"
+  },
+  "scored_at": "2026-11-14T18:38:11.886529+00:00",
+  "suite_sha256": {
+   "humaneval": "5a99b52b296d516f9f356c85bbf29b1a3befbf75182919e6f9dc1209e3a39243",
+   "humaneval_plus": "2e66c5d2d6f4df58516e9f1dc84b519b3857cb371821e7e0ab4a31a8d1697d3d",
+   "mbpp": "28ba799cfd8879bdde20759f3e8275e1b00bd9c75d84e4dd4b6075b45cf1513c",
+   "mbpp_plus": "42253b796bead43ba776793b4e432ba5b8524424379928272dd2839832f9334a"
+  },
+  "suites": [
+   "humaneval",
+   "humaneval_plus",
+   "mbpp",
+   "mbpp_plus"
+  ],
+  "tokenizer": "bpe_code",
+  "vocab_size": 16384
+ },
+ "parses_as_python": 0.6731,
+ "results": [
+  {
+   "detail": "",
+   "id": "HumanEval/0",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/1",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 raised RecursionError",
+   "id": "HumanEval/2",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/3",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 raised RecursionError",
+   "id": "HumanEval/4",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 2 raised IndexError",
+   "id": "HumanEval/5",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/6",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/7",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/8",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/9",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 3 output mismatch",
+   "id": "HumanEval/10",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/11",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 raised RecursionError",
+   "id": "HumanEval/12",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/13",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/14",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 raised TypeError",
+   "id": "HumanEval/15",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 raised RecursionError",
+   "id": "HumanEval/16",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/17",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 raised ValueError",
+   "id": "HumanEval/18",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/19",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/20",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/21",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/22",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "all function cases passed",
+   "id": "HumanEval/23",
+   "parses": true,
+   "passed": true,
+   "status": "passed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/24",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/0",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/1",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 raised RecursionError",
+   "id": "HumanEval/2",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/3",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 raised RecursionError",
+   "id": "HumanEval/4",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 2 raised IndexError",
+   "id": "HumanEval/5",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/6",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/7",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/8",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/9",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 3 output mismatch",
+   "id": "HumanEval/10",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/11",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 raised RecursionError",
+   "id": "HumanEval/12",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/13",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 raised RecursionError",
+   "id": "HumanEval/16",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/17",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 raised ValueError",
+   "id": "HumanEval/18",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/19",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/20",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/21",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/22",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "all function cases passed",
+   "id": "HumanEval/23",
+   "parses": true,
+   "passed": true,
+   "status": "passed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "case 1 output mismatch",
+   "id": "HumanEval/24",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/25",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "",
+   "id": "HumanEval/26",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "humaneval_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/2",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/3",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/4",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/6",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/7",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/8",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/9",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/11",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/12",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/14",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/16",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/17",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/18",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/19",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/20",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/56",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/57",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/58",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/59",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/61",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/62",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/63",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/64",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/65",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/66",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/2",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/3",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/4",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/6",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/7",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/8",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/9",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/11",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/12",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/14",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/16",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/17",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/18",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/19",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/20",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/56",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/57",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/58",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/59",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/61",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/62",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/63",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/64",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "",
+   "id": "Mbpp/65",
+   "parses": false,
+   "passed": false,
+   "status": "syntax-error",
+   "suite": "mbpp_plus"
+  },
+  {
+   "detail": "worker exited unsuccessfully",
+   "id": "Mbpp/66",
+   "parses": true,
+   "passed": false,
+   "status": "failed",
+   "suite": "mbpp_plus"
+  }
+ ],
+ "summary": {
+  "humaneval": {
+   "parses": 0.8,
+   "pass_at_1": 0.04,
+   "passed": 1,
+   "tasks": 25,
+   "unavailable": 0
+  },
+  "humaneval_plus": {
+   "parses": 0.76,
+   "pass_at_1": 0.04,
+   "passed": 1,
+   "tasks": 25,
+   "unavailable": 0
+  },
+  "mbpp": {
+   "parses": 0.6,
+   "pass_at_1": 0.0,
+   "passed": 0,
+   "tasks": 25,
+   "unavailable": 0
+  },
+  "mbpp_plus": {
+   "parses": 0.6,
+   "pass_at_1": 0.0,
+   "passed": 0,
+   "tasks": 25,
+   "unavailable": 0
+  }
+ }
+}
