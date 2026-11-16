@@ -25,11 +25,15 @@ Stop this sequence of small-curriculum SFT trials; do not simply add more steps.
 
 ## Queued after the pilot
 
-1. Diagnose syntax failures and instruction-format transfer offline. The
+1. The [offline syntax diagnosis](syntax-diagnosis-2026-11-16.md) is complete:
+   treatment loses 13 previously valid completion programs and gains five;
+   nine of ten parseable chat outputs are empty. No observed valid full response
+   is made invalid by extraction. Build an original family-separated format probe
+   with function/entry-point checks before a new GPU trial. The
    [base diagnosis](base-diagnosis-2026-11-14.md) and completed control establish
    that repaired body exposure improves loss, but not useful coding in this budget.
-   Classify failure modes and inspect corpus format/provenance without training
-   on benchmark answers. Before more GPU training, predeclare a distinct
+   Inspect corpus format/provenance without training on benchmark answers.
+   Before more GPU training, predeclare a distinct
    data/format hypothesis, independent family-level evaluation and bounded budget.
    Retain uniform sampling for new experiments and preserve historical sampling
    on exact resumes. No larger model or immediate run extension is justified by
