@@ -35,6 +35,12 @@ rejected. The next research phase is offline syntax/format-transfer diagnosis
 before another separately specified training trial. Capability improvement has
 not yet been demonstrated.
 
+The [offline syntax follow-up](training/syntax-diagnosis-2026-11-16.md) localizes
+most net treatment syntax loss to MBPP-style full programs. Nine of ten parseable
+treatment chat outputs are empty modules. AST-only extraction checks find no
+parseable full response made invalid by extraction in this sample. A separate
+authored format probe with entry-point checks is needed before further training.
+
 **This is not a production cybersecurity/Python coding assistant.** It is a
 from-scratch research model with a hardened evaluation and serving harness. Neither software changes nor passing infrastructure tests establish enterprise
 readiness; the model's demonstrated coding ability remains inadequate.
