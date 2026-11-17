@@ -1,0 +1,206 @@
+{
+  "cases": 44,
+  "families": 12,
+  "limitations": [
+    "Public small diagnostic, not independent final qualification.",
+    "Related programming concepts can overlap across families; family IDs do not prove semantic independence.",
+    "No model outputs have been measured. Evaluation families must not enter training."
+  ],
+  "provenance": "Project-authored public diagnostic; no benchmark/private data imported.",
+  "rows": [
+    {
+      "entry_point": "value_runs",
+      "family": "consecutive-value-runs",
+      "format": "module",
+      "id": "consecutive-value-runs:module",
+      "prompt": "items is a list of integers. Return consecutive equal runs as [value, count] pairs, in order.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef value_runs(items):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "value_runs",
+      "family": "consecutive-value-runs",
+      "format": "body",
+      "id": "consecutive-value-runs:body",
+      "prompt": "items is a list of integers. Return consecutive equal runs as [value, count] pairs, in order.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef value_runs(items):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "running_totals",
+      "family": "cumulative-signed-totals",
+      "format": "module",
+      "id": "cumulative-signed-totals:module",
+      "prompt": "Return the cumulative totals of an integer list, starting from zero; do not include the initial zero.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef running_totals(changes):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "running_totals",
+      "family": "cumulative-signed-totals",
+      "format": "body",
+      "id": "cumulative-signed-totals:body",
+      "prompt": "Return the cumulative totals of an integer list, starting from zero; do not include the initial zero.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef running_totals(changes):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "remaining_lifetime",
+      "family": "integer-session-lifetime",
+      "format": "module",
+      "id": "integer-session-lifetime:module",
+      "prompt": "Both arguments are integer timestamps. Return expires minus now, clamped to a minimum of zero.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef remaining_lifetime(expires, now):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "remaining_lifetime",
+      "family": "integer-session-lifetime",
+      "format": "body",
+      "id": "integer-session-lifetime:body",
+      "prompt": "Both arguments are integer timestamps. Return expires minus now, clamped to a minimum of zero.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef remaining_lifetime(expires, now):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "adjacent_changes",
+      "family": "adjacent-integer-differences",
+      "format": "module",
+      "id": "adjacent-integer-differences:module",
+      "prompt": "For a list of integers, return each value minus its immediately preceding value, in order.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef adjacent_changes(values):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "adjacent_changes",
+      "family": "adjacent-integer-differences",
+      "format": "body",
+      "id": "adjacent-integer-differences:body",
+      "prompt": "For a list of integers, return each value minus its immediately preceding value, in order.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef adjacent_changes(values):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "tally_outcomes",
+      "family": "two-channel-event-tally",
+      "format": "module",
+      "id": "two-channel-event-tally:module",
+      "prompt": "events contains strings. Return [allowed_count, denied_count], counting exact 'allow' and 'deny' only.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef tally_outcomes(events):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "tally_outcomes",
+      "family": "two-channel-event-tally",
+      "format": "body",
+      "id": "two-channel-event-tally:body",
+      "prompt": "events contains strings. Return [allowed_count, denied_count], counting exact 'allow' and 'deny' only.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef tally_outcomes(events):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "within_distance",
+      "family": "bounded-numeric-distance",
+      "format": "module",
+      "id": "bounded-numeric-distance:module",
+      "prompt": "Arguments are integers. Return False for negative radius; otherwise whether abs(left-right) <= radius.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef within_distance(left, right, radius):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "within_distance",
+      "family": "bounded-numeric-distance",
+      "format": "body",
+      "id": "bounded-numeric-distance:body",
+      "prompt": "Arguments are integers. Return False for negative radius; otherwise whether abs(left-right) <= radius.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef within_distance(left, right, radius):\n",
+      "split": "train"
+    },
+    {
+      "entry_point": "first_above",
+      "family": "first-strict-threshold-position",
+      "format": "module",
+      "id": "first-strict-threshold-position:module",
+      "prompt": "Return the index of the first integer in values strictly greater than threshold; return -1 if absent.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef first_above(values, threshold):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "first_above",
+      "family": "first-strict-threshold-position",
+      "format": "body",
+      "id": "first-strict-threshold-position:body",
+      "prompt": "Return the index of the first integer in values strictly greater than threshold; return -1 if absent.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef first_above(values, threshold):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "interleave",
+      "family": "alternating-sequence-merge",
+      "format": "module",
+      "id": "alternating-sequence-merge:module",
+      "prompt": "Return a new list alternating left then right elements; append remaining elements of the longer list.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef interleave(left, right):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "interleave",
+      "family": "alternating-sequence-merge",
+      "format": "body",
+      "id": "alternating-sequence-merge:body",
+      "prompt": "Return a new list alternating left then right elements; append remaining elements of the longer list.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef interleave(left, right):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "reverse_pairs",
+      "family": "literal-pair-reversal",
+      "format": "module",
+      "id": "literal-pair-reversal:module",
+      "prompt": "pairs is a list of two-element lists. Return a new list with the two elements of each pair swapped.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef reverse_pairs(pairs):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "reverse_pairs",
+      "family": "literal-pair-reversal",
+      "format": "body",
+      "id": "literal-pair-reversal:body",
+      "prompt": "pairs is a list of two-element lists. Return a new list with the two elements of each pair swapped.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef reverse_pairs(pairs):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "is_nondecreasing",
+      "family": "nondecreasing-order-check",
+      "format": "module",
+      "id": "nondecreasing-order-check:module",
+      "prompt": "Return whether an integer list is nondecreasing; the empty list and singleton lists return True.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef is_nondecreasing(values):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "is_nondecreasing",
+      "family": "nondecreasing-order-check",
+      "format": "body",
+      "id": "nondecreasing-order-check:body",
+      "prompt": "Return whether an integer list is nondecreasing; the empty list and singleton lists return True.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef is_nondecreasing(values):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "whole_requests",
+      "family": "aligned-request-budget",
+      "format": "module",
+      "id": "aligned-request-budget:module",
+      "prompt": "Arguments are integers. Return zero if remaining < 0 or cost <= 0, else remaining // cost.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef whole_requests(remaining, cost):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "whole_requests",
+      "family": "aligned-request-budget",
+      "format": "body",
+      "id": "aligned-request-budget:body",
+      "prompt": "Arguments are integers. Return zero if remaining < 0 or cost <= 0, else remaining // cost.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef whole_requests(remaining, cost):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "has_scopes",
+      "family": "exact-required-scope-subset",
+      "format": "module",
+      "id": "exact-required-scope-subset:module",
+      "prompt": "Both lists contain strings. Return whether every required value occurs exactly (case-sensitive) in granted.\nReturn only a complete Python function with this exact signature, without Markdown fences.\ndef has_scopes(granted, required):\n",
+      "split": "evaluation"
+    },
+    {
+      "entry_point": "has_scopes",
+      "family": "exact-required-scope-subset",
+      "format": "body",
+      "id": "exact-required-scope-subset:body",
+      "prompt": "Both lists contain strings. Return whether every required value occurs exactly (case-sensitive) in granted.\nReturn only the function body, indented by four spaces. Do not repeat the signature or use Markdown fences.\ndef has_scopes(granted, required):\n",
+      "split": "evaluation"
+    }
+  ],
+  "schema": "original_format_probe_v1",
+  "source_sha256": "2e294d5e97da9ff93f797a25333eee5d1a84cebfaed0a6f001031f8bf08d7272"
+}
