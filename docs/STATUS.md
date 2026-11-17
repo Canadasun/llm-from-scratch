@@ -40,6 +40,10 @@ most net treatment syntax loss to MBPP-style full programs. Nine of ten parseabl
 treatment chat outputs are empty modules. AST-only extraction checks find no
 parseable full response made invalid by extraction in this sample. A separate
 authored format probe with entry-point checks is needed before further training.
+That [probe is now built and sandbox-verified](training/format-probe-2026-11-16.md):
+12 original families, 24 paired prompts and 44 reference cases, with 24 passing
+reference responses and 96 rejected negative controls. Model outputs have not
+yet been measured on it; this is harness verification, not a capability gain.
 
 **This is not a production cybersecurity/Python coding assistant.** It is a
 from-scratch research model with a hardened evaluation and serving harness. Neither software changes nor passing infrastructure tests establish enterprise
