@@ -28,6 +28,13 @@ def test_build_rejects_family_duplication(monkeypatch):
         probe.build()
 
 
+def test_renaming_reference_cannot_move_it_across_splits(monkeypatch):
+    renamed = replace(TASKS[0], family="renamed", name="another_name", split="evaluation")
+    monkeypatch.setattr(probe, "TASKS", (TASKS[0], renamed))
+    with pytest.raises(ValueError, match="structure overlaps"):
+        probe.build()
+
+
 @pytest.mark.parametrize("task", TASKS, ids=lambda t: t.family)
 def test_reference_shape_and_body_boundary(task):
     assert probe.check_shape(task, "body", task.body)["format"]

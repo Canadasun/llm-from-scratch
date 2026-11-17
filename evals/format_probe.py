@@ -71,10 +71,22 @@ def build():
     families = [task.family for task in TASKS]
     if len(set(families)) != len(families):
         raise ValueError("family must occur once; variants inherit its split")
-    rows = []
+    rows, structures = [], {}
     for task in TASKS:
         if task.split not in ("train", "evaluation"):
             raise ValueError("unknown split")
+        tree = ast.parse(task.header + task.body)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                node.name = "function"
+            elif isinstance(node, ast.Name):
+                node.id = "variable"
+            elif isinstance(node, ast.arg):
+                node.arg = "argument"
+        key = ast.dump(tree, include_attributes=False)
+        if key in structures and structures[key] != task.split:
+            raise ValueError("renamed reference structure overlaps splits")
+        structures[key] = task.split
         for mode in FORMATS:
             rows.append({"id": f"{task.family}:{mode}", "family": task.family,
                          "split": task.split, "format": mode, "entry_point": task.name,
@@ -89,6 +101,7 @@ def build():
 
 
 def verify():
+    suite = build()  # Refuse an invalid split before executing any reference.
     preflight = sandbox_preflight()
     if not preflight["available"]:
         raise RuntimeError("Linux bubblewrap/libseccomp sandbox required; no host fallback")
@@ -107,7 +120,6 @@ def verify():
                     raise AssertionError(f"{task.family}:{mode}:{name}: incorrect control verdict")
                 results.append({"family": task.family, "split": task.split, "format": mode,
                                 "control": name, **result})
-    suite = build()
     root = Path(__file__).resolve().parents[1]
     return {"schema": "format_probe_verification_v1", "suite_sha256": hashlib.sha256(
                 json.dumps(suite, sort_keys=True).encode()).hexdigest(),
