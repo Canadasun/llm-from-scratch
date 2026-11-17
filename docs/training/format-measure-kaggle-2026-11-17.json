@@ -1,0 +1,15 @@
+{
+  "purpose": "Inference-only accepted-model measurement; no training, optimizer, checkpoint writes or promotion",
+  "code_slug": "llmfs-code-format-measure-20261117",
+  "code_commit": "f4caafdd90ad9c8c10a246abbe49115b046206e1",
+  "code_tar_sha256": "66e3777981cb77daf5bc7afac7c93d4b1faffe0606cd998ccd9658a88c4d3e30",
+  "state_slug": "llmfs-p4-base",
+  "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+  "steps": [
+    {
+      "name": "accepted-format-inference",
+      "args": ["-m", "evals.format_probe_run", "generate", "--checkpoint", "{state}/ckpt.pt", "--out", "{work}/responses-base.json", "--device", "cuda"],
+      "timeout": 1800
+    }
+  ]
+}

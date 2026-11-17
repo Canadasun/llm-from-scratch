@@ -43,7 +43,13 @@ authored format probe with entry-point checks is needed before further training.
 That [probe is now built and sandbox-verified](training/format-probe-2026-11-16.md):
 12 original families, 24 paired prompts and 44 reference cases, with 24 passing
 reference responses and 96 rejected negative controls. Model outputs have not
-yet been measured on it; this is harness verification, not a capability gain.
+yet been measured in that verification phase. The subsequent
+[accepted-model measurement](training/format-measure-2026-11-17.md) generated all
+24 responses; every response hit the 384-token budget and failed the required
+function shape. Linux scoring confirmed the failure before functional execution.
+Both formats used instruction-role wrappers, so a separately frozen raw-header
+continuation diagnostic is needed to distinguish format transfer from underlying
+code continuation. Accepted weights remain unchanged; no capability gain is shown.
 
 **This is not a production cybersecurity/Python coding assistant.** It is a
 from-scratch research model with a hardened evaluation and serving harness. Neither software changes nor passing infrastructure tests establish enterprise

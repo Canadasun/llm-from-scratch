@@ -118,7 +118,7 @@ def verify():
                 result = score_response(task, mode, response)
                 if result["functional"] != (name == "reference"):
                     raise AssertionError(f"{task.family}:{mode}:{name}: incorrect control verdict")
-                results.append({"family": task.family, "split": task.split, "format": mode,
+                results.append({"family": task.family, "split": task.split, "mode": mode,
                                 "control": name, **result})
     root = Path(__file__).resolve().parents[1]
     return {"schema": "format_probe_verification_v1", "suite_sha256": hashlib.sha256(

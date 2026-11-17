@@ -1,0 +1,37 @@
+{
+  "config": {
+    "purpose": "Inference-only accepted-model measurement; no training, optimizer, checkpoint writes or promotion",
+    "code_slug": "llmfs-code-format-measure-20261117",
+    "code_commit": "f4caafdd90ad9c8c10a246abbe49115b046206e1",
+    "code_tar_sha256": "66e3777981cb77daf5bc7afac7c93d4b1faffe0606cd998ccd9658a88c4d3e30",
+    "state_slug": "llmfs-p4-base",
+    "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593"
+  },
+  "steps": [
+    {
+      "name": "accepted-format-inference",
+      "returncode": 0,
+      "seconds": 208.3,
+      "log": "accepted-format-inference.log"
+    }
+  ],
+  "environment": {
+    "python": "3.13.16",
+    "started_utc": "2026-11-17T02:17:18Z",
+    "torch": "2.11.0+cu130",
+    "cuda_available": true,
+    "gpus": [
+      "Tesla T4",
+      "Tesla T4"
+    ],
+    "nvidia_smi": "Tesla T4, 15360 MiB, 580.178.04\nTesla T4, 15360 MiB, 580.178.04"
+  },
+  "code_tar_sha256": "66e3777981cb77daf5bc7afac7c93d4b1faffe0606cd998ccd9658a88c4d3e30",
+  "state_ckpt_sha256": "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593",
+  "paths": {
+    "work": "/kaggle/working",
+    "src": "/tmp/llmfs-src",
+    "state": "/kaggle/input/datasets/idowuaye/llmfs-p4-base"
+  },
+  "finished_utc": "2026-11-17T02:21:06Z"
+}
