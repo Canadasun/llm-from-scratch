@@ -8,6 +8,7 @@ from pathlib import Path
 
 from data.format_probe_tasks import TASKS
 from evals.format_probe import FORMATS, build, prompt, score_response
+from evals.code_executor import sandbox_preflight
 from special_tokens import ASSISTANT, ENDOFTEXT, USER
 
 BASE_SHA = "1164213e635d376946ec331d5ff238cf89f492788554a953010f59bd5f57a593"
@@ -129,6 +130,9 @@ def validate(saved, tokenizer_state):
 
 def score(saved, tokenizer_state):
     validate(saved, tokenizer_state)  # Check all rows before any execution.
+    preflight = sandbox_preflight()
+    if not preflight["available"]:
+        raise RuntimeError("sandbox unavailable; no host fallback")
     rows = {}
     for task in TASKS:
         for mode in FORMATS:
@@ -142,7 +146,8 @@ def score(saved, tokenizer_state):
             summary[f"{split}-{mode}"] = {"tasks": len(selected), **{
                 name: sum(row[name] for row in selected) for name in ("syntax", "format", "functional")}}
     return {"schema": "format_probe_scores_v1", "meta": saved["meta"],
-            "responses_sha256": digest(saved), "summary": summary, "results": rows,
+            "responses_sha256": digest(saved), "sandbox": preflight,
+            "summary": summary, "results": rows,
             "scope": "Observed public format diagnostic; no qualification or training authorization."}
 
 

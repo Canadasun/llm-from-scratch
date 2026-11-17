@@ -72,12 +72,21 @@ def test_partial_wrong_checkpoint_or_tokenizer_rejected():
 
 def test_summary_keeps_formats_and_splits_separate(monkeypatch):
     saved, state = fixture()
+    monkeypatch.setattr(run, "sandbox_preflight", lambda: {"available": True})
     monkeypatch.setattr(run, "score_response", lambda *a: {
         "syntax": True, "format": True, "functional": False, "status": "failed"})
     result = run.score(saved, state)
     assert len(result["summary"]) == 4
     assert all(row == {"tasks": 6, "syntax": 6, "format": 6, "functional": 0}
                for row in result["summary"].values())
+
+
+def test_scoring_requires_sandbox_even_for_empty_outputs(monkeypatch):
+    saved, state = fixture()
+    monkeypatch.setattr(run, "sandbox_preflight", lambda: {"available": False})
+    monkeypatch.setattr(run, "score_response", lambda *a: pytest.fail("must not execute"))
+    with pytest.raises(RuntimeError, match="no host fallback"):
+        run.score(saved, state)
 
 
 def test_reference_report_preserves_mode_and_boolean_format(monkeypatch):
