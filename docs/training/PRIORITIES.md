@@ -28,8 +28,12 @@ Stop this sequence of small-curriculum SFT trials; do not simply add more steps.
 1. The [offline syntax diagnosis](syntax-diagnosis-2026-11-16.md) is complete:
    treatment loses 13 previously valid completion programs and gains five;
    nine of ten parseable chat outputs are empty. No observed valid full response
-   is made invalid by extraction. Build an original family-separated format probe
-   with function/entry-point checks before a new GPU trial. The
+   is made invalid by extraction. The [original format probe](format-probe-2026-11-16.md)
+   now has 12 families and 24 paired prompts; isolated verification passed all
+   references and rejected empty/wrong-entry/pass-only/wrong-value controls.
+   Next measure accepted-model outputs on both formats, preserving the six
+   evaluation families and recording stop reasons/token counts, before a new
+   training proposal. No model capability has yet been measured on this probe. The
    [base diagnosis](base-diagnosis-2026-11-14.md) and completed control establish
    that repaired body exposure improves loss, but not useful coding in this budget.
    Inspect corpus format/provenance without training on benchmark answers.

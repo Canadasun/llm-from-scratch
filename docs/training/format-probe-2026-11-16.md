@@ -55,6 +55,14 @@ python -m evals.format_probe --verify --out format-probe-verification.json
 
 The dedicated `Verify original format probe` workflow installs the same isolation
 dependencies as the existing evaluator and uploads the verification artifact.
+Run [43999664433](https://github.com/Canadasun/llm-from-scratch/actions/runs/43999664433)
+passed at implementation commit `0da1285b3619b53327be8fba699fa3fb23035a1b`.
+The [raw verified report](format-probe-verification-2026-11-16.json) records
+24 passing references and 96 rejected negative controls. The 44 distinct cases
+run against both reference formats. Its suite and implementation hashes were
+checked against the local files before committing the evidence. All 20 targeted
+unit tests pass. A static renamed-code comparison found no matches against the
+78 previous authored curriculum tasks; that does not prove semantic independence.
 Unit tests cover family pairing, reference shapes, signature/empty-output controls,
 no AST execution, functional-vs-shape separation and sandbox failure handling.
 Reference verification is not model capability measurement. No new candidate is
