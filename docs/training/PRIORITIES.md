@@ -31,9 +31,13 @@ Stop this sequence of small-curriculum SFT trials; do not simply add more steps.
    is made invalid by extraction. The [original format probe](format-probe-2026-11-16.md)
    now has 12 families and 24 paired prompts; isolated verification passed all
    references and rejected empty/wrong-entry/pass-only/wrong-value controls.
-   Next measure accepted-model outputs on both formats, preserving the six
-   evaluation families and recording stop reasons/token counts, before a new
-   training proposal. No model capability has yet been measured on this probe. The
+   The [accepted-model measurement](format-measure-2026-11-17.md) completed all
+   24 responses: every response reached 384 tokens, and none produced the required
+   function shape. Both instruction-conditioned formats fail before execution.
+   Next freeze a matched-task raw-header continuation diagnostic to distinguish
+   continuation ability from unseen role/response-boundary transfer, preserving
+   all six evaluation families outside training. No more training follows from
+   this failed screen alone. The
    [base diagnosis](base-diagnosis-2026-11-14.md) and completed control establish
    that repaired body exposure improves loss, but not useful coding in this budget.
    Inspect corpus format/provenance without training on benchmark answers.

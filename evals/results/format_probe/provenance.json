@@ -1,0 +1,14 @@
+{
+  "inference_kernel": "idowuaye/llmfs-format-measure-20261117",
+  "inference_source_commit": "f4caafdd90ad9c8c10a246abbe49115b046206e1",
+  "scoring_workflow_run": 44002813300,
+  "corrected_reference_workflow_run": 44002813233,
+  "scored_commit": "d342c21",
+  "artifact_sha256": {
+    "responses-base.json": "767caecc00c5b265b21363b9c57cb588f5782e29cbc19d5f8b39b213f879a370",
+    "scores-base.json": "83776015afa518bd8916bc62a0df9002396e40ab6657597ea734c728fd02b758",
+    "tokenizer.json": "da85db32344158509a9359f9d5019267152d4ecac335c34a65e25b21ebed979f",
+    "reference-verification.json": "da209a64548309eab40389701ac63a46e011dbb6521dbe6fa0c66aad2fc9b560",
+    "session-summary.json": "3a9529fb785c91f0327b709fef151a85806b6a9262855f8918d7a571a8f6b709"
+  }
+}
